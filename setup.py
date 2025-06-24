@@ -32,6 +32,7 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "litellm>=1.0.0",
+        "python-dotenv>=1.0.0",
     ],
     extras_require={
         "dev": [
@@ -44,7 +45,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "agents-example=agents.example:main",
+            "agents=agents.cli:main",
         ],
     },
     keywords="ai, agents, llm, gpt, claude, gemini, simple, api",
