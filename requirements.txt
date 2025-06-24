@@ -1,0 +1,5 @@
+# Core dependencies
+litellm>=1.0.0
+
+# Optional but recommended
+python-dotenv>=1.0.0  # For .env file support
