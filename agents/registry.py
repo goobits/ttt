@@ -108,6 +108,8 @@ class ModelConfiguration:
         
         # OpenRouter models (when OPENROUTER_API_KEY is set)
         import os
+        from dotenv import load_dotenv
+        load_dotenv()  # Load .env file if it exists
         if os.getenv("OPENROUTER_API_KEY"):
             self.add_model(ModelInfo(
                 name="openrouter/gemini-flash-1.5",
