@@ -103,7 +103,25 @@ setup_shell() {
     echo "$ai_path_export" >> "$SHELL_RC"
     echo "$ai_function" >> "$SHELL_RC"
     
+    # Also create a global binary for better compatibility
+    local bin_dir="$HOME/.local/bin"
+    mkdir -p "$bin_dir"
+    
+    cat > "$bin_dir/ai" << EOF
+#!/bin/bash
+# AI Library Global Command
+
+# Change to the AI library directory
+cd $AI_DIR
+
+# Activate virtual environment and run the AI wrapper
+source .venv/bin/activate && python ai_wrapper.py "\$@"
+EOF
+    
+    chmod +x "$bin_dir/ai"
+    
     print_success "Shell integration added to $SHELL_RC"
+    print_success "Global 'ai' command created in $bin_dir/ai"
 }
 
 # Setup environment variables
@@ -159,29 +177,34 @@ install() {
     
     print_success "Installation complete!"
     echo
-    echo -e "${GREEN}IMPORTANT: You must restart your terminal or run:${NC}"
-    echo -e "${YELLOW}  source $SHELL_RC${NC}"
+    echo -e "${GREEN}✅ AI Library Successfully Installed${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo
-    echo -e "${GREEN}Next steps:${NC}"
-    echo "1. ${YELLOW}Restart your terminal${NC} (recommended) or run the source command above"
-    echo "2. Edit $API_KEY_FILE with your API keys (OpenRouter key already set)"
-    echo "3. Test with: ai 'What is 2+2?'"
+    echo -e "${YELLOW}NEXT STEPS:${NC}"
+    echo "1. ${GREEN}Restart your terminal${NC} or run: ${YELLOW}source $SHELL_RC${NC}"
+    echo "2. ${GREEN}Configure API keys${NC} in: ${YELLOW}$API_KEY_FILE${NC}"
+    echo "3. ${GREEN}Test installation${NC}: ${YELLOW}ai 'What is 2+2?'${NC}"
     echo
-    echo -e "${BLUE}Available commands after restart:${NC}"
-    echo "  ai 'Your question here'                    # Basic usage (clean output)"
-    echo "  ai 'Question' --model openrouter/anthropic/claude-3-haiku"
-    echo "  ai 'Question' --backend local --model llama2"
-    echo "  ai backend-status                          # Check backend status"
-    echo "  ai models-list                             # List available models"
-    echo "  ai 'Question' --verbose                    # Show detailed metadata"
+    echo -e "${BLUE}COMMANDS AVAILABLE:${NC}"
+    echo "  ${YELLOW}ai${NC} 'Your question here'           # Basic usage"
+    echo "  ${YELLOW}ai${NC} backend-status                 # Check system status"
+    echo "  ${YELLOW}ai${NC} models-list                    # List available models"
+    echo "  ${YELLOW}ai${NC} --help                         # Show all options"
     echo
-    echo -e "${GREEN}Features:${NC}"
-    echo "  ✅ Clean output (minimal logging)"
-    echo "  ✅ OpenRouter integration (multiple models)"
-    echo "  ✅ Async cleanup (no warnings)"
-    echo "  ✅ Smart defaults (cloud backend)"
+    echo -e "${BLUE}EXAMPLE USAGE:${NC}"
+    echo "  ${YELLOW}ai${NC} 'Explain quantum computing'"
+    echo "  ${YELLOW}ai${NC} 'Write Python code' --model claude-3-sonnet"
+    echo "  ${YELLOW}ai${NC} 'Question' --verbose           # Show metadata"
     echo
-    echo -e "${RED}Note: The 'ai' command won't work in this terminal session until you restart or source!${NC}"
+    echo -e "${GREEN}FEATURES:${NC}"
+    echo "  ✅ Unified interface for multiple AI providers"
+    echo "  ✅ OpenRouter integration (100+ models)"
+    echo "  ✅ Clean output with minimal logging"
+    echo "  ✅ Global command available from any directory"
+    echo "  ✅ Professional error handling and diagnostics"
+    echo
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}Ready for professional AI assistance!${NC}"
     
     # Offer to test in current session
     echo
