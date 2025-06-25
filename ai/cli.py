@@ -8,7 +8,7 @@ from rich.panel import Panel
 from rich.spinner import Spinner
 from rich.live import Live
 
-from .api import ask, stream
+from .api import ask as ask_api, stream
 from .utils import get_logger, console
 from .backends import LocalBackend, CloudBackend
 from .config import model_registry, get_config
@@ -22,8 +22,27 @@ app = typer.Typer(
 logger = get_logger(__name__)
 
 
+@app.callback()
+def main(ctx: typer.Context):
+    """
+    The Unified AI Library - Ask questions, get answers.
+    
+    Examples:
+        ai ask "What is Python?"
+        ai ask "Explain quantum computing" --stream
+        ai ask "Debug this code" --system "You are a code reviewer"
+        ai ask "Tell me a joke" --model llama2 --verbose
+        ai models list
+        ai backend status
+    """
+    # If no subcommand provided, show help
+    if ctx.invoked_subcommand is None:
+        console.print(ctx.get_help())
+        raise typer.Exit(0)
+
+
 @app.command()
-def main(
+def ask(
     prompt: str = typer.Argument(
         ..., 
         help="Your question or prompt"
@@ -68,10 +87,10 @@ def main(
     Ask the AI a question and get an answer.
     
     Examples:
-        ai "What is Python?"
-        ai "Explain quantum computing" --stream
-        ai "Debug this code" --system "You are a code reviewer"
-        ai "Tell me a joke" --model llama2 --verbose
+        ai ask "What is Python?"
+        ai ask "Explain quantum computing" --stream
+        ai ask "Debug this code" --system "You are a code reviewer"
+        ai ask "Tell me a joke" --model llama2 --verbose
     """
     # Read from stdin if prompt is "-"
     if prompt == "-":
@@ -115,7 +134,7 @@ def main(
         else:
             # Non-streaming mode with spinner
             with console.status("[bold green]Thinking...") as status:
-                response = ask(
+                response = ask_api(
                     prompt,
                     model=model,
                     system=system,
@@ -185,17 +204,19 @@ def models_list(
     
     # Get models from registry (includes cloud models)
     if show_cloud:
-        for model_info in model_registry.list_models():
-            all_models.append({
-                "name": model_info.name,
-                "backend": "cloud",
-                "provider": model_info.provider,
-                "aliases": model_info.aliases,
-                "speed": model_info.speed,
-                "quality": model_info.quality,
-                "capabilities": model_info.capabilities,
-                "context_length": model_info.context_length,
-            })
+        for model_name in model_registry.list_models():
+            model_info = model_registry.get_model(model_name)
+            if model_info:
+                all_models.append({
+                    "name": model_info.name,
+                    "backend": "cloud",
+                    "provider": model_info.provider,
+                    "aliases": model_info.aliases,
+                    "speed": model_info.speed,
+                    "quality": model_info.quality,
+                    "capabilities": model_info.capabilities,
+                    "context_length": model_info.context_length,
+                })
     
     # Get local models if available
     if show_local:
@@ -368,7 +389,7 @@ def models_pull(
         
         # Test the model
         console.print("\n[dim]Testing model...[/dim]")
-        test_response = ask(f"Say 'Hello' in one word", model=model_name, backend="local")
+        test_response = ask_api(f"Say 'Hello' in one word", model=model_name, backend="local")
         if not test_response.failed:
             console.print(f"[green]✓ Model is working![/green]")
         else:
@@ -425,18 +446,21 @@ def backend_status(
                 model_count = len(status_info.get("models", []))
                 local_details = f"{model_count} models available"
                 if verbose:
-                    base_url = status_info.get("base_url", config.ollama_base_url)
+                    cfg = get_config()
+                    base_url = status_info.get("base_url", cfg.ollama_base_url)
                     local_config = f"URL: {base_url}"
             else:
                 local_details = "Ollama not running"
                 if verbose:
-                    local_config = f"URL: {config.ollama_base_url}"
+                    cfg = get_config()
+                    local_config = f"URL: {cfg.ollama_base_url}"
         finally:
             loop.close()
     except Exception as e:
         local_details = f"Error: {str(e)}"
         if verbose:
-            local_config = f"URL: {config.ollama_base_url}"
+            cfg = get_config()
+            local_config = f"URL: {cfg.ollama_base_url}"
     
     if verbose:
         table.add_row("Local (Ollama)", local_status, local_details, local_config)
@@ -476,7 +500,7 @@ def backend_status(
             
             try:
                 # Quick test with minimal tokens
-                test_response = ask(
+                test_response = ask_api(
                     "Hi",
                     model=provider_info["test_model"],
                     backend="cloud",
@@ -559,5 +583,10 @@ def version():
     console.print(f"AI Library version {__version__}")
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for the CLI."""
     app()
+
+
+if __name__ == "__main__":
+    main()

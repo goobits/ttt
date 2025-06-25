@@ -21,6 +21,96 @@ except Exception as e:
     logger.debug(f"Plugin discovery failed: {e}")
 
 
+def _cleanup_aiohttp_sessions_sync(loop):
+    """Synchronously cleanup aiohttp sessions and tasks to prevent warnings."""
+    import gc
+    import warnings
+    import logging
+    
+    # Temporarily disable logging to prevent cleanup noise
+    logging.getLogger("asyncio").setLevel(logging.CRITICAL)
+    
+    # Suppress specific aiohttp cleanup warnings during our own cleanup
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*Task was destroyed.*")
+        warnings.filterwarnings("ignore", message=".*ClientSession.*")
+        warnings.filterwarnings("ignore", message=".*BaseConnector.*")
+        warnings.filterwarnings("ignore", message=".*_wait_for_close.*")
+        
+        # More aggressive cleanup approach
+        try:
+            # Get all pending tasks and cancel them
+            all_tasks = list(asyncio.all_tasks(loop))
+            for task in all_tasks:
+                if not task.done():
+                    task.cancel()
+            
+            # Force wait for cancellation with multiple attempts
+            if all_tasks:
+                for attempt in range(3):
+                    try:
+                        remaining_tasks = [t for t in all_tasks if not t.done()]
+                        if not remaining_tasks:
+                            break
+                        
+                        loop.run_until_complete(
+                            asyncio.wait_for(
+                                asyncio.gather(*remaining_tasks, return_exceptions=True),
+                                timeout=0.1
+                            )
+                        )
+                        break
+                    except (asyncio.TimeoutError, asyncio.CancelledError, RuntimeError):
+                        continue  # Try again with shorter timeout
+                        
+        except RuntimeError:
+            pass  # Event loop may be closing
+        
+        # Force cleanup of aiohttp objects using gc
+        try:
+            import aiohttp
+            
+            # Multiple garbage collection passes to ensure cleanup
+            for _ in range(3):
+                gc.collect()
+                
+                # Find and close any remaining aiohttp objects
+                for obj in gc.get_objects():
+                    try:
+                        if hasattr(obj, '__class__'):
+                            class_name = obj.__class__.__name__
+                            
+                            # Handle ClientSession cleanup
+                            if isinstance(obj, aiohttp.ClientSession) and not getattr(obj, '_closed', True):
+                                try:
+                                    # Try to close without creating new loop
+                                    if hasattr(obj, '_connector') and obj._connector:
+                                        obj._connector._close()
+                                    obj._closed = True
+                                except:
+                                    pass
+                            
+                            # Handle BaseConnector cleanup
+                            elif class_name == 'TCPConnector' or 'Connector' in class_name:
+                                if hasattr(obj, '_close') and not getattr(obj, '_closed', True):
+                                    try:
+                                        obj._close()
+                                    except:
+                                        pass
+                                        
+                    except:
+                        pass  # Ignore individual cleanup failures
+                        
+        except ImportError:
+            pass  # aiohttp not available
+        
+        # Final garbage collection
+        gc.collect()
+        
+    # Restore logging level
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
+
+
 def _get_default_backend() -> BaseBackend:
     """Get the default backend (local if available, otherwise cloud)."""
     try:
@@ -95,11 +185,11 @@ def ask(
         **kwargs
     )
     
-    # Run async function in sync context
+    # Run async function in sync context with proper cleanup
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        return loop.run_until_complete(
+        result = loop.run_until_complete(
             backend_instance.ask(
                 prompt,
                 model=resolved_model,
@@ -109,6 +199,11 @@ def ask(
                 **kwargs
             )
         )
+        
+        # Properly cleanup aiohttp sessions and tasks
+        _cleanup_aiohttp_sessions_sync(loop)
+        
+        return result
     finally:
         loop.close()
 
@@ -186,6 +281,9 @@ def stream(
                 yield chunk
             except StopAsyncIteration:
                 break
+        
+        # Cleanup after streaming is complete
+        _cleanup_aiohttp_sessions_sync(loop)
     finally:
         loop.close()
 
@@ -283,6 +381,9 @@ class ChatSession:
                     **params
                 )
             )
+            
+            # Cleanup aiohttp sessions
+            _cleanup_aiohttp_sessions_sync(loop)
         finally:
             loop.close()
         
@@ -353,6 +454,9 @@ class ChatSession:
                     yield chunk
                 except StopAsyncIteration:
                     break
+            
+            # Cleanup after streaming is complete
+            _cleanup_aiohttp_sessions_sync(loop)
         finally:
             loop.close()
         

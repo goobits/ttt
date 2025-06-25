@@ -99,6 +99,16 @@ class PersistentChatSession:
         import uuid
         return f"chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
     
+    @property
+    def session_id(self) -> str:
+        """Get the session ID."""
+        return self.metadata["session_id"]
+    
+    @property
+    def messages(self) -> List[Dict[str, Any]]:
+        """Get the message history (alias for history)."""
+        return self.history
+    
     def ask(
         self,
         prompt: Union[str, List[Union[str, ImageInput]]],
@@ -126,6 +136,18 @@ class PersistentChatSession:
             "content": prompt,
             "timestamp": timestamp
         })
+        
+        # Track multimodal usage
+        if isinstance(prompt, list):
+            # Count images in the prompt
+            image_count = sum(1 for item in prompt if isinstance(item, ImageInput))
+            if image_count > 0:
+                if "multimodal_messages" not in self.metadata:
+                    self.metadata["multimodal_messages"] = 0
+                if "total_images" not in self.metadata:
+                    self.metadata["total_images"] = 0
+                self.metadata["multimodal_messages"] += 1
+                self.metadata["total_images"] += image_count
         
         # Build messages for API
         messages = []
@@ -383,7 +405,7 @@ class PersistentChatSession:
         
         # Only pass backend if it's a valid backend name
         backend_name = session_data.get("backend")
-        if backend_name and backend_name in ["MagicMock", "Mock", "AsyncMock"]:
+        if backend_name and backend_name in ["MagicMock", "Mock", "AsyncMock", "mock"]:
             # Skip mock backends when loading
             backend_name = None
             
@@ -410,17 +432,9 @@ class PersistentChatSession:
         Returns:
             Dictionary with session statistics
         """
-        # Calculate duration in minutes
+        # Calculate duration in minutes (precise with fractions)
         duration_str = self._calculate_duration()
-        duration_minutes = 0
-        if duration_str and duration_str != "0m":
-            # Parse duration string like "5m", "1h 30m", etc.
-            parts = duration_str.split()
-            for part in parts:
-                if part.endswith('h'):
-                    duration_minutes += int(part[:-1]) * 60
-                elif part.endswith('m'):
-                    duration_minutes += int(part[:-1])
+        duration_minutes = self._calculate_duration_minutes()
                     
         return {
             "session_id": self.metadata["session_id"],
@@ -579,16 +593,39 @@ class PersistentChatSession:
                 end = datetime.fromisoformat(last_msg["timestamp"])
                 duration = end - start
                 
-                hours = duration.seconds // 3600
-                minutes = (duration.seconds % 3600) // 60
+                total_seconds = int(duration.total_seconds())
                 
                 if duration.days > 0:
+                    # Calculate hours and minutes within the current day
+                    remaining_seconds = total_seconds % (24 * 3600)
+                    hours = remaining_seconds // 3600
+                    minutes = (remaining_seconds % 3600) // 60
                     return f"{duration.days}d {hours}h {minutes}m"
-                elif hours > 0:
-                    return f"{hours}h {minutes}m"
                 else:
-                    return f"{minutes}m"
+                    hours = total_seconds // 3600
+                    minutes = (total_seconds % 3600) // 60
+                    if hours > 0:
+                        return f"{hours}h {minutes}m"
+                    else:
+                        return f"{minutes}m"
         except:
             pass
         
         return "Unknown"
+    
+    def _calculate_duration_minutes(self) -> float:
+        """Calculate session duration in minutes (with fractions)."""
+        if not self.history:
+            return 0.0
+        
+        try:
+            start = datetime.fromisoformat(self.metadata["created_at"])
+            last_msg = self.history[-1]
+            if "timestamp" in last_msg:
+                end = datetime.fromisoformat(last_msg["timestamp"])
+                duration = end - start
+                return duration.total_seconds() / 60.0
+        except:
+            pass
+        
+        return 0.0

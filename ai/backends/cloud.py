@@ -53,6 +53,7 @@ class CloudBackend(BaseBackend):
             "openai": "gpt-3.5-turbo",
             "anthropic": "claude-3-sonnet-20240229", 
             "google": "gemini-pro",
+            "openrouter": "openrouter/google/gemini-flash-1.5",
         }
         
         # Get default model from backend_config (handles merging)
@@ -86,6 +87,13 @@ class CloudBackend(BaseBackend):
             os.getenv("GOOGLE_API_KEY")
         ):
             os.environ["GOOGLE_API_KEY"] = google_key
+        
+        # OpenRouter
+        if openrouter_key := (
+            self.backend_config.get("openrouter_api_key") or 
+            os.getenv("OPENROUTER_API_KEY")
+        ):
+            os.environ["OPENROUTER_API_KEY"] = openrouter_key
     
     @property
     def name(self) -> str:
@@ -185,6 +193,9 @@ class CloudBackend(BaseBackend):
             response = await self.litellm.acompletion(**params)
             
             # Extract response content
+            if not response.choices:
+                raise EmptyResponseError(used_model, self.name)
+                
             content = response.choices[0].message.content or ""
             
             if not content:
@@ -221,12 +232,15 @@ class CloudBackend(BaseBackend):
                 }
             )
             
+        except EmptyResponseError:
+            # Re-raise EmptyResponseError as-is
+            raise
         except Exception as e:
             error_msg = str(e)
             logger.error(f"Cloud request failed: {error_msg}")
             
             # Check for specific error types
-            if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
+            if "api_key" in error_msg.lower() or "api key" in error_msg.lower() or "authentication" in error_msg.lower():
                 provider = self._get_provider_from_model(used_model)
                 env_vars = {
                     "openai": "OPENAI_API_KEY",
@@ -240,7 +254,7 @@ class CloudBackend(BaseBackend):
             elif "quota" in error_msg.lower():
                 provider = self._get_provider_from_model(used_model)
                 raise QuotaExceededError(provider)
-            elif "model_not_found" in error_msg.lower() or "does not exist" in error_msg.lower():
+            elif "model_not_found" in error_msg.lower() or "does not exist" in error_msg.lower() or "not found" in error_msg.lower():
                 raise ModelNotFoundError(used_model, self.name)
             elif "timeout" in error_msg.lower():
                 raise BackendTimeoutError(self.name, self.timeout)
@@ -338,7 +352,7 @@ class CloudBackend(BaseBackend):
             logger.error(f"Streaming request failed: {error_msg}")
             
             # Apply same error handling as ask method
-            if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
+            if "api_key" in error_msg.lower() or "api key" in error_msg.lower() or "authentication" in error_msg.lower():
                 provider = self._get_provider_from_model(used_model)
                 env_vars = {
                     "openai": "OPENAI_API_KEY",
@@ -352,7 +366,7 @@ class CloudBackend(BaseBackend):
             elif "quota" in error_msg.lower():
                 provider = self._get_provider_from_model(used_model)
                 raise QuotaExceededError(provider)
-            elif "model_not_found" in error_msg.lower() or "does not exist" in error_msg.lower():
+            elif "model_not_found" in error_msg.lower() or "does not exist" in error_msg.lower() or "not found" in error_msg.lower():
                 raise ModelNotFoundError(used_model, self.name)
             elif "timeout" in error_msg.lower():
                 raise BackendTimeoutError(self.name, self.timeout)

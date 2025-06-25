@@ -99,13 +99,10 @@ class LocalBackend(BaseBackend):
             # Check if any images are in the prompt
             has_images = any(isinstance(item, ImageInput) for item in prompt)
             if has_images:
-                # Return a failed response instead of raising
-                return AIResponse(
-                    "",
-                    model=model or self.default_model,
-                    backend=self.name,
-                    error="Local backend (Ollama) does not support image inputs yet. Please use a cloud backend with vision capabilities.",
-                    time_taken=0.0
+                # Raise MultiModalError for image inputs
+                from ..exceptions import MultiModalError
+                raise MultiModalError(
+                    "Local backend (Ollama) does not support image inputs yet. Please use a cloud backend with vision capabilities."
                 )
             # Extract text from the list
             prompt = " ".join(item for item in prompt if isinstance(item, str))
@@ -214,8 +211,11 @@ class LocalBackend(BaseBackend):
             # Check if any images are in the prompt
             has_images = any(isinstance(item, ImageInput) for item in prompt)
             if has_images:
-                yield "Error: Local backend (Ollama) does not support image inputs yet. Please use a cloud backend with vision capabilities."
-                return
+                # Raise MultiModalError for image inputs
+                from ..exceptions import MultiModalError
+                raise MultiModalError(
+                    "Local backend (Ollama) does not support image inputs yet. Please use a cloud backend with vision capabilities."
+                )
             # Extract text from the list
             prompt = " ".join(item for item in prompt if isinstance(item, str))
         
