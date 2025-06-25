@@ -120,7 +120,7 @@ class TestConfigModel:
         config = ConfigModel()
         
         assert config.ollama_base_url == "http://localhost:11434"
-        assert config.default_backend == "auto"
+        assert config.default_backend == "cloud"
         assert config.timeout == 30
         assert config.max_retries == 3
         assert config.enable_fallbacks is True
