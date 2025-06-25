@@ -75,6 +75,7 @@ class LocalBackend(BaseBackend):
         system: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List] = None,
         **kwargs
     ) -> AIResponse:
         """
@@ -188,6 +189,7 @@ class LocalBackend(BaseBackend):
         system: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List] = None,
         **kwargs
     ) -> AsyncIterator[str]:
         """

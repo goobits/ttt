@@ -1,6 +1,7 @@
 """Cloud backend implementation using LiteLLM for multiple providers."""
 
 import time
+import json
 from typing import AsyncIterator, Dict, Any, Optional, List, Union
 import os
 from ..models import AIResponse, ImageInput
@@ -120,6 +121,7 @@ class CloudBackend(BaseBackend):
         system: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List] = None,
         **kwargs
     ) -> AIResponse:
         """
@@ -183,6 +185,25 @@ class CloudBackend(BaseBackend):
         if max_tokens is not None:
             params["max_tokens"] = max_tokens
         
+        # Add tools if provided
+        tool_definitions = []
+        tool_result = None
+        if tools:
+            # Import tools here to avoid circular imports
+            from ..tools import resolve_tools
+            
+            # Resolve tools to ToolDefinition objects
+            resolved_tools = resolve_tools(tools)
+            
+            # Convert to LiteLLM format
+            tool_definitions = []
+            for tool_def in resolved_tools:
+                tool_definitions.append(tool_def.to_openai_schema())
+            
+            if tool_definitions:
+                params["tools"] = tool_definitions
+                params["tool_choice"] = "auto"  # Let the model decide when to use tools
+        
         # Add any additional parameters
         params.update(kwargs)
         
@@ -197,6 +218,47 @@ class CloudBackend(BaseBackend):
                 raise EmptyResponseError(used_model, self.name)
                 
             content = response.choices[0].message.content or ""
+            
+            # Handle tool calls if present
+            message = response.choices[0].message
+            if hasattr(message, 'tool_calls') and message.tool_calls:
+                # Import tool execution here to avoid circular imports
+                from ..tools import execute_multiple_async
+                
+                # Build tool calls data
+                tool_calls_data = []
+                tool_def_map = {td['function']['name']: td for td in resolved_tools} if tools else {}
+                
+                for tool_call in message.tool_calls:
+                    if tool_call.type == 'function':
+                        func_call = tool_call.function
+                        try:
+                            arguments = json.loads(func_call.arguments) if func_call.arguments else {}
+                        except json.JSONDecodeError:
+                            arguments = {}
+                        
+                        tool_calls_data.append({
+                            'id': tool_call.id,
+                            'name': func_call.name,
+                            'arguments': arguments
+                        })
+                
+                # Execute tool calls
+                if tool_calls_data and tools:
+                    # Create tool definition map
+                    tool_def_dict = {td.name: td for td in resolved_tools}
+                    tool_result = await execute_multiple_async(tool_calls_data, tool_def_dict)
+                    
+                    # Update content with tool results if content is empty
+                    if not content:
+                        # Generate a response based on tool results
+                        results_summary = []
+                        for call in tool_result.calls:
+                            if call.succeeded:
+                                results_summary.append(f"{call.name}: {call.result}")
+                            else:
+                                results_summary.append(f"{call.name}: Error - {call.error}")
+                        content = "Tool execution completed:\n" + "\n".join(results_summary)
             
             if not content:
                 raise EmptyResponseError(used_model, self.name)
@@ -225,6 +287,7 @@ class CloudBackend(BaseBackend):
                 tokens_in=tokens_in,
                 tokens_out=tokens_out,
                 time_taken=time_taken,
+                tool_result=tool_result,
                 cost=cost,
                 metadata={
                     "provider": self._get_provider_from_model(used_model),
@@ -269,6 +332,7 @@ class CloudBackend(BaseBackend):
         system: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List] = None,
         **kwargs
     ) -> AsyncIterator[str]:
         """
@@ -331,6 +395,23 @@ class CloudBackend(BaseBackend):
             params["temperature"] = temperature
         if max_tokens is not None:
             params["max_tokens"] = max_tokens
+        
+        # Add tools if provided (same as ask method)
+        if tools:
+            # Import tools here to avoid circular imports
+            from ..tools import resolve_tools
+            
+            # Resolve tools to ToolDefinition objects
+            resolved_tools = resolve_tools(tools)
+            
+            # Convert to LiteLLM format
+            tool_definitions = []
+            for tool_def in resolved_tools:
+                tool_definitions.append(tool_def.to_openai_schema())
+            
+            if tool_definitions:
+                params["tools"] = tool_definitions
+                params["tool_choice"] = "auto"
         
         # Add any additional parameters
         params.update(kwargs)

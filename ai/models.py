@@ -1,11 +1,14 @@
 """Core data models for the AI library."""
 
-from typing import Optional, Dict, Any, Union, List
+from typing import Optional, Dict, Any, Union, List, TYPE_CHECKING
 from datetime import datetime
 from dataclasses import dataclass
 from pydantic import BaseModel, Field, ConfigDict
 from pathlib import Path
 import base64
+
+if TYPE_CHECKING:
+    from .tools.base import ToolResult
 
 
 class AIResponse(str):
@@ -34,6 +37,7 @@ class AIResponse(str):
         error: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         timestamp: Optional[datetime] = None,
+        tool_result: Optional["ToolResult"] = None,
     ):
         """
         Initialize AIResponse.
@@ -49,6 +53,7 @@ class AIResponse(str):
             error: Error message if request failed
             metadata: Additional metadata
             timestamp: When the response was generated
+            tool_result: Result of any tool calls made during this response
         """
         super().__init__()
         self.model = model
@@ -60,6 +65,7 @@ class AIResponse(str):
         self.error = error
         self.metadata = metadata or {}
         self.timestamp = timestamp or datetime.now()
+        self.tool_result = tool_result
     
     @property
     def failed(self) -> bool:
@@ -75,6 +81,25 @@ class AIResponse(str):
     def time(self) -> Optional[float]:
         """Alias for time_taken."""
         return self.time_taken
+    
+    @property
+    def tools_called(self) -> bool:
+        """True if tools were called during this response."""
+        return self.tool_result is not None and len(self.tool_result.calls) > 0
+    
+    @property
+    def tool_calls(self) -> List[Any]:
+        """Get list of tool calls made during this response."""
+        if self.tool_result is None:
+            return []
+        return self.tool_result.calls
+    
+    @property
+    def tools_succeeded(self) -> bool:
+        """True if all tool calls succeeded."""
+        if not self.tools_called:
+            return True  # No tools called means no tool failures
+        return self.tool_result.succeeded
     
     def __repr__(self) -> str:
         """String representation showing metadata."""

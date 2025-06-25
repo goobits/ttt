@@ -43,6 +43,7 @@ class BaseBackend(ABC):
         system: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List] = None,
         **kwargs
     ) -> AIResponse:
         """
@@ -54,6 +55,7 @@ class BaseBackend(ABC):
             system: System prompt (optional)
             temperature: Sampling temperature (optional)
             max_tokens: Maximum tokens to generate (optional)
+            tools: List of functions/tools the AI can call (optional)
             **kwargs: Additional backend-specific parameters
             
         Returns:
@@ -70,6 +72,7 @@ class BaseBackend(ABC):
         system: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List] = None,
         **kwargs
     ) -> AsyncIterator[str]:
         """
@@ -81,6 +84,7 @@ class BaseBackend(ABC):
             system: System prompt (optional)
             temperature: Sampling temperature (optional)
             max_tokens: Maximum tokens to generate (optional)
+            tools: List of functions/tools the AI can call (optional)
             **kwargs: Additional backend-specific parameters
             
         Yields:

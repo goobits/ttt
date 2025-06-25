@@ -133,6 +133,7 @@ def ask(
     backend: Optional[Union[str, BaseBackend]] = None,
     fast: bool = False,
     quality: bool = False,
+    tools: Optional[List] = None,
     **kwargs
 ) -> AIResponse:
     """
@@ -160,6 +161,12 @@ def ask(
         ...     ImageInput("image1.png"),
         ...     ImageInput("image2.png")
         ... ], backend="cloud")
+        
+        >>> # With tools
+        >>> def get_weather(city: str) -> str:
+        ...     return f"Weather in {city}: 72°F, sunny"
+        >>> response = ask("What's the weather in NYC?", tools=[get_weather])
+        >>> print(f"Called {len(response.tool_calls)} tools")
     
     Args:
         prompt: Your question - can be a string or list of content (text/images)
@@ -170,6 +177,7 @@ def ask(
         backend: Backend to use, "local", "cloud", "auto", or Backend instance (optional)
         fast: Prefer speed over quality (optional)
         quality: Prefer quality over speed (optional)
+        tools: List of functions/tools the AI can call (optional)
         **kwargs: Additional backend-specific parameters
         
     Returns:
@@ -196,6 +204,7 @@ def ask(
                 system=system,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                tools=tools,
                 **kwargs
             )
         )
@@ -218,6 +227,7 @@ def stream(
     backend: Optional[Union[str, BaseBackend]] = None,
     fast: bool = False,
     quality: bool = False,
+    tools: Optional[List] = None,
     **kwargs
 ) -> Iterator[str]:
     """
@@ -243,6 +253,7 @@ def stream(
         backend: Backend to use, "local", "cloud", "auto", or Backend instance (optional)
         fast: Prefer speed over quality (optional)
         quality: Prefer quality over speed (optional)
+        tools: List of functions/tools the AI can call (optional)
         **kwargs: Additional backend-specific parameters
         
     Yields:
@@ -266,6 +277,7 @@ def stream(
             system=system,
             temperature=temperature,
             max_tokens=max_tokens,
+            tools=tools,
             **kwargs
         ):
             yield chunk
