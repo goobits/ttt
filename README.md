@@ -5,10 +5,11 @@ A professional, unified command-line interface for interacting with multiple AI 
 ## Features
 
 - **🎯 Simple CLI**: Just `ai "your question"` - works instantly
+- **🔧 Function Calling**: AI can call your Python functions and tools
 - **🌐 Multi-Provider**: Supports OpenRouter, OpenAI, Anthropic, Google APIs
 - **🤖 Local Support**: Optional Ollama integration for local models
 - **⚡ Fast Setup**: One-command installation with automatic configuration
-- **🔧 Robust**: Built-in error handling, retries, and fallbacks
+- **🛡️ Robust**: Built-in error handling, retries, and fallbacks
 - **🧹 Clean Output**: Minimal logging for production use
 - **📊 Status Monitoring**: Backend health checks and model listing
 
@@ -52,6 +53,63 @@ ai backend-status
 
 # List available models
 ai models-list
+```
+
+### Tools and Function Calling
+
+```python
+# Define tools using the @tool decorator
+from ai import ask
+from ai.tools import tool
+
+@tool
+def get_weather(city: str, units: str = "fahrenheit") -> str:
+    """Get weather information for a city.
+    
+    Args:
+        city: Name of the city
+        units: Temperature units (fahrenheit or celsius)
+    """
+    return f"Weather in {city}: 72°{units[0].upper()}, sunny"
+
+@tool
+def calculate(x: int, y: int, operation: str = "add") -> int:
+    """Perform a mathematical calculation.
+    
+    Args:
+        x: First number
+        y: Second number
+        operation: Operation to perform (add, subtract, multiply, divide)
+    """
+    if operation == "add":
+        return x + y
+    elif operation == "subtract":
+        return x - y
+    elif operation == "multiply":
+        return x * y
+    elif operation == "divide":
+        return x // y if y != 0 else 0
+    return 0
+
+# Use tools with AI
+response = ask("What's the weather in NYC?", tools=[get_weather])
+print(f"Response: {response}")
+print(f"Tools called: {len(response.tool_calls)}")
+
+# Multiple tools
+response = ask(
+    "Calculate 15 + 25 and tell me the weather in Paris", 
+    tools=[calculate, get_weather]
+)
+
+# Check tool usage
+if response.tools_called:
+    print("Tools were called:")
+    for call in response.tool_calls:
+        if call.succeeded:
+            print(f"  {call.name}: {call.result}")
+        else:
+            print(f"  {call.name}: Error - {call.error}")
 ```
 
 ## Command Reference
@@ -181,6 +239,11 @@ agents/
 │   ├── backends/          # Backend implementations
 │   │   ├── cloud.py       # Cloud provider backend
 │   │   └── local.py       # Local Ollama backend
+│   ├── tools/             # Function calling system
+│   │   ├── __init__.py    # Tool decorator and exports
+│   │   ├── base.py        # Core tool classes
+│   │   ├── registry.py    # Tool registration system
+│   │   └── execution.py   # Tool execution engine
 │   └── exceptions.py      # Custom exceptions
 ├── ai_wrapper.py          # CLI entry point wrapper
 ├── setup.sh               # Installation script
@@ -192,6 +255,7 @@ agents/
 
 **Core Components:**
 - **API Layer** (`ai/api.py`): Main interface with `ask()` function
+- **Tool System** (`ai/tools/`): Function calling with automatic schema generation
 - **Backend System**: Pluggable backends for different AI providers
 - **CLI Interface**: Professional command-line tool with rich features
 - **Session Management**: Support for persistent chat sessions
@@ -200,6 +264,7 @@ agents/
 **Design Principles:**
 - **Unified Interface**: Single API for all providers
 - **Provider Abstraction**: Backend-agnostic usage
+- **Function Calling**: Type-safe tool integration with automatic schema generation
 - **Graceful Degradation**: Fallbacks when providers fail
 - **Professional Output**: Clean, parseable responses
 - **Configuration Flexibility**: Environment variables, config files

@@ -37,6 +37,7 @@ class MockLiteLLM:
     class MockMessage:
         def __init__(self, content):
             self.content = content
+            self.tool_calls = None
             
     class MockUsage:
         def __init__(self, prompt_tokens=10, completion_tokens=20, total_tokens=30):

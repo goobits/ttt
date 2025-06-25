@@ -140,7 +140,7 @@ class TestCloudBackendMultiModal:
         
         # Mock litellm
         mock_response = Mock()
-        mock_response.choices = [Mock(message=Mock(content="A beautiful sunset"))]
+        mock_response.choices = [Mock(message=Mock(content="A beautiful sunset", tool_calls=None))]
         mock_response.usage = Mock(prompt_tokens=100, completion_tokens=20)
         
         with patch.object(backend, 'litellm') as mock_litellm:
@@ -185,7 +185,7 @@ class TestCloudBackendMultiModal:
         
         # Mock litellm
         mock_response = Mock()
-        mock_response.choices = [Mock(message=Mock(content="Response"))]
+        mock_response.choices = [Mock(message=Mock(content="Response", tool_calls=None))]
         mock_response.usage = Mock(prompt_tokens=100, completion_tokens=20)
         
         with patch.object(backend, 'litellm') as mock_litellm:

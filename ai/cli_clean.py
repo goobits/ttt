@@ -96,12 +96,12 @@ def main():
         return
     
     if args[0] == 'backend-status':
-        from .cli_v2 import show_backend_status
+        from .cli import show_backend_status
         clean_execute(show_backend_status)
         return
     
     if args[0] == 'models-list':
-        from .cli_v2 import show_models_list
+        from .cli import show_models_list
         clean_execute(show_models_list)
         return
     

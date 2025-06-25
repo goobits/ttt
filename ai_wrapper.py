@@ -37,7 +37,7 @@ def filter_output(line):
 def main():
     """Run the AI CLI with filtered output."""
     # Run the actual CLI
-    cmd = [sys.executable, "-m", "ai.cli_v2"] + sys.argv[1:]
+    cmd = [sys.executable, "-m", "ai.cli"] + sys.argv[1:]
     
     try:
         process = subprocess.Popen(

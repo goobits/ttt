@@ -608,8 +608,8 @@ class PersistentChatSession:
                         return f"{hours}h {minutes}m"
                     else:
                         return f"{minutes}m"
-        except:
-            pass
+        except (ValueError, KeyError, AttributeError) as e:
+            logger.debug(f"Could not calculate session duration: {e}")
         
         return "Unknown"
     
@@ -625,7 +625,7 @@ class PersistentChatSession:
                 end = datetime.fromisoformat(last_msg["timestamp"])
                 duration = end - start
                 return duration.total_seconds() / 60.0
-        except:
-            pass
+        except (ValueError, KeyError, AttributeError) as e:
+            logger.debug(f"Could not calculate session duration in minutes: {e}")
         
         return 0.0

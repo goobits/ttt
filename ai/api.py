@@ -87,18 +87,18 @@ def _cleanup_aiohttp_sessions_sync(loop):
                                     if hasattr(obj, '_connector') and obj._connector:
                                         obj._connector._close()
                                     obj._closed = True
-                                except:
-                                    pass
+                                except (AttributeError, RuntimeError):
+                                    pass  # Expected during cleanup
                             
                             # Handle BaseConnector cleanup
                             elif class_name == 'TCPConnector' or 'Connector' in class_name:
                                 if hasattr(obj, '_close') and not getattr(obj, '_closed', True):
                                     try:
                                         obj._close()
-                                    except:
-                                        pass
+                                    except (AttributeError, RuntimeError):
+                                        pass  # Expected during cleanup
                                         
-                    except:
+                    except (TypeError, AttributeError, RuntimeError):
                         pass  # Ignore individual cleanup failures
                         
         except ImportError:
@@ -117,8 +117,8 @@ def _get_default_backend() -> BaseBackend:
         backend = LocalBackend()
         if backend.is_available:
             return backend
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Local backend not available: {e}")
     
     return CloudBackend()
 

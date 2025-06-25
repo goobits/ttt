@@ -227,7 +227,6 @@ class CloudBackend(BaseBackend):
                 
                 # Build tool calls data
                 tool_calls_data = []
-                tool_def_map = {td['function']['name']: td for td in resolved_tools} if tools else {}
                 
                 for tool_call in message.tool_calls:
                     if tool_call.type == 'function':

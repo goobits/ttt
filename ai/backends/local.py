@@ -64,7 +64,8 @@ class LocalBackend(BaseBackend):
                 return loop.run_until_complete(check())
             finally:
                 loop.close()
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Ollama availability check failed: {e}")
             return False
     
     async def ask(
