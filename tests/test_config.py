@@ -1,0 +1,296 @@
+"""Tests for the configuration system."""
+
+import pytest
+import os
+import tempfile
+from pathlib import Path
+import yaml
+from ai.config import load_config, save_config, configure, get_config, model_registry
+from ai.models import ConfigModel, ModelInfo
+
+
+class TestConfigModel:
+    """Test the ConfigModel class."""
+    
+    def test_default_values(self):
+        """Test default configuration values."""
+        config = ConfigModel()
+        
+        assert config.ollama_base_url == "http://localhost:11434"
+        assert config.default_backend == "auto"
+        assert config.default_model is None
+        assert config.timeout == 30
+        assert config.max_retries == 3
+        assert config.enable_fallbacks is True
+        assert config.fallback_order == ["cloud", "local"]
+    
+    def test_environment_override(self, monkeypatch):
+        """Test that environment variables override defaults."""
+        monkeypatch.setenv("OLLAMA_BASE_URL", "http://custom:8080")
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+        
+        from ai.config import load_config
+        config = load_config()
+        
+        assert config.ollama_base_url == "http://custom:8080"
+        assert config.openai_api_key == "test-key"
+    
+    def test_custom_values(self):
+        """Test setting custom values."""
+        config = ConfigModel(
+            default_backend="local",
+            timeout=60,
+            model_aliases={"custom": "my-model"}
+        )
+        
+        assert config.default_backend == "local"
+        assert config.timeout == 60
+        assert config.model_aliases["custom"] == "my-model"
+
+
+class TestConfigLoading:
+    """Test configuration loading from files."""
+    
+    def test_load_yaml_config(self, tmp_path):
+        """Test loading configuration from YAML file."""
+        config_file = tmp_path / "test_config.yaml"
+        config_data = {
+            "default_backend": "cloud",
+            "timeout": 45,
+            "model_aliases": {
+                "test": "gpt-3.5-turbo"
+            }
+        }
+        
+        with open(config_file, "w") as f:
+            yaml.dump(config_data, f)
+        
+        config = load_config(config_file)
+        
+        assert config.default_backend == "cloud"
+        assert config.timeout == 45
+        assert config.model_aliases["test"] == "gpt-3.5-turbo"
+    
+    def test_load_config_with_models(self, tmp_path):
+        """Test loading configuration with model definitions."""
+        config_file = tmp_path / "test_config.yaml"
+        config_data = {
+            "default_backend": "cloud",
+            "models": [
+                {
+                    "name": "test-model",
+                    "provider": "openai",
+                    "provider_name": "gpt-test",
+                    "aliases": ["test", "custom"],
+                    "speed": "fast",
+                    "quality": "medium"
+                }
+            ]
+        }
+        
+        with open(config_file, "w") as f:
+            yaml.dump(config_data, f)
+        
+        # Clear registry for clean test
+        model_registry.models.clear()
+        model_registry.aliases.clear()
+        model_registry._load_default_models()
+        
+        config = load_config(config_file)
+        
+        # Check that model was added to registry
+        model = model_registry.get_model("test-model")
+        assert model is not None
+        assert model.provider == "openai"
+        assert model.provider_name == "gpt-test"
+        assert "test" in model.aliases
+        assert "custom" in model.aliases
+    
+    def test_config_precedence(self, tmp_path, monkeypatch):
+        """Test configuration precedence (env > file > defaults)."""
+        # Set environment variable
+        monkeypatch.setenv("TIMEOUT", "90")
+        
+        # Create config file
+        config_file = tmp_path / "test_config.yaml"
+        config_data = {
+            "timeout": 60,
+            "default_backend": "local"
+        }
+        
+        with open(config_file, "w") as f:
+            yaml.dump(config_data, f)
+        
+        config = load_config(config_file)
+        
+        # Environment variable is not used for timeout (only specific env vars)
+        assert config.timeout == 60  # From file
+        assert config.default_backend == "local"  # From file
+    
+    def test_missing_config_file(self):
+        """Test loading with non-existent config file."""
+        config = load_config("non_existent_file.yaml")
+        
+        # Should return defaults
+        assert config.default_backend == "auto"
+        assert config.timeout == 30
+
+
+class TestConfigSaving:
+    """Test configuration saving."""
+    
+    def test_save_config(self, tmp_path):
+        """Test saving configuration to file."""
+        config_file = tmp_path / "saved_config.yaml"
+        
+        config = ConfigModel(
+            default_backend="cloud",
+            timeout=45,
+            model_aliases={"saved": "gpt-4"}
+        )
+        
+        save_config(config, config_file)
+        
+        # Read back and verify
+        with open(config_file) as f:
+            saved_data = yaml.safe_load(f)
+        
+        assert saved_data["default_backend"] == "cloud"
+        assert saved_data["timeout"] == 45
+        assert saved_data["model_aliases"]["saved"] == "gpt-4"
+    
+    def test_save_config_excludes_secrets(self, tmp_path):
+        """Test that API keys are not saved."""
+        config_file = tmp_path / "saved_config.yaml"
+        
+        config = ConfigModel(
+            default_backend="cloud",
+            openai_api_key="secret-key",
+            anthropic_api_key="another-secret"
+        )
+        
+        save_config(config, config_file)
+        
+        # Read back and verify
+        with open(config_file) as f:
+            saved_data = yaml.safe_load(f)
+        
+        assert "openai_api_key" not in saved_data
+        assert "anthropic_api_key" not in saved_data
+        assert "google_api_key" not in saved_data
+
+
+class TestProgrammaticConfiguration:
+    """Test the configure() function."""
+    
+    def test_configure_updates_global_config(self):
+        """Test that configure() updates the global configuration."""
+        # Reset global config
+        import ai.config
+        ai.config._config = None
+        
+        configure(
+            default_backend="local",
+            timeout=120,
+            custom_option="value"
+        )
+        
+        config = get_config()
+        assert config.default_backend == "local"
+        assert config.timeout == 120
+    
+    def test_configure_partial_update(self):
+        """Test that configure() does partial updates."""
+        # Reset global config
+        import ai.config
+        ai.config._config = None
+        
+        # First configuration
+        configure(default_backend="cloud", timeout=60)
+        
+        # Second configuration (partial update)
+        configure(timeout=90)
+        
+        config = get_config()
+        assert config.default_backend == "cloud"  # Unchanged
+        assert config.timeout == 90  # Updated
+
+
+class TestModelRegistry:
+    """Test the model registry functionality."""
+    
+    def test_add_and_get_model(self):
+        """Test adding and retrieving models."""
+        model = ModelInfo(
+            name="test-registry-model",
+            provider="test",
+            provider_name="test-model",
+            aliases=["reg-test"],
+            speed="fast",
+            quality="medium"
+        )
+        
+        model_registry.add_model(model)
+        
+        # Get by name
+        retrieved = model_registry.get_model("test-registry-model")
+        assert retrieved is not None
+        assert retrieved.provider == "test"
+        
+        # Get by alias
+        retrieved_by_alias = model_registry.get_model("reg-test")
+        assert retrieved_by_alias is not None
+        assert retrieved_by_alias.name == "test-registry-model"
+    
+    def test_resolve_model_name(self):
+        """Test model name resolution."""
+        model = ModelInfo(
+            name="resolve-test",
+            provider="test",
+            provider_name="test",
+            aliases=["resolve-alias"]
+        )
+        
+        model_registry.add_model(model)
+        
+        # Resolve direct name
+        assert model_registry.resolve_model_name("resolve-test") == "resolve-test"
+        
+        # Resolve alias
+        assert model_registry.resolve_model_name("resolve-alias") == "resolve-test"
+        
+        # Unknown returns as-is
+        assert model_registry.resolve_model_name("unknown") == "unknown"
+    
+    def test_list_models(self):
+        """Test listing models."""
+        # Add a test model
+        model = ModelInfo(
+            name="list-test",
+            provider="test-provider",
+            provider_name="test"
+        )
+        model_registry.add_model(model)
+        
+        # List all models
+        all_models = model_registry.list_models()
+        assert "list-test" in all_models
+        
+        # List by provider
+        test_models = model_registry.list_models(provider="test-provider")
+        assert "list-test" in test_models
+        
+        # Non-existent provider
+        empty = model_registry.list_models(provider="non-existent")
+        assert "list-test" not in empty
+    
+    def test_default_models_loaded(self):
+        """Test that default models are loaded."""
+        # Check some default models exist
+        gpt35 = model_registry.get_model("gpt-3.5-turbo")
+        assert gpt35 is not None
+        assert gpt35.provider == "openai"
+        
+        # Check aliases work
+        fast_model = model_registry.get_model("fast")
+        assert fast_model is not None

@@ -1,0 +1,213 @@
+"""Core data models for the AI library."""
+
+from typing import Optional, Dict, Any, Union, List
+from datetime import datetime
+from dataclasses import dataclass
+from pydantic import BaseModel, Field, ConfigDict
+from pathlib import Path
+import base64
+
+
+class AIResponse(str):
+    """
+    AI response that behaves like a string but contains rich metadata.
+    
+    This class extends str so it can be used anywhere a string is expected,
+    while providing additional metadata about the AI response.
+    """
+    
+    def __new__(cls, content: str, **kwargs):
+        """Create new AIResponse instance."""
+        obj = str.__new__(cls, content)
+        return obj
+    
+    def __init__(
+        self,
+        content: str,
+        *,
+        model: Optional[str] = None,
+        backend: Optional[str] = None,
+        tokens_in: Optional[int] = None,
+        tokens_out: Optional[int] = None,
+        time_taken: Optional[float] = None,
+        cost: Optional[float] = None,
+        error: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[datetime] = None,
+    ):
+        """
+        Initialize AIResponse.
+        
+        Args:
+            content: The response text
+            model: Model ID that generated the response
+            backend: Backend that handled the request (local/cloud)
+            tokens_in: Input tokens used
+            tokens_out: Output tokens generated
+            time_taken: Time taken in seconds
+            cost: Estimated cost in USD
+            error: Error message if request failed
+            metadata: Additional metadata
+            timestamp: When the response was generated
+        """
+        super().__init__()
+        self.model = model
+        self.backend = backend
+        self.tokens_in = tokens_in
+        self.tokens_out = tokens_out
+        self.time_taken = time_taken
+        self.cost = cost
+        self.error = error
+        self.metadata = metadata or {}
+        self.timestamp = timestamp or datetime.now()
+    
+    @property
+    def failed(self) -> bool:
+        """True if the request failed."""
+        return self.error is not None
+    
+    @property
+    def succeeded(self) -> bool:
+        """True if the request succeeded."""
+        return self.error is None
+    
+    @property
+    def time(self) -> Optional[float]:
+        """Alias for time_taken."""
+        return self.time_taken
+    
+    def __repr__(self) -> str:
+        """String representation showing metadata."""
+        return (
+            f"AIResponse('{str(self)[:50]}...', "
+            f"model='{self.model}', "
+            f"backend='{self.backend}', "
+            f"time={self.time_taken:.2f}s)"
+        )
+
+
+@dataclass
+class ModelInfo:
+    """Information about an available AI model."""
+    
+    name: str
+    provider: str
+    provider_name: str
+    aliases: list[str] = None
+    speed: str = "medium"  # fast, medium, slow
+    quality: str = "medium"  # low, medium, high
+    capabilities: list[str] = None
+    context_length: Optional[int] = None
+    cost_per_token: Optional[float] = None
+    
+    def __post_init__(self):
+        if self.aliases is None:
+            self.aliases = []
+        if self.capabilities is None:
+            self.capabilities = []
+
+
+class ConfigModel(BaseModel):
+    """Configuration model for the AI library."""
+    
+    # API Keys
+    openai_api_key: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
+    google_api_key: Optional[str] = None
+    
+    # Ollama Configuration
+    ollama_base_url: str = "http://localhost:11434"
+    
+    # Default Settings
+    default_backend: str = "auto"
+    default_model: Optional[str] = None
+    timeout: int = 30
+    max_retries: int = 3
+    
+    # Model Aliases
+    model_aliases: Dict[str, str] = Field(default_factory=lambda: {
+        "fast": "gpt-3.5-turbo",
+        "best": "gpt-4",
+        "cheap": "gpt-3.5-turbo",
+        "coding": "claude-3-sonnet-20240229",
+        "local": "llama2"
+    })
+    
+    # Fallback Configuration
+    enable_fallbacks: bool = True
+    fallback_order: list[str] = Field(default_factory=lambda: ["cloud", "local"])
+    
+    model_config = ConfigDict(
+        case_sensitive=False
+    )
+
+
+class ImageInput:
+    """Represents an image input for multi-modal AI models."""
+    
+    def __init__(self, source: Union[str, Path, bytes], mime_type: Optional[str] = None):
+        """
+        Initialize ImageInput.
+        
+        Args:
+            source: Image source - can be file path, URL, or raw bytes
+            mime_type: MIME type (e.g., 'image/jpeg', 'image/png')
+        """
+        self.source = source
+        self.mime_type = mime_type
+        self._base64_cache = None
+    
+    @property
+    def is_path(self) -> bool:
+        """Check if source is a file path."""
+        return isinstance(self.source, (str, Path)) and Path(self.source).exists()
+    
+    @property
+    def is_url(self) -> bool:
+        """Check if source is a URL."""
+        return isinstance(self.source, str) and (
+            self.source.startswith('http://') or self.source.startswith('https://')
+        )
+    
+    @property
+    def is_bytes(self) -> bool:
+        """Check if source is raw bytes."""
+        return isinstance(self.source, bytes)
+    
+    def to_base64(self) -> str:
+        """Convert image to base64 string."""
+        if self._base64_cache:
+            return self._base64_cache
+            
+        if self.is_bytes:
+            self._base64_cache = base64.b64encode(self.source).decode('utf-8')
+        elif self.is_path:
+            with open(self.source, 'rb') as f:
+                self._base64_cache = base64.b64encode(f.read()).decode('utf-8')
+        elif self.is_url:
+            # URL images typically sent as-is to APIs
+            return self.source
+        else:
+            raise ValueError("Invalid image source type")
+            
+        return self._base64_cache
+    
+    def get_mime_type(self) -> str:
+        """Get or infer MIME type."""
+        if self.mime_type:
+            return self.mime_type
+            
+        if self.is_path:
+            path = Path(self.source)
+            ext = path.suffix.lower()
+            mime_map = {
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.png': 'image/png',
+                '.gif': 'image/gif',
+                '.webp': 'image/webp',
+                '.bmp': 'image/bmp'
+            }
+            return mime_map.get(ext, 'image/jpeg')
+            
+        return 'image/jpeg'  # Default
