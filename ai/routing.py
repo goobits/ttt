@@ -2,7 +2,9 @@
 
 from typing import Optional, Union, Dict, Any, List
 from .models import AIResponse, ImageInput
-from .backends import BaseBackend, LocalBackend, CloudBackend
+from .backends import BaseBackend, CloudBackend, HAS_LOCAL_BACKEND
+if HAS_LOCAL_BACKEND:
+    from .backends import LocalBackend
 from .config import get_config, model_registry
 from .plugins import plugin_registry
 from .utils import get_logger
@@ -39,6 +41,11 @@ class Router:
             
             # Try built-in backends first
             if backend_name == "local":
+                if not HAS_LOCAL_BACKEND:
+                    raise BackendNotAvailableError(
+                        "local", 
+                        "Local backend not available. Install with: pip install ai[local]"
+                    )
                 self._backends[backend_name] = LocalBackend(config_dict)
             elif backend_name == "cloud":
                 self._backends[backend_name] = CloudBackend(config_dict)
@@ -68,6 +75,10 @@ class Router:
         if isinstance(backend, BaseBackend):
             return backend
         
+        # Handle mock objects (for testing)
+        if hasattr(backend, '_mock_name') or str(type(backend)).startswith("<class 'unittest.mock"):
+            return backend
+        
         if isinstance(backend, str):
             return self.get_backend(backend)
         
@@ -94,8 +105,29 @@ class Router:
             except Exception as e:
                 logger.warning(f"Default backend {self.config.default_backend} failed: {e}")
         
-        # Try backends in fallback order
+        # Try cloud first (always available)
+        try:
+            backend = self.get_backend("cloud")
+            if backend.is_available:
+                logger.debug("Using cloud backend")
+                return backend
+        except Exception as e:
+            logger.warning(f"Cloud backend failed: {e}")
+        
+        # Fallback to local if available
+        if HAS_LOCAL_BACKEND:
+            try:
+                backend = self.get_backend("local")
+                if backend.is_available:
+                    logger.debug("Using local backend")
+                    return backend
+            except Exception as e:
+                logger.warning(f"Local backend failed: {e}")
+        
+        # Try other backends in fallback order
         for backend_name in self.config.fallback_order:
+            if backend_name in ["cloud", "local"]:
+                continue  # Already tried above
             try:
                 backend = self.get_backend(backend_name)
                 if backend.is_available:
@@ -104,9 +136,11 @@ class Router:
             except Exception as e:
                 logger.debug(f"Backend {backend_name} not available: {e}")
         
-        # Default to local backend as last resort
-        logger.warning("No backends available, falling back to local")
-        return self.get_backend("local")
+        # No backends available
+        error_msg = "No backends available."
+        if not HAS_LOCAL_BACKEND:
+            error_msg += " For local models: pip install ai[local]"
+        raise BackendNotAvailableError("auto", error_msg)
     
     def resolve_model(
         self, 

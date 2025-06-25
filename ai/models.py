@@ -119,7 +119,7 @@ class ConfigModel(BaseModel):
     ollama_base_url: str = "http://localhost:11434"
     
     # Default Settings
-    default_backend: str = "auto"
+    default_backend: str = "cloud"
     default_model: Optional[str] = None
     timeout: int = 30
     max_retries: int = 3
