@@ -34,7 +34,16 @@ class TestRealAPIIntegration:
     
     def test_basic_ask_integration(self):
         """Test basic ask functionality with real API."""
-        response = ask("What is 2+2? Reply with just the number.", model="gpt-3.5-turbo")
+        # Use a simple, reliable model for testing
+        if os.getenv("OPENAI_API_KEY"):
+            model = "gpt-3.5-turbo"
+        elif os.getenv("OPENROUTER_API_KEY"):
+            # Use Gemini 2.5 Flash (latest model)
+            model = "openrouter/google/gemini-2.5-flash-preview"
+        else:
+            model = "gpt-3.5-turbo"  # Default fallback
+            
+        response = ask("What is 2+2? Reply with just the number.", model=model, backend="cloud")
         assert "4" in str(response)
         assert response.succeeded
         assert response.model
@@ -43,7 +52,8 @@ class TestRealAPIIntegration:
     def test_streaming_integration(self):
         """Test streaming with real API."""
         chunks = []
-        for chunk in stream("Count from 1 to 3, one number per line.", model="gpt-3.5-turbo"):
+        model = "openai/gpt-3.5-turbo" if os.getenv("OPENAI_API_KEY") else "google/gemini-flash-1.5"
+        for chunk in stream("Count from 1 to 3, one number per line.", model=model):
             chunks.append(chunk)
         
         full_response = "".join(chunks)
@@ -52,7 +62,8 @@ class TestRealAPIIntegration:
     
     def test_chat_session_integration(self):
         """Test persistent chat session."""
-        with chat(model="gpt-3.5-turbo") as session:
+        model = "openai/gpt-3.5-turbo" if os.getenv("OPENAI_API_KEY") else "google/gemini-flash-1.5"
+        with chat(model=model) as session:
             response1 = session.ask("My name is Alice. What's 5+5?")
             assert "10" in str(response1)
             
@@ -65,6 +76,16 @@ class TestRealAPIIntegration:
         response = ask("Hello", model="nonexistent-model", backend="cloud")
         # Should fallback to available model
         assert response.succeeded or "not found" in str(response).lower()
+    
+    @pytest.mark.skipif(not os.getenv("OPENROUTER_API_KEY"), reason="OpenRouter key required")
+    def test_gemini_25_pro_integration(self):
+        """Test Gemini 2.5 Pro specifically."""
+        model = "openrouter/google/gemini-2.5-pro-preview"
+        response = ask("Explain quantum computing in exactly 3 words.", model=model, backend="cloud")
+        assert response.succeeded
+        assert len(str(response).split()) <= 5  # Allow some flexibility
+        assert response.model
+        assert response.backend == "cloud"
 
 
 @pytest.mark.integration  
