@@ -38,8 +38,8 @@ class TestRealAPIIntegration:
         if os.getenv("OPENAI_API_KEY"):
             model = "gpt-3.5-turbo"
         elif os.getenv("OPENROUTER_API_KEY"):
-            # Use Gemini 2.5 Flash (latest model)
-            model = "openrouter/google/gemini-2.5-flash-preview"
+            # Use Gemini 2.5 Flash (stable production model)
+            model = "openrouter/google/gemini-2.5-flash"
         else:
             model = "gpt-3.5-turbo"  # Default fallback
             
@@ -79,8 +79,8 @@ class TestRealAPIIntegration:
     
     @pytest.mark.skipif(not os.getenv("OPENROUTER_API_KEY"), reason="OpenRouter key required")
     def test_gemini_25_pro_integration(self):
-        """Test Gemini 2.5 Pro specifically."""
-        model = "openrouter/google/gemini-2.5-pro-preview"
+        """Test Gemini 2.5 Pro stable version."""
+        model = "openrouter/google/gemini-2.5-pro"
         response = ask("Explain quantum computing in exactly 3 words.", model=model, backend="cloud")
         assert response.succeeded
         assert len(str(response).split()) <= 5  # Allow some flexibility
