@@ -208,15 +208,18 @@ agents/
 
 **Unit Tests (Mocked - No API calls):**
 ```bash
-# Run all unit tests (recommended for development)
-python -m pytest tests/
+# Quick run - all unit tests
+./run_tests.sh
 
-# Run specific test categories
+# Run with options
+./run_tests.sh --coverage          # With coverage report
+./run_tests.sh --verbose           # Detailed output
+./run_tests.sh --test cloud_backend # Specific test file
+./run_tests.sh --markers "not slow" # Skip slow tests
+
+# Direct pytest (alternative)
+python -m pytest tests/ -m "not integration"
 python -m pytest tests/test_cloud_backend.py
-python -m pytest tests/test_local_backend.py
-python -m pytest tests/test_cli_commands.py
-
-# Run with coverage
 python -m pytest tests/ --cov=ai --cov-report=html
 ```
 
