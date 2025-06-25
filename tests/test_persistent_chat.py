@@ -40,7 +40,7 @@ class TestPersistentChatSession:
     @patch('ai.routing.router')
     def test_ask_updates_history(self, mock_router):
         """Test that ask() updates conversation history."""
-        # Setup mock
+        # Setup mock backend
         mock_backend = Mock()
         mock_backend.ask = AsyncMock(return_value=AIResponse(
             "Hello! Nice to meet you.",
@@ -50,10 +50,12 @@ class TestPersistentChatSession:
             tokens_out=20,
             cost=0.001
         ))
-        mock_router.smart_route.return_value = (mock_backend, "gpt-3.5-turbo")
+        
+        # Mock router to return our backend
         mock_router.resolve_backend.return_value = mock_backend
         
-        session = PersistentChatSession()
+        # Create session with the mock backend directly
+        session = PersistentChatSession(backend=mock_backend, model="gpt-3.5-turbo")
         response = session.ask("Hello, my name is Bob")
         
         # Check history
@@ -72,7 +74,7 @@ class TestPersistentChatSession:
     @patch('ai.routing.router')
     def test_metadata_tracking(self, mock_router):
         """Test that metadata is properly tracked."""
-        # Setup mock
+        # Setup mock backend
         mock_backend = Mock()
         mock_backend.ask = AsyncMock(return_value=AIResponse(
             "Response",
@@ -81,10 +83,12 @@ class TestPersistentChatSession:
             tokens_out=100,
             cost=0.01
         ))
-        mock_router.smart_route.return_value = (mock_backend, "gpt-4")
+        
+        # Mock router to return our backend
         mock_router.resolve_backend.return_value = mock_backend
         
-        session = PersistentChatSession()
+        # Create session with the mock backend directly
+        session = PersistentChatSession(backend=mock_backend, model="gpt-4")
         
         # Make multiple requests
         session.ask("First question")
@@ -260,8 +264,12 @@ class TestPersistentChatSession:
         ]
         
         markdown = session.export_messages(format="markdown")
-        expected = "**User**: What is Python?\n\n*Assistant*: Python is a programming language."
-        assert markdown == expected
+        # The markdown format includes a session header and uses ### for roles
+        assert markdown.startswith("# Chat Session:")
+        assert "### User" in markdown
+        assert "What is Python?" in markdown
+        assert "### Assistant" in markdown
+        assert "Python is a programming language." in markdown
     
     def test_export_messages_json(self):
         """Test exporting messages as JSON."""
@@ -272,9 +280,12 @@ class TestPersistentChatSession:
         
         json_str = session.export_messages(format="json")
         data = json.loads(json_str)
-        assert isinstance(data, list)
-        assert len(data) == 1
-        assert data[0]["content"] == "Test"
+        assert isinstance(data, dict)
+        assert "session_id" in data
+        assert "messages" in data
+        assert isinstance(data["messages"], list)
+        assert len(data["messages"]) == 1
+        assert data["messages"][0]["content"] == "Test"
     
     def test_clear_history(self):
         """Test clearing conversation history."""
@@ -304,7 +315,8 @@ class TestPersistentChatSession:
         mock_router.smart_route.return_value = (mock_backend, "gpt-4-vision-preview")
         mock_router.resolve_backend.return_value = mock_backend
         
-        session = PersistentChatSession()
+        # Create session with the mocked backend
+        session = PersistentChatSession(backend=mock_backend)
         
         # Ask with image
         response = session.ask([

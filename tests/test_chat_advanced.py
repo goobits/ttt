@@ -427,7 +427,7 @@ class TestPersistentChatSessionAdvanced:
         with pytest.raises(ValueError) as exc_info:
             session.export_messages(format="pdf")
             
-        assert "Unsupported format" in str(exc_info.value)
+        assert "Unknown format" in str(exc_info.value)
         
     def test_clear_history(self, mock_router, mock_backend):
         """Test clearing chat history."""
@@ -443,8 +443,8 @@ class TestPersistentChatSessionAdvanced:
         
         assert session.history == []
         assert session.metadata["message_count"] == 0
-        # Start time should be preserved
-        assert "start_time" in session.metadata
+        # Created time should be preserved
+        assert "created_at" in session.metadata
         
     def test_multimodal_metadata(self, mock_router, mock_backend):
         """Test metadata tracking with multimodal inputs."""
@@ -469,28 +469,38 @@ class TestDurationCalculation:
         """Test duration calculation with ISO timestamps."""
         session = PersistentChatSession(backend=mock_backend)
         
-        # Set specific timestamps
+        # Set specific timestamps for created_at and add message with specific timestamp
         start = datetime(2024, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
         end = datetime(2024, 1, 1, 10, 30, 45, tzinfo=timezone.utc)
         
-        session.metadata["start_time"] = start.isoformat()
-        session.metadata["last_activity"] = end.isoformat()
+        session.metadata["created_at"] = start.isoformat()
+        # Add a message with specific timestamp
+        session.history.append({
+            "role": "user",
+            "content": "test message",
+            "timestamp": end.isoformat()
+        })
         
         summary = session.get_summary()
         
-        # Should be 30.75 minutes
+        # Should be 30.75 minutes (30 minutes and 45 seconds)
         assert abs(summary["duration_minutes"] - 30.75) < 0.01
         
     def test_duration_with_datetime_objects(self, mock_router, mock_backend):
-        """Test duration with datetime objects (backwards compatibility)."""
+        """Test duration calculation with one hour duration."""
         session = PersistentChatSession(backend=mock_backend)
         
-        # Use datetime objects directly
+        # Set created_at and add message with 1 hour difference
         start = datetime(2024, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
         end = datetime(2024, 1, 1, 11, 0, 0, tzinfo=timezone.utc)
         
-        session.metadata["start_time"] = start
-        session.metadata["last_activity"] = end
+        session.metadata["created_at"] = start.isoformat()
+        # Add a message with specific timestamp
+        session.history.append({
+            "role": "user",
+            "content": "test message",
+            "timestamp": end.isoformat()
+        })
         
         summary = session.get_summary()
         

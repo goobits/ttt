@@ -284,10 +284,11 @@ class TestRouterFallback:
         router = Router()
         
         # Create failing and successful backends
-        failing_backend = MockBackend({"name": "failing"})
-        failing_backend._available = False
+        failing_backend = MockBackend({"name": "cloud"})
+        failing_backend._available = True  # Make it available so it gets tried
         
-        success_backend = MockBackend({"name": "success"})
+        success_backend = MockBackend({"name": "local"})
+        success_backend._available = True
         
         # Mock the get_backend method
         def mock_get_backend(name):
@@ -301,16 +302,23 @@ class TestRouterFallback:
             with patch.object(router, "smart_route") as mock_route:
                 mock_route.return_value = (failing_backend, "model")
                 
-                # Mock ask to fail on first backend
-                async def mock_ask(prompt, **kwargs):
-                    if kwargs.get("model") == "model":
-                        return AIResponse("", error="Failed", backend="failing")
-                    return AIResponse("Success", backend="success")
+                # Mock ask to fail on cloud backend, succeed on local
+                async def mock_ask_failing(prompt, **kwargs):
+                    return AIResponse("", error="Failed", backend="cloud")
                 
-                failing_backend.ask = mock_ask
-                success_backend.ask = mock_ask
+                async def mock_ask_success(prompt, **kwargs):
+                    return AIResponse("Success", backend="local")
+                
+                failing_backend.ask = mock_ask_failing
+                success_backend.ask = mock_ask_success
+                
+                # Enable fallbacks in config
+                router.config.enable_fallbacks = True
+                router.config.fallback_order = ["local", "cloud"]
                 
                 response = await router.route_with_fallback("Test prompt")
                 
                 # Should have tried fallback
-                assert response.backend == "success"
+                assert response.backend == "local"
+                assert response.error is None
+                assert str(response) == "Success"

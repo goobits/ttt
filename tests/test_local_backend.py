@@ -95,6 +95,8 @@ class TestLocalBackend:
     @pytest.mark.asyncio
     async def test_ask_http_error(self, local_backend):
         """Test ask with HTTP error."""
+        from ai.exceptions import ModelNotFoundError
+        
         with patch("httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.status_code = 404
@@ -106,11 +108,11 @@ class TestLocalBackend:
                 )
             )
             
-            result = await local_backend.ask("Test prompt")
+            with pytest.raises(ModelNotFoundError) as exc_info:
+                await local_backend.ask("Test prompt")
             
-            assert result.failed
-            assert "HTTP error 404" in result.error
-            assert str(result) == ""
+            assert exc_info.value.details["model"] == "test-model"
+            assert exc_info.value.details["backend"] == "local"
     
     @pytest.mark.asyncio
     async def test_astream_success(self, local_backend):
@@ -171,14 +173,18 @@ class TestLocalBackend:
     @pytest.mark.asyncio
     async def test_models_error(self, local_backend):
         """Test models listing with error."""
+        from ai.exceptions import BackendConnectionError
+        
         with patch("httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.get = AsyncMock(
                 side_effect=Exception("Connection failed")
             )
             
-            models = await local_backend.models()
+            with pytest.raises(BackendConnectionError) as exc_info:
+                await local_backend.models()
             
-            assert models == []
+            assert exc_info.value.details["backend"] == "local"
+            assert "Connection failed" in str(exc_info.value)
     
     @pytest.mark.asyncio
     async def test_status(self, local_backend):

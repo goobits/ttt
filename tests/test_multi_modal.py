@@ -226,17 +226,17 @@ class TestLocalBackendMultiModal:
     @pytest.mark.asyncio
     async def test_local_backend_rejects_images(self):
         """Test local backend properly rejects image inputs."""
+        from ai.exceptions import MultiModalError
         backend = LocalBackend()
         
-        # Try to use images
-        response = await backend.ask([
-            "What's in this image?",
-            ImageInput("image.jpg")
-        ])
+        # Try to use images - should raise an exception
+        with pytest.raises(MultiModalError) as exc_info:
+            await backend.ask([
+                "What's in this image?",
+                ImageInput("image.jpg")
+            ])
         
-        assert response.failed
-        assert "does not support image inputs" in response.error
-        assert response.model is not None
+        assert "does not support image inputs" in str(exc_info.value)
     
     @pytest.mark.asyncio
     async def test_local_backend_extracts_text(self):

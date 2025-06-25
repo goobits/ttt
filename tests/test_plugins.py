@@ -7,6 +7,7 @@ from typing import AsyncIterator, Dict, Any, List, Optional
 from ai.plugins import PluginRegistry, BackendPlugin, plugin_registry
 from ai.backends import BaseBackend
 from ai.models import AIResponse
+from ai.exceptions import PluginValidationError
 
 
 class MockTestBackend(BaseBackend):
@@ -178,11 +179,11 @@ def register_plugin(registry):
             f.write("# No register_plugin function")
         
         registry = PluginRegistry()
-        # Should not raise an error, just skip
-        registry._load_plugin_from_file(plugin_file)
+        # Should raise PluginValidationError for missing register_plugin
+        with pytest.raises(PluginValidationError) as exc_info:
+            registry._load_plugin_from_file(plugin_file)
         
-        # No plugins should be registered
-        assert len(registry.plugins) == 0
+        assert "must define a 'register_plugin' function" in str(exc_info.value)
     
     def test_load_plugin_package(self, tmp_path):
         """Test loading a plugin from a package directory."""

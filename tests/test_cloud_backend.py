@@ -14,6 +14,7 @@ from ai.exceptions import (
     RateLimitError,
     QuotaExceededError,
     BackendConnectionError,
+    EmptyResponseError,
 )
 
 
@@ -357,10 +358,10 @@ class TestCloudBackendErrorHandling:
         mock_response.choices = []
         mock_litellm.acompletion.return_value = mock_response
         
-        response = await cloud_backend.ask("Test")
+        with pytest.raises(EmptyResponseError) as exc_info:
+            await cloud_backend.ask("Test")
         
-        assert response.failed is True
-        assert "No response" in response.error
+        assert "empty response" in str(exc_info.value).lower()
     
     @pytest.mark.asyncio  
     async def test_timeout_handling(self, cloud_backend, mock_litellm):
