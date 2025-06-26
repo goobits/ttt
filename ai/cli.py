@@ -25,6 +25,7 @@ def show_help():
 [bold green]Commands:[/bold green]
   ai backend-status                            # Check backend status
   ai models-list                               # List available models
+  ai tools-list                                # List available tools
   ai --help                                    # Show this help
 
 [bold green]Examples:[/bold green]
@@ -135,6 +136,46 @@ def show_models_list():
     console.print("    • gemini-pro (Google)")
 
 
+def show_tools_list():
+    """Show available tools."""
+    console.print("[bold blue]Available Tools:[/bold blue]")
+    console.print()
+    
+    try:
+        from .tools.registry import get_registry
+        from .tools import list_tools
+        
+        # Get all tools grouped by category
+        registry = get_registry()
+        all_tools = list_tools()
+        
+        # Group by category
+        by_category = {}
+        for tool in all_tools:
+            category = tool.category or "general"
+            if category not in by_category:
+                by_category[category] = []
+            by_category[category].append(tool)
+        
+        # Display by category
+        for category, tools in sorted(by_category.items()):
+            console.print(f"[bold green]{category.title()} Tools:[/bold green]")
+            for tool in sorted(tools, key=lambda t: t.name):
+                # Truncate description if too long
+                desc = tool.description or "No description"
+                if len(desc) > 60:
+                    desc = desc[:57] + "..."
+                console.print(f"  • [bold]{tool.name}[/bold] - {desc}")
+            console.print()
+        
+        console.print(f"[dim]Total: {len(all_tools)} tools available[/dim]")
+        console.print("[dim]Use --tools flag to include tools in your requests[/dim]")
+        
+    except Exception as e:
+        console.print(f"[red]Error listing tools:[/red] {e}")
+        console.print("[dim]Make sure the AI library is properly installed[/dim]")
+
+
 def resolve_tools(tool_specs: List[str]) -> List:
     """Resolve tool specifications to actual tool objects.
     
@@ -200,6 +241,9 @@ def parse_args():
     
     if args[0] == 'models-list':
         return {'command': 'models-list'}
+    
+    if args[0] == 'tools-list' or args[0] == 'tools':
+        return {'command': 'tools-list'}
     
     # Parse AI query
     result = {
@@ -301,6 +345,10 @@ def main():
         
         if args['command'] == 'models-list':
             show_models_list()
+            return
+        
+        if args['command'] == 'tools-list':
+            show_tools_list()
             return
         
         if args['command'] == 'query':

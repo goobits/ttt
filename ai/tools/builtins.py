@@ -32,10 +32,33 @@ import math
 import re
 
 from ai.tools import tool
+from ai.config import get_config
 
 
-# Security settings
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+# Get configuration settings
+def _get_max_file_size():
+    """Get maximum file size from configuration."""
+    try:
+        config = get_config()
+        return config.tools_config.get('max_file_size', 10 * 1024 * 1024)
+    except Exception:
+        return 10 * 1024 * 1024  # Fallback to default
+
+def _get_code_timeout():
+    """Get code execution timeout from configuration."""
+    try:
+        config = get_config()
+        return config.tools_config.get('code_execution_timeout', 30)
+    except Exception:
+        return 30  # Fallback to default
+
+def _get_web_timeout():
+    """Get web request timeout from configuration."""
+    try:
+        config = get_config()
+        return config.tools_config.get('web_request_timeout', 10)
+    except Exception:
+        return 10  # Fallback to default
 ALLOWED_MATH_NAMES = {
     'abs', 'round', 'pow', 'sum', 'min', 'max',
     'sqrt', 'log', 'log10', 'exp', 'sin', 'cos', 'tan',
@@ -77,7 +100,7 @@ def web_search(query: str, num_results: int = 5) -> str:
             'User-Agent': 'Mozilla/5.0 (compatible; AI-Library/1.0)'
         })
         
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with urllib.request.urlopen(req, timeout=_get_web_timeout()) as response:
             data = json.loads(response.read().decode('utf-8'))
         
         # Extract results
@@ -134,8 +157,9 @@ def read_file(file_path: str, encoding: str = "utf-8") -> str:
         
         # Check file size
         file_size = path.stat().st_size
-        if file_size > MAX_FILE_SIZE:
-            return f"Error: File too large ({file_size} bytes). Maximum size is {MAX_FILE_SIZE} bytes."
+        max_file_size = _get_max_file_size()
+        if file_size > max_file_size:
+            return f"Error: File too large ({file_size} bytes). Maximum size is {max_file_size} bytes."
         
         # Read file
         with open(path, 'r', encoding=encoding) as f:
@@ -190,16 +214,19 @@ def write_file(file_path: str, content: str, encoding: str = "utf-8", create_dir
 
 
 @tool(category="code", description="Execute Python code safely in a sandboxed environment")
-def run_python(code: str, timeout: int = 5) -> str:
+def run_python(code: str, timeout: int = None) -> str:
     """Execute Python code safely.
     
     Args:
         code: Python code to execute
-        timeout: Maximum execution time in seconds (max 30)
+        timeout: Maximum execution time in seconds (default: from config)
     
     Returns:
         Output of the code execution or error message
     """
+    if timeout is None:
+        timeout = _get_code_timeout()
+        
     try:
         # Validate inputs
         if not code or not code.strip():
@@ -280,7 +307,7 @@ def http_request(
     method: str = "GET",
     headers: Optional[Dict[str, str]] = None,
     data: Optional[Union[str, Dict[str, Any]]] = None,
-    timeout: int = 10
+    timeout: int = None
 ) -> str:
     """Make HTTP requests.
     
@@ -289,11 +316,14 @@ def http_request(
         method: HTTP method (GET, POST, PUT, DELETE, etc.)
         headers: Optional headers dictionary
         data: Optional data to send (for POST/PUT requests)
-        timeout: Request timeout in seconds (max 30)
+        timeout: Request timeout in seconds (default: from config)
     
     Returns:
         Response text or error message
     """
+    if timeout is None:
+        timeout = _get_web_timeout()
+        
     try:
         # Validate inputs
         if not url:

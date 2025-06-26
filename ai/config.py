@@ -48,6 +48,40 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
     load_dotenv()
     
     # Start with defaults
+    defaults = {
+        'models': {
+            'default': 'openrouter/google/gemini-flash-1.5',
+            'available': {}
+        },
+        'backends': {
+            'default': 'cloud',
+            'cloud': {
+                'timeout': 30,
+                'max_retries': 3,
+                'retry_delay': 1.0
+            },
+            'local': {
+                'base_url': 'http://localhost:11434',
+                'timeout': 60,
+                'default_model': 'llama2'
+            }
+        },
+        'tools': {
+            'max_file_size': 10 * 1024 * 1024,  # 10MB
+            'code_execution_timeout': 30,
+            'web_request_timeout': 10,
+            'math_max_iterations': 1000
+        },
+        'chat': {
+            'default_system_prompt': None,
+            'max_history_length': 100,
+            'auto_save': True
+        },
+        'logging': {
+            'level': 'INFO',
+            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        }
+    }
     config_data = {}
     models_data = []
     

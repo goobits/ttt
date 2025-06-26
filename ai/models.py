@@ -149,6 +149,34 @@ class ConfigModel(BaseModel):
     timeout: int = 30
     max_retries: int = 3
     
+    # Tool Configuration
+    tools_config: Dict[str, Any] = Field(default_factory=lambda: {
+        'max_file_size': 10 * 1024 * 1024,  # 10MB
+        'code_execution_timeout': 30,
+        'web_request_timeout': 10,
+        'math_max_iterations': 1000
+    })
+    
+    # Backend Configuration
+    backend_config: Dict[str, Any] = Field(default_factory=lambda: {
+        'cloud': {
+            'timeout': 30,
+            'max_retries': 3,
+            'retry_delay': 1.0
+        },
+        'local': {
+            'base_url': 'http://localhost:11434',
+            'timeout': 60,
+            'default_model': 'llama2'
+        }
+    })
+    
+    # Chat Configuration
+    chat_config: Dict[str, Any] = Field(default_factory=lambda: {
+        'max_history_length': 100,
+        'auto_save': True
+    })
+    
     # Model Aliases
     model_aliases: Dict[str, str] = Field(default_factory=lambda: {
         "fast": "gpt-3.5-turbo",
