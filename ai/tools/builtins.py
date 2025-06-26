@@ -30,10 +30,19 @@ import ast
 import operator
 import math
 import re
+import asyncio
 
 from ai.tools import tool
 from ai.config import get_config
+from .recovery import ErrorRecoverySystem, RetryConfig, InputSanitizer
 
+
+# Initialize recovery system
+recovery_system = ErrorRecoverySystem(RetryConfig(
+    max_attempts=3,
+    base_delay=1.0,
+    max_delay=30.0
+))
 
 # Get configuration settings
 def _get_max_file_size():
@@ -59,6 +68,52 @@ def _get_web_timeout():
         return config.tools_config.get('web_request_timeout', 10)
     except Exception:
         return 10  # Fallback to default
+
+def _safe_execute(func_name: str, func: callable, **kwargs):
+    """Execute a function with error recovery and input sanitization."""
+    try:
+        # Sanitize arguments
+        sanitized_kwargs = {}
+        for key, value in kwargs.items():
+            if key in ['file_path', 'path'] and isinstance(value, str):
+                try:
+                    sanitized_kwargs[key] = str(InputSanitizer.sanitize_path(value))
+                except ValueError as e:
+                    return f"Error: Invalid path '{value}': {e}"
+            elif key in ['url'] and isinstance(value, str):
+                try:
+                    sanitized_kwargs[key] = InputSanitizer.sanitize_url(value)
+                except ValueError as e:
+                    return f"Error: Invalid URL '{value}': {e}"
+            elif key in ['query', 'code', 'expression', 'content'] and isinstance(value, str):
+                try:
+                    sanitized_kwargs[key] = InputSanitizer.sanitize_string(value)
+                except ValueError as e:
+                    return f"Error: Invalid input '{key}': {e}"
+            else:
+                sanitized_kwargs[key] = value
+        
+        # Execute with enhanced error handling
+        result = func(**sanitized_kwargs)
+        return result
+        
+    except Exception as e:
+        # Classify error and provide helpful message
+        error_pattern = recovery_system.classify_error(str(e))
+        
+        # Create user-friendly error message
+        if error_pattern.error_type.value == "network_error":
+            return f"🌐 Network Error: {error_pattern.message}\n💡 {error_pattern.suggested_action}"
+        elif error_pattern.error_type.value == "permission_error":
+            return f"🔒 Permission Error: {error_pattern.message}\n💡 {error_pattern.suggested_action}"
+        elif error_pattern.error_type.value == "resource_error":
+            return f"📁 Resource Error: {error_pattern.message}\n💡 {error_pattern.suggested_action}"
+        elif error_pattern.error_type.value == "timeout_error":
+            return f"⏱️ Timeout Error: {error_pattern.message}\n💡 {error_pattern.suggested_action}"
+        elif error_pattern.error_type.value == "validation_error":
+            return f"⚠️ Validation Error: {error_pattern.message}\n💡 {error_pattern.suggested_action}"
+        else:
+            return f"❌ Error in {func_name}: {str(e)}\n💡 {error_pattern.suggested_action}"
 ALLOWED_MATH_NAMES = {
     'abs', 'round', 'pow', 'sum', 'min', 'max',
     'sqrt', 'log', 'log10', 'exp', 'sin', 'cos', 'tan',
@@ -82,10 +137,10 @@ def web_search(query: str, num_results: int = 5) -> str:
     Returns:
         Search results as formatted text
     """
-    try:
+    def _web_search_impl(query: str, num_results: int = 5) -> str:
         # Validate inputs
         if not query or not query.strip():
-            return "Error: Search query cannot be empty"
+            raise ValueError("Search query cannot be empty")
         
         num_results = min(max(1, num_results), 10)
         
@@ -124,14 +179,11 @@ def web_search(query: str, num_results: int = 5) -> str:
                     results.append(f"  URL: {topic['FirstURL']}")
         
         if not results:
-            return f"No results found for: {query}"
+            return f"No results found for: {query}\n💡 Try different keywords or check your internet connection"
         
         return "\n".join(results)
-        
-    except urllib.error.URLError as e:
-        return f"Network error: {str(e)}"
-    except Exception as e:
-        return f"Error performing search: {str(e)}"
+    
+    return _safe_execute("web_search", _web_search_impl, query=query, num_results=num_results)
 
 
 @tool(category="file", description="Read the contents of a file")
@@ -145,34 +197,29 @@ def read_file(file_path: str, encoding: str = "utf-8") -> str:
     Returns:
         File contents or error message
     """
-    try:
+    def _read_file_impl(file_path: str, encoding: str = "utf-8") -> str:
         # Validate file path
         path = Path(file_path).resolve()
         
         if not path.exists():
-            return f"Error: File not found: {file_path}"
+            raise FileNotFoundError(f"File not found: {file_path}")
         
         if not path.is_file():
-            return f"Error: Not a file: {file_path}"
+            raise ValueError(f"Not a file: {file_path}")
         
         # Check file size
         file_size = path.stat().st_size
         max_file_size = _get_max_file_size()
         if file_size > max_file_size:
-            return f"Error: File too large ({file_size} bytes). Maximum size is {max_file_size} bytes."
+            raise ValueError(f"File too large ({file_size} bytes). Maximum size is {max_file_size} bytes.")
         
         # Read file
         with open(path, 'r', encoding=encoding) as f:
             content = f.read()
         
         return content
-        
-    except PermissionError:
-        return f"Error: Permission denied: {file_path}"
-    except UnicodeDecodeError:
-        return f"Error: Unable to decode file with {encoding} encoding. Try a different encoding."
-    except Exception as e:
-        return f"Error reading file: {str(e)}"
+    
+    return _safe_execute("read_file", _read_file_impl, file_path=file_path, encoding=encoding)
 
 
 @tool(category="file", description="Write content to a file")
@@ -188,10 +235,10 @@ def write_file(file_path: str, content: str, encoding: str = "utf-8", create_dir
     Returns:
         Success message or error
     """
-    try:
+    def _write_file_impl(file_path: str, content: str, encoding: str = "utf-8", create_dirs: bool = False) -> str:
         # Validate inputs
         if not file_path:
-            return "Error: File path cannot be empty"
+            raise ValueError("File path cannot be empty")
         
         path = Path(file_path).resolve()
         
@@ -199,18 +246,17 @@ def write_file(file_path: str, content: str, encoding: str = "utf-8", create_dir
         if create_dirs:
             path.parent.mkdir(parents=True, exist_ok=True)
         elif not path.parent.exists():
-            return f"Error: Parent directory does not exist: {path.parent}"
+            raise FileNotFoundError(f"Parent directory does not exist: {path.parent}")
         
         # Write file
         with open(path, 'w', encoding=encoding) as f:
             f.write(content)
         
         return f"Successfully wrote {len(content)} characters to {file_path}"
-        
-    except PermissionError:
-        return f"Error: Permission denied: {file_path}"
-    except Exception as e:
-        return f"Error writing file: {str(e)}"
+    
+    return _safe_execute("write_file", _write_file_impl, 
+                        file_path=file_path, content=content, 
+                        encoding=encoding, create_dirs=create_dirs)
 
 
 @tool(category="code", description="Execute Python code safely in a sandboxed environment")
@@ -224,13 +270,13 @@ def run_python(code: str, timeout: int = None) -> str:
     Returns:
         Output of the code execution or error message
     """
-    if timeout is None:
-        timeout = _get_code_timeout()
-        
-    try:
+    def _run_python_impl(code: str, timeout: int = None) -> str:
+        if timeout is None:
+            timeout = _get_code_timeout()
+            
         # Validate inputs
         if not code or not code.strip():
-            return "Error: Code cannot be empty"
+            raise ValueError("Code cannot be empty")
         
         timeout = min(max(1, timeout), 30)
         
@@ -266,11 +312,8 @@ def run_python(code: str, timeout: int = None) -> str:
         finally:
             # Clean up
             os.unlink(temp_file)
-            
-    except subprocess.TimeoutExpired:
-        return f"Error: Code execution timed out after {timeout} seconds"
-    except Exception as e:
-        return f"Error executing code: {str(e)}"
+    
+    return _safe_execute("run_python", _run_python_impl, code=code, timeout=timeout)
 
 
 @tool(category="time", description="Get the current time in a specified timezone")

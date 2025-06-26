@@ -400,6 +400,14 @@ def main():
                     kwargs['tools'] = resolved_tools
                     if args['verbose']:
                         console.print(f"[dim]Loaded {len(resolved_tools)} tools[/dim]")
+                        # Show tool execution stats if available
+                        try:
+                            from .tools.executor import get_execution_stats
+                            stats = get_execution_stats()
+                            if stats['total_calls'] > 0:
+                                console.print(f"[dim]Tool execution stats: {stats['success_rate']:.1%} success rate, avg {stats['avg_execution_time']:.2f}s[/dim]")
+                        except:
+                            pass
             
             # Import here to avoid import errors
             from .api import ask, stream
