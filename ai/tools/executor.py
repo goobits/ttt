@@ -264,16 +264,18 @@ class ToolExecutor:
             elif key in ['url']:
                 sanitized[key] = InputSanitizer.sanitize_url(value)
             elif key in ['query', 'code', 'expression', 'content']:
-                sanitized[key] = InputSanitizer.sanitize_string(value)
+                # Allow code for code/expression contexts
+                allow_code = key in ['code', 'expression']
+                sanitized[key] = InputSanitizer.sanitize_string(value, allow_code=allow_code)
             elif key in ['data'] and isinstance(value, str):
                 try:
                     sanitized[key] = InputSanitizer.sanitize_json(value)
                 except ValueError:
-                    sanitized[key] = InputSanitizer.sanitize_string(value)
+                    sanitized[key] = InputSanitizer.sanitize_string(value, allow_code=False)
             else:
                 # Basic validation for other types
                 if isinstance(value, str):
-                    sanitized[key] = InputSanitizer.sanitize_string(value)
+                    sanitized[key] = InputSanitizer.sanitize_string(value, allow_code=False)
                 else:
                     sanitized[key] = value
         

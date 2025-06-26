@@ -87,7 +87,9 @@ def _safe_execute(func_name: str, func: callable, **kwargs):
                     return f"Error: Invalid URL '{value}': {e}"
             elif key in ['query', 'code', 'expression', 'content'] and isinstance(value, str):
                 try:
-                    sanitized_kwargs[key] = InputSanitizer.sanitize_string(value)
+                    # Allow code for these contexts
+                    allow_code = key in ['code', 'expression']
+                    sanitized_kwargs[key] = InputSanitizer.sanitize_string(value, allow_code=allow_code)
                 except ValueError as e:
                     return f"Error: Invalid input '{key}': {e}"
             else:

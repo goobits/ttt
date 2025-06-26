@@ -10,6 +10,10 @@ from enum import Enum
 import re
 import json
 from pathlib import Path
+import ast
+
+import bleach
+import validators
 
 from .base import ToolCall, ToolResult
 
@@ -58,42 +62,43 @@ class FallbackSuggestion:
 
 
 class InputSanitizer:
-    """Comprehensive input sanitization for tools."""
+    """Professional input sanitization using battle-tested libraries."""
     
-    # Dangerous patterns to block
+    # Only block truly dangerous patterns (much more targeted)
     DANGEROUS_PATTERNS = [
-        # Command injection
-        r'[;&|`$()]',
+        # Actual command injection (not legitimate code)
         r'^\s*sudo\s+',
-        r'rm\s+-rf\s+/',
-        r'del\s+/[sq]',
-        r'format\s+[c-z]:',
+        r'\brm\s+-rf\s+/',
+        r'\bdel\s+/[sq]',
+        r'\bformat\s+[c-z]:',
         
         # Path traversal
         r'\.\./',
         r'\.\.\\',
         
-        # Script injection
-        r'<script[^>]*>',
-        r'javascript:',
-        r'vbscript:',
-        r'on\w+\s*=',
-        
-        # SQL injection patterns
-        r'union\s+select',
-        r'drop\s+table',
-        r'delete\s+from',
-        r'insert\s+into',
+        # System file access
+        r'/etc/passwd',
+        r'/etc/shadow',
+        r'C:\\Windows\\System32',
         
         # Binary/executable content
         r'^\x7fELF',  # ELF header
         r'^MZ',       # DOS header
-        r'^\x89PNG',  # PNG header (suspicious in text contexts)
+    ]
+    
+    # Patterns that are dangerous specifically in code execution contexts
+    CODE_DANGEROUS_PATTERNS = [
+        r'os\.system\s*\(',
+        r'subprocess\.(run|call|Popen)',
+        r'eval\s*\(',
+        r'exec\s*\(',
+        r'__import__\s*\(',
+        r'open\s*\(\s*["\'][/\\]',  # Opening system files
     ]
     
     @classmethod
-    def sanitize_string(cls, value: str, max_length: int = 10000) -> str:
-        """Sanitize string input."""
+    def sanitize_string(cls, value: str, max_length: int = 10000, allow_code: bool = True) -> str:
+        """Sanitize string input using professional bleach library."""
         if not isinstance(value, str):
             raise ValueError(f"Expected string, got {type(value)}")
         
@@ -101,18 +106,24 @@ class InputSanitizer:
         if len(value) > max_length:
             raise ValueError(f"String too long: {len(value)} > {max_length}")
         
-        # Check for dangerous patterns
+        # Check for truly dangerous patterns (much more targeted now)
         for pattern in cls.DANGEROUS_PATTERNS:
             if re.search(pattern, value, re.IGNORECASE | re.MULTILINE):
-                raise ValueError(f"Potentially dangerous content detected: {pattern}")
+                raise ValueError(f"Potentially dangerous content detected")
         
-        # Basic cleanup
-        sanitized = value.strip()
-        
-        # Remove null bytes and other control characters
-        sanitized = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', sanitized)
-        
-        return sanitized
+        if allow_code:
+            # For code content, check code-specific dangerous patterns
+            for pattern in cls.CODE_DANGEROUS_PATTERNS:
+                if re.search(pattern, value, re.IGNORECASE | re.MULTILINE):
+                    raise ValueError(f"Dangerous code pattern detected")
+            
+            # Remove null bytes and other control characters
+            sanitized = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', value)
+            return sanitized.strip()
+        else:
+            # For HTML/text content, use bleach for proper sanitization
+            sanitized = bleach.clean(value, strip=True)
+            return sanitized
     
     @classmethod
     def sanitize_path(cls, path: str) -> Path:
@@ -149,44 +160,47 @@ class InputSanitizer:
     
     @classmethod
     def sanitize_url(cls, url: str) -> str:
-        """Sanitize URL input."""
+        """Sanitize URL input using validators library."""
         if not isinstance(url, str):
             raise ValueError(f"Expected string URL, got {type(url)}")
         
-        # Basic URL validation
-        if not url or url.isspace():
-            raise ValueError("URL cannot be empty")
+        # Clean the URL
+        url = url.strip()
         
-        # Check for allowed schemes
-        allowed_schemes = ['http', 'https']
-        if not any(url.startswith(f'{scheme}://') for scheme in allowed_schemes):
-            raise ValueError(f"URL must start with one of: {allowed_schemes}")
+        # Validate URL format using professional library
+        if not validators.url(url):
+            raise ValueError(f"Invalid URL format: {url}")
         
-        # Check for dangerous patterns
+        # Ensure only HTTP/HTTPS schemes
+        if not (url.startswith('http://') or url.startswith('https://')):
+            raise ValueError("Only HTTP and HTTPS URLs are allowed")
+        
+        # Check for dangerous patterns in URL
         for pattern in cls.DANGEROUS_PATTERNS:
             if re.search(pattern, url, re.IGNORECASE):
-                raise ValueError(f"Potentially dangerous URL content: {pattern}")
+                raise ValueError("Potentially dangerous URL content detected")
         
-        return url.strip()
+        return url
     
     @classmethod
     def sanitize_json(cls, json_str: str) -> Dict[str, Any]:
-        """Sanitize and parse JSON input."""
+        """Sanitize and parse JSON input safely."""
         if not isinstance(json_str, str):
             raise ValueError(f"Expected JSON string, got {type(json_str)}")
         
         try:
-            # Parse JSON
+            # Parse JSON using standard library
             data = json.loads(json_str)
             
-            # Recursively sanitize string values
+            # Recursively sanitize string values with bleach
             def sanitize_recursive(obj):
                 if isinstance(obj, dict):
                     return {k: sanitize_recursive(v) for k, v in obj.items()}
                 elif isinstance(obj, list):
                     return [sanitize_recursive(item) for item in obj]
                 elif isinstance(obj, str):
-                    return cls.sanitize_string(obj)
+                    # Use bleach for text content in JSON
+                    return cls.sanitize_string(obj, allow_code=False)
                 else:
                     return obj
             
