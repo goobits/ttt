@@ -37,14 +37,14 @@ import os
 def handle_backend_errors():
     """Demonstrate handling backend-related errors."""
     print("=== Backend Error Handling ===\n")
-    
+
     # 1. Backend not available
     try:
         response = ask("Hello", backend="nonexistent")
     except BackendNotAvailableError as e:
         print(f"Backend not available: {e}")
         print(f"  Details: {e.details}")
-    
+
     # 2. Backend connection error (simulated by using wrong URL)
     try:
         # Temporarily configure wrong URL
@@ -64,7 +64,7 @@ def handle_backend_errors():
 def handle_model_errors():
     """Demonstrate handling model-related errors."""
     print("\n=== Model Error Handling ===\n")
-    
+
     # 1. Model not found
     try:
         response = ask("Hello", model="nonexistent-model-xyz")
@@ -72,14 +72,14 @@ def handle_model_errors():
         print(f"Model not found: {e}")
         print(f"  Model: {e.details.get('model')}")
         print(f"  Backend: {e.details.get('backend')}")
-    
+
     # 2. Model doesn't support feature (multi-modal on local)
     try:
         from ai import ImageInput
-        response = ask([
-            "What's in this image?",
-            ImageInput("test.jpg")
-        ], backend="local")
+
+        response = ask(
+            ["What's in this image?", ImageInput("test.jpg")], backend="local"
+        )
     except MultiModalError as e:
         print(f"\nMulti-modal error: {e}")
         print(f"  Reason: {e.details.get('reason')}")
@@ -88,14 +88,14 @@ def handle_model_errors():
 def handle_api_key_errors():
     """Demonstrate handling API key errors."""
     print("\n=== API Key Error Handling ===\n")
-    
+
     # Save current API key
     original_key = os.environ.get("OPENAI_API_KEY")
-    
+
     try:
         # Set invalid API key
         os.environ["OPENAI_API_KEY"] = "invalid-key-123"
-        
+
         response = ask("Hello", model="gpt-3.5-turbo", backend="cloud")
     except APIKeyError as e:
         print(f"API key error: {e}")
@@ -115,11 +115,12 @@ def handle_api_key_errors():
 def handle_rate_limit_errors():
     """Demonstrate handling rate limit errors."""
     print("\n=== Rate Limit Error Handling ===\n")
-    
+
     # This would typically happen with rapid requests
     print("Rate limit errors occur when making too many requests.")
     print("Example handling:")
-    print("""
+    print(
+        """
     try:
         for i in range(100):
             response = ask(f"Question {i}", model="gpt-3.5-turbo")
@@ -129,13 +130,14 @@ def handle_rate_limit_errors():
         if retry_after:
             print(f"Retry after {retry_after} seconds")
             time.sleep(retry_after)
-    """)
+    """
+    )
 
 
 def handle_session_errors():
     """Demonstrate handling session-related errors."""
     print("\n=== Session Error Handling ===\n")
-    
+
     # 1. Load non-existent session
     try:
         session = PersistentChatSession.load("nonexistent_session.json")
@@ -143,7 +145,7 @@ def handle_session_errors():
         print(f"Session load error: {e}")
         print(f"  File: {e.details.get('file_path')}")
         print(f"  Reason: {e.details.get('reason')}")
-    
+
     # 2. Save to invalid location
     try:
         with chat(persist=True) as session:
@@ -154,7 +156,7 @@ def handle_session_errors():
         print(f"\nSession save error: {e}")
         print(f"  File: {e.details.get('file_path')}")
         print(f"  Reason: {e.details.get('reason')}")
-    
+
     # 3. Invalid save format
     try:
         with chat(persist=True) as session:
@@ -169,13 +171,14 @@ def handle_session_errors():
 def handle_config_errors():
     """Demonstrate handling configuration errors."""
     print("\n=== Configuration Error Handling ===\n")
-    
+
     # Create an invalid config file
     invalid_config = Path("invalid_config.yaml")
     invalid_config.write_text("invalid: yaml: content: [}")
-    
+
     try:
         from ai.config import load_config
+
         config = load_config(invalid_config)
     except ConfigFileError as e:
         print(f"Config file error: {e}")
@@ -189,24 +192,27 @@ def handle_config_errors():
 def handle_generic_errors():
     """Demonstrate handling generic AI errors."""
     print("\n=== Generic Error Handling ===\n")
-    
+
     print("You can catch all AI library errors with AIError:")
-    print("""
+    print(
+        """
     try:
         response = ask("Question", model="unknown", backend="invalid")
     except AIError as e:
         # This catches any error from the AI library
         print(f"AI Error: {type(e).__name__}: {e}")
         print(f"Details: {e.details}")
-    """)
+    """
+    )
 
 
 def best_practices():
     """Show best practices for error handling."""
     print("\n=== Best Practices ===\n")
-    
+
     print("1. Be specific when you know what errors to expect:")
-    print("""
+    print(
+        """
     try:
         response = ask("Hello", model=user_specified_model)
     except ModelNotFoundError:
@@ -215,43 +221,50 @@ def best_practices():
     except APIKeyError as e:
         # Guide user to set up API key
         print(f"Please set {e.details['env_var']} environment variable")
-    """)
-    
+    """
+    )
+
     print("\n2. Use AIError as a catch-all for any library error:")
-    print("""
+    print(
+        """
     try:
         response = ask(prompt)
     except AIError as e:
         logger.error(f"AI operation failed: {e}")
         # Fallback behavior
-    """)
-    
+    """
+    )
+
     print("\n3. Access error details for better handling:")
-    print("""
+    print(
+        """
     try:
         response = ask(prompt, backend=backend)
     except BackendConnectionError as e:
         backend_name = e.details.get('backend')
         original_error = e.details.get('original_error')
         # Implement retry logic or fallback
-    """)
-    
+    """
+    )
+
     print("\n4. Let unexpected errors bubble up in development:")
-    print("""
+    print(
+        """
     try:
         response = ask(prompt)
     except AIError:
         # Handle expected AI library errors
         pass
     # Don't catch Exception unless you log and re-raise
-    """)
+    """
+    )
 
 
 def main():
     """Run all examples."""
     print("AI Library Exception Handling Examples\n")
     print("=" * 50)
-    
+
     handle_backend_errors()
     handle_model_errors()
     handle_api_key_errors()
@@ -260,7 +273,7 @@ def main():
     handle_config_errors()
     handle_generic_errors()
     best_practices()
-    
+
     print("\n" + "=" * 50)
     print("\nException handling examples complete!")
     print("\nKey takeaways:")

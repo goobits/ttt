@@ -17,7 +17,7 @@ from ai.tools import tool
 @tool
 def get_weather(city: str) -> str:
     """Get the current weather for a city.
-    
+
     Args:
         city: The city name to get weather for
     """
@@ -26,7 +26,7 @@ def get_weather(city: str) -> str:
         "New York": "72°F, Sunny",
         "London": "60°F, Cloudy",
         "Tokyo": "68°F, Clear",
-        "Sydney": "75°F, Partly Cloudy"
+        "Sydney": "75°F, Partly Cloudy",
     }
     return weather_data.get(city, f"Unknown weather for {city}")
 
@@ -34,7 +34,7 @@ def get_weather(city: str) -> str:
 @tool
 def calculate(expression: str) -> str:
     """Evaluate a mathematical expression.
-    
+
     Args:
         expression: Mathematical expression to evaluate
     """
@@ -49,14 +49,14 @@ def calculate(expression: str) -> str:
 def basic_chat_with_tools():
     """Basic example of chat session with tools."""
     print("=== Basic Chat with Tools ===")
-    
+
     # Create a chat session with tools
     with chat(tools=[get_weather, calculate]) as session:
         # Ask about weather
         response = session.ask("What's the weather in New York?")
         print(f"User: What's the weather in New York?")
         print(f"Assistant: {response}")
-        
+
         # Ask for calculation
         response = session.ask("Calculate 15 * 23 + 42")
         print(f"\nUser: Calculate 15 * 23 + 42")
@@ -66,33 +66,33 @@ def basic_chat_with_tools():
 def persistent_chat_with_tools():
     """Example of persistent chat session with tools."""
     print("\n=== Persistent Chat with Tools ===")
-    
+
     # Create persistent session with tools
     session = PersistentChatSession(
         system="You are a helpful assistant with access to weather and calculation tools.",
-        tools=[get_weather, calculate]
+        tools=[get_weather, calculate],
     )
-    
+
     # First conversation
     print(f"Session ID: {session.session_id}")
     response = session.ask("What's the weather in London?")
     print(f"User: What's the weather in London?")
     print(f"Assistant: {response}")
-    
+
     # Save session
     save_path = "weather_chat.json"
     session.save(save_path)
     print(f"\nSession saved to {save_path}")
-    
+
     # Load session and continue
     loaded_session = PersistentChatSession.load(save_path)
     print(f"\nLoaded session with {len(loaded_session.history)} messages")
-    
+
     # Continue conversation
     response = loaded_session.ask("What about Tokyo?")
     print(f"User: What about Tokyo?")
     print(f"Assistant: {response}")
-    
+
     # Show tool usage statistics
     print(f"\nTool usage statistics:")
     for tool_name, count in loaded_session.metadata.get("tools_used", {}).items():
@@ -121,8 +121,9 @@ def main():
     """Run all examples."""
     # Mock backend for examples
     import os
+
     os.environ["AI_MOCK_BACKEND"] = "true"
-    
+
     try:
         basic_chat_with_tools()
         persistent_chat_with_tools()

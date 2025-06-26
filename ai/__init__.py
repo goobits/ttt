@@ -43,12 +43,13 @@ from .exceptions import (
 
 # Auto-load built-in tools when the library is imported
 from .tools.builtins import load_builtin_tools
+
 load_builtin_tools()
 
 __version__ = "0.1.0"
 __all__ = [
     "ask",
-    "stream", 
+    "stream",
     "chat",
     "AIResponse",
     "ImageInput",

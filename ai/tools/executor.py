@@ -15,6 +15,7 @@ from .registry import get_tool, list_tools
 @dataclass
 class ExecutionConfig:
     """Configuration for tool execution."""
+
     max_retries: int = 3
     timeout_seconds: float = 30.0
     enable_fallbacks: bool = True
@@ -24,17 +25,17 @@ class ExecutionConfig:
 
 class ToolExecutor:
     """Enhanced tool executor with recovery, retry, and fallback capabilities."""
-    
+
     def __init__(self, config: Optional[ExecutionConfig] = None):
         self.config = config or ExecutionConfig()
-        self.recovery_system = ErrorRecoverySystem(RetryConfig(
-            max_attempts=self.config.max_retries,
-            base_delay=1.0,
-            max_delay=30.0
-        ))
+        self.recovery_system = ErrorRecoverySystem(
+            RetryConfig(
+                max_attempts=self.config.max_retries, base_delay=1.0, max_delay=30.0
+            )
+        )
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(getattr(logging, self.config.log_level))
-        
+
         # Performance tracking
         self.execution_stats = {
             "total_calls": 0,
@@ -42,21 +43,18 @@ class ToolExecutor:
             "failed_calls": 0,
             "retried_calls": 0,
             "fallback_calls": 0,
-            "avg_execution_time": 0.0
+            "avg_execution_time": 0.0,
         }
-    
+
     async def execute_tool(
-        self,
-        tool_name: str,
-        arguments: Dict[str, Any],
-        timeout: Optional[float] = None
+        self, tool_name: str, arguments: Dict[str, Any], timeout: Optional[float] = None
     ) -> ToolCall:
         """Execute a single tool with full recovery support."""
         start_time = time.time()
         call_id = f"{tool_name}_{int(start_time * 1000)}"
-        
+
         self.execution_stats["total_calls"] += 1
-        
+
         try:
             # Get tool definition
             tool = get_tool(tool_name)
@@ -65,9 +63,9 @@ class ToolExecutor:
                     id=call_id,
                     name=tool_name,
                     arguments=arguments,
-                    error=self._create_tool_not_found_error(tool_name)
+                    error=self._create_tool_not_found_error(tool_name),
                 )
-            
+
             # Sanitize inputs if enabled
             if self.config.enable_input_sanitization:
                 try:
@@ -77,29 +75,29 @@ class ToolExecutor:
                         id=call_id,
                         name=tool_name,
                         arguments=arguments,
-                        error=f"Input validation failed: {e}"
+                        error=f"Input validation failed: {e}",
                     )
-            
+
             # Execute with timeout and recovery
             execution_timeout = timeout or self.config.timeout_seconds
             result = await asyncio.wait_for(
                 self._execute_with_recovery(tool, arguments, call_id),
-                timeout=execution_timeout
+                timeout=execution_timeout,
             )
-            
+
             # Update stats
             execution_time = time.time() - start_time
             self._update_execution_stats(True, execution_time)
-            
+
             return result
-            
+
         except asyncio.TimeoutError:
             self.execution_stats["failed_calls"] += 1
             return ToolCall(
                 id=call_id,
                 name=tool_name,
                 arguments=arguments,
-                error=f"⏱️ Tool execution timed out after {execution_timeout} seconds\n💡 Try reducing the complexity of your request or increase the timeout"
+                error=f"⏱️ Tool execution timed out after {execution_timeout} seconds\n💡 Try reducing the complexity of your request or increase the timeout",
             )
         except Exception as e:
             self.execution_stats["failed_calls"] += 1
@@ -108,13 +106,11 @@ class ToolExecutor:
                 id=call_id,
                 name=tool_name,
                 arguments=arguments,
-                error=f"❌ Unexpected error: {e}\n💡 This appears to be a system error. Please try again or contact support."
+                error=f"❌ Unexpected error: {e}\n💡 This appears to be a system error. Please try again or contact support.",
             )
-    
+
     async def execute_tools(
-        self,
-        tool_calls: List[Dict[str, Any]],
-        parallel: bool = False
+        self, tool_calls: List[Dict[str, Any]], parallel: bool = False
     ) -> ToolResult:
         """Execute multiple tools with optional parallel execution."""
         if parallel:
@@ -124,42 +120,48 @@ class ToolExecutor:
                 for call in tool_calls
             ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            
+
             # Convert exceptions to error tool calls
             processed_results = []
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
                     call = tool_calls[i]
-                    processed_results.append(ToolCall(
-                        id=f"error_{i}_{int(time.time() * 1000)}",
-                        name=call["name"],
-                        arguments=call.get("arguments", {}),
-                        error=f"Parallel execution error: {result}"
-                    ))
+                    processed_results.append(
+                        ToolCall(
+                            id=f"error_{i}_{int(time.time() * 1000)}",
+                            name=call["name"],
+                            arguments=call.get("arguments", {}),
+                            error=f"Parallel execution error: {result}",
+                        )
+                    )
                 else:
                     processed_results.append(result)
-            
+
             return ToolResult(calls=processed_results)
         else:
             # Execute tools sequentially
             results = []
             for call in tool_calls:
-                result = await self.execute_tool(call["name"], call.get("arguments", {}))
+                result = await self.execute_tool(
+                    call["name"], call.get("arguments", {})
+                )
                 results.append(result)
-                
+
                 # If a critical tool fails, consider stopping execution
                 if not result.succeeded and self._is_critical_failure(result):
-                    self.logger.warning(f"Critical tool failure, stopping execution: {result.error}")
+                    self.logger.warning(
+                        f"Critical tool failure, stopping execution: {result.error}"
+                    )
                     break
-            
+
             return ToolResult(calls=results)
-    
+
     async def _execute_with_recovery(
         self,
         tool: ToolDefinition,
         arguments: Dict[str, Any],
         call_id: str,
-        attempt: int = 1
+        attempt: int = 1,
     ) -> ToolCall:
         """Execute tool with recovery and retry logic."""
         try:
@@ -168,142 +170,154 @@ class ToolExecutor:
                 result = await tool.function(**arguments)
             else:
                 result = tool.function(**arguments)
-            
+
             return ToolCall(
-                id=call_id,
-                name=tool.name,
-                arguments=arguments,
-                result=result
+                id=call_id, name=tool.name, arguments=arguments, result=result
             )
-            
+
         except Exception as e:
             error_message = str(e)
             error_pattern = self.recovery_system.classify_error(error_message)
-            
-            self.logger.warning(f"Tool {tool.name} failed (attempt {attempt}): {error_message}")
-            
+
+            self.logger.warning(
+                f"Tool {tool.name} failed (attempt {attempt}): {error_message}"
+            )
+
             # Check if we should retry
             if self.recovery_system.should_retry(error_pattern, attempt):
                 self.execution_stats["retried_calls"] += 1
-                
+
                 # Calculate delay and retry
-                delay = self.recovery_system.calculate_retry_delay(attempt, error_pattern)
+                delay = self.recovery_system.calculate_retry_delay(
+                    attempt, error_pattern
+                )
                 self.logger.info(f"Retrying {tool.name} in {delay:.1f} seconds...")
-                
+
                 await asyncio.sleep(delay)
-                return await self._execute_with_recovery(tool, arguments, call_id, attempt + 1)
-            
+                return await self._execute_with_recovery(
+                    tool, arguments, call_id, attempt + 1
+                )
+
             # If retry failed or not allowed, try fallbacks
             elif self.config.enable_fallbacks:
-                fallback_result = await self._try_fallbacks(tool.name, arguments, error_pattern)
+                fallback_result = await self._try_fallbacks(
+                    tool.name, arguments, error_pattern
+                )
                 if fallback_result:
                     self.execution_stats["fallback_calls"] += 1
                     return fallback_result
-            
+
             # Create enhanced error message
             recovery_message = self.recovery_system.create_recovery_message(
                 ToolCall(call_id, tool.name, arguments, error=error_message),
-                error_pattern
+                error_pattern,
             )
-            
+
             return ToolCall(
-                id=call_id,
-                name=tool.name,
-                arguments=arguments,
-                error=recovery_message
+                id=call_id, name=tool.name, arguments=arguments, error=recovery_message
             )
-    
+
     async def _try_fallbacks(
-        self,
-        failed_tool: str,
-        original_args: Dict[str, Any],
-        error_pattern
+        self, failed_tool: str, original_args: Dict[str, Any], error_pattern
     ) -> Optional[ToolCall]:
         """Try fallback tools when the primary tool fails."""
-        suggestions = self.recovery_system.get_fallback_suggestions(failed_tool, original_args)
-        
+        suggestions = self.recovery_system.get_fallback_suggestions(
+            failed_tool, original_args
+        )
+
         for suggestion in suggestions:
             try:
                 self.logger.info(f"Trying fallback: {suggestion.tool_name}")
-                
+
                 fallback_tool = get_tool(suggestion.tool_name)
                 if not fallback_tool:
                     continue
-                
+
                 # Execute fallback with limited retries
                 if asyncio.iscoroutinefunction(fallback_tool.function):
                     result = await fallback_tool.function(**suggestion.arguments)
                 else:
                     result = fallback_tool.function(**suggestion.arguments)
-                
+
                 # Add fallback notification to result
                 fallback_notice = f"\n\n🔧 Note: Used fallback tool '{suggestion.tool_name}' because '{failed_tool}' failed."
                 if isinstance(result, str):
                     result = result + fallback_notice
-                
+
                 return ToolCall(
                     id=f"fallback_{int(time.time() * 1000)}",
                     name=suggestion.tool_name,
                     arguments=suggestion.arguments,
-                    result=result
+                    result=result,
                 )
-                
+
             except Exception as e:
                 self.logger.warning(f"Fallback {suggestion.tool_name} also failed: {e}")
                 continue
-        
+
         return None
-    
-    def _sanitize_inputs(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+
+    def _sanitize_inputs(
+        self, tool_name: str, arguments: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Sanitize tool inputs based on argument types."""
         sanitized = {}
-        
+
         for key, value in arguments.items():
-            if key in ['file_path', 'path']:
+            if key in ["file_path", "path"]:
                 sanitized[key] = str(InputSanitizer.sanitize_path(value))
-            elif key in ['url']:
+            elif key in ["url"]:
                 sanitized[key] = InputSanitizer.sanitize_url(value)
-            elif key in ['query', 'code', 'expression', 'content']:
+            elif key in ["query", "code", "expression", "content"]:
                 # Allow code for code/expression contexts
-                allow_code = key in ['code', 'expression']
-                sanitized[key] = InputSanitizer.sanitize_string(value, allow_code=allow_code)
-            elif key in ['data'] and isinstance(value, str):
+                allow_code = key in ["code", "expression"]
+                sanitized[key] = InputSanitizer.sanitize_string(
+                    value, allow_code=allow_code
+                )
+            elif key in ["data"] and isinstance(value, str):
                 try:
                     sanitized[key] = InputSanitizer.sanitize_json(value)
                 except ValueError:
-                    sanitized[key] = InputSanitizer.sanitize_string(value, allow_code=False)
+                    sanitized[key] = InputSanitizer.sanitize_string(
+                        value, allow_code=False
+                    )
             else:
                 # Basic validation for other types
                 if isinstance(value, str):
-                    sanitized[key] = InputSanitizer.sanitize_string(value, allow_code=False)
+                    sanitized[key] = InputSanitizer.sanitize_string(
+                        value, allow_code=False
+                    )
                 else:
                     sanitized[key] = value
-        
+
         return sanitized
-    
+
     def _create_tool_not_found_error(self, tool_name: str) -> str:
         """Create helpful error message when tool is not found."""
         available_tools = [tool.name for tool in list_tools()]
-        
+
         # Find similar tools
         similar = []
         for available in available_tools:
-            if tool_name.lower() in available.lower() or available.lower() in tool_name.lower():
+            if (
+                tool_name.lower() in available.lower()
+                or available.lower() in tool_name.lower()
+            ):
                 similar.append(available)
-        
+
         error_msg = f"🔍 Tool '{tool_name}' not found"
-        
+
         if similar:
             error_msg += f"\n💡 Did you mean: {', '.join(similar[:3])}"
         else:
             error_msg += f"\n💡 Available tools: {', '.join(available_tools[:5])}"
             if len(available_tools) > 5:
                 error_msg += f" and {len(available_tools) - 5} more"
-        
+
         error_msg += "\n🔧 Use 'ai tools-list' to see all available tools"
-        
+
         return error_msg
-    
+
     def _is_critical_failure(self, tool_call: ToolCall) -> bool:
         """Determine if a tool failure should stop execution of subsequent tools."""
         # Critical failures that should halt execution
@@ -312,34 +326,34 @@ class ToolExecutor:
             "authentication failed",
             "access denied",
             "invalid api key",
-            "quota exceeded"
+            "quota exceeded",
         ]
-        
+
         if tool_call.error:
             error_lower = tool_call.error.lower()
             return any(pattern in error_lower for pattern in critical_patterns)
-        
+
         return False
-    
+
     def _update_execution_stats(self, success: bool, execution_time: float):
         """Update execution statistics."""
         if success:
             self.execution_stats["successful_calls"] += 1
         else:
             self.execution_stats["failed_calls"] += 1
-        
+
         # Update average execution time
         total_calls = self.execution_stats["total_calls"]
         if total_calls > 0:
             current_avg = self.execution_stats["avg_execution_time"]
             self.execution_stats["avg_execution_time"] = (
-                (current_avg * (total_calls - 1) + execution_time) / total_calls
-            )
-    
+                current_avg * (total_calls - 1) + execution_time
+            ) / total_calls
+
     def get_execution_stats(self) -> Dict[str, Any]:
         """Get execution statistics."""
         stats = self.execution_stats.copy()
-        
+
         # Add calculated metrics
         total = stats["total_calls"]
         if total > 0:
@@ -347,9 +361,9 @@ class ToolExecutor:
             stats["failure_rate"] = stats["failed_calls"] / total
             stats["retry_rate"] = stats["retried_calls"] / total
             stats["fallback_rate"] = stats["fallback_calls"] / total
-        
+
         return stats
-    
+
     def reset_stats(self):
         """Reset execution statistics."""
         self.execution_stats = {
@@ -358,7 +372,7 @@ class ToolExecutor:
             "failed_calls": 0,
             "retried_calls": 0,
             "fallback_calls": 0,
-            "avg_execution_time": 0.0
+            "avg_execution_time": 0.0,
         }
 
 

@@ -6,6 +6,7 @@ from .cloud import CloudBackend
 # Conditionally import local backend
 try:
     from .local import LocalBackend
+
     HAS_LOCAL_BACKEND = True
     __all__ = ["BaseBackend", "CloudBackend", "LocalBackend"]
 except ImportError:

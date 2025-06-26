@@ -14,16 +14,16 @@ if TYPE_CHECKING:
 class AIResponse(str):
     """
     AI response that behaves like a string but contains rich metadata.
-    
+
     This class extends str so it can be used anywhere a string is expected,
     while providing additional metadata about the AI response.
     """
-    
+
     def __new__(cls, content: str, **kwargs):
         """Create new AIResponse instance."""
         obj = str.__new__(cls, content)
         return obj
-    
+
     def __init__(
         self,
         content: str,
@@ -41,7 +41,7 @@ class AIResponse(str):
     ):
         """
         Initialize AIResponse.
-        
+
         Args:
             content: The response text
             model: Model ID that generated the response
@@ -66,41 +66,41 @@ class AIResponse(str):
         self.metadata = metadata or {}
         self.timestamp = timestamp or datetime.now()
         self.tool_result = tool_result
-    
+
     @property
     def failed(self) -> bool:
         """True if the request failed."""
         return self.error is not None
-    
+
     @property
     def succeeded(self) -> bool:
         """True if the request succeeded."""
         return self.error is None
-    
+
     @property
     def time(self) -> Optional[float]:
         """Alias for time_taken."""
         return self.time_taken
-    
+
     @property
     def tools_called(self) -> bool:
         """True if tools were called during this response."""
         return self.tool_result is not None and len(self.tool_result.calls) > 0
-    
+
     @property
     def tool_calls(self) -> List[Any]:
         """Get list of tool calls made during this response."""
         if self.tool_result is None:
             return []
         return self.tool_result.calls
-    
+
     @property
     def tools_succeeded(self) -> bool:
         """True if all tool calls succeeded."""
         if not self.tools_called:
             return True  # No tools called means no tool failures
         return self.tool_result.succeeded
-    
+
     def __repr__(self) -> str:
         """String representation showing metadata."""
         return (
@@ -114,7 +114,7 @@ class AIResponse(str):
 @dataclass
 class ModelInfo:
     """Information about an available AI model."""
-    
+
     name: str
     provider: str
     provider_name: str
@@ -124,7 +124,7 @@ class ModelInfo:
     capabilities: list[str] = None
     context_length: Optional[int] = None
     cost_per_token: Optional[float] = None
-    
+
     def __post_init__(self):
         if self.aliases is None:
             self.aliases = []
@@ -134,74 +134,75 @@ class ModelInfo:
 
 class ConfigModel(BaseModel):
     """Configuration model for the AI library."""
-    
+
     # API Keys
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
     google_api_key: Optional[str] = None
-    
+
     # Ollama Configuration
     ollama_base_url: str = "http://localhost:11434"
-    
+
     # Default Settings
     default_backend: str = "cloud"
     default_model: Optional[str] = None
     timeout: int = 30
     max_retries: int = 3
-    
+
     # Tool Configuration
-    tools_config: Dict[str, Any] = Field(default_factory=lambda: {
-        'max_file_size': 10 * 1024 * 1024,  # 10MB
-        'code_execution_timeout': 30,
-        'web_request_timeout': 10,
-        'math_max_iterations': 1000
-    })
-    
-    # Backend Configuration
-    backend_config: Dict[str, Any] = Field(default_factory=lambda: {
-        'cloud': {
-            'timeout': 30,
-            'max_retries': 3,
-            'retry_delay': 1.0
-        },
-        'local': {
-            'base_url': 'http://localhost:11434',
-            'timeout': 60,
-            'default_model': 'llama2'
+    tools_config: Dict[str, Any] = Field(
+        default_factory=lambda: {
+            "max_file_size": 10 * 1024 * 1024,  # 10MB
+            "code_execution_timeout": 30,
+            "web_request_timeout": 10,
+            "math_max_iterations": 1000,
         }
-    })
-    
+    )
+
+    # Backend Configuration
+    backend_config: Dict[str, Any] = Field(
+        default_factory=lambda: {
+            "cloud": {"timeout": 30, "max_retries": 3, "retry_delay": 1.0},
+            "local": {
+                "base_url": "http://localhost:11434",
+                "timeout": 60,
+                "default_model": "llama2",
+            },
+        }
+    )
+
     # Chat Configuration
-    chat_config: Dict[str, Any] = Field(default_factory=lambda: {
-        'max_history_length': 100,
-        'auto_save': True
-    })
-    
+    chat_config: Dict[str, Any] = Field(
+        default_factory=lambda: {"max_history_length": 100, "auto_save": True}
+    )
+
     # Model Aliases
-    model_aliases: Dict[str, str] = Field(default_factory=lambda: {
-        "fast": "gpt-3.5-turbo",
-        "best": "gpt-4",
-        "cheap": "gpt-3.5-turbo",
-        "coding": "claude-3-sonnet-20240229",
-        "local": "llama2"
-    })
-    
+    model_aliases: Dict[str, str] = Field(
+        default_factory=lambda: {
+            "fast": "gpt-3.5-turbo",
+            "best": "gpt-4",
+            "cheap": "gpt-3.5-turbo",
+            "coding": "claude-3-sonnet-20240229",
+            "local": "llama2",
+        }
+    )
+
     # Fallback Configuration
     enable_fallbacks: bool = True
     fallback_order: list[str] = Field(default_factory=lambda: ["cloud", "local"])
-    
-    model_config = ConfigDict(
-        case_sensitive=False
-    )
+
+    model_config = ConfigDict(case_sensitive=False)
 
 
 class ImageInput:
     """Represents an image input for multi-modal AI models."""
-    
-    def __init__(self, source: Union[str, Path, bytes], mime_type: Optional[str] = None):
+
+    def __init__(
+        self, source: Union[str, Path, bytes], mime_type: Optional[str] = None
+    ):
         """
         Initialize ImageInput.
-        
+
         Args:
             source: Image source - can be file path, URL, or raw bytes
             mime_type: MIME type (e.g., 'image/jpeg', 'image/png')
@@ -209,58 +210,58 @@ class ImageInput:
         self.source = source
         self.mime_type = mime_type
         self._base64_cache = None
-    
+
     @property
     def is_path(self) -> bool:
         """Check if source is a file path."""
         return isinstance(self.source, (str, Path)) and Path(self.source).exists()
-    
+
     @property
     def is_url(self) -> bool:
         """Check if source is a URL."""
         return isinstance(self.source, str) and (
-            self.source.startswith('http://') or self.source.startswith('https://')
+            self.source.startswith("http://") or self.source.startswith("https://")
         )
-    
+
     @property
     def is_bytes(self) -> bool:
         """Check if source is raw bytes."""
         return isinstance(self.source, bytes)
-    
+
     def to_base64(self) -> str:
         """Convert image to base64 string."""
         if self._base64_cache:
             return self._base64_cache
-            
+
         if self.is_bytes:
-            self._base64_cache = base64.b64encode(self.source).decode('utf-8')
+            self._base64_cache = base64.b64encode(self.source).decode("utf-8")
         elif self.is_path:
-            with open(self.source, 'rb') as f:
-                self._base64_cache = base64.b64encode(f.read()).decode('utf-8')
+            with open(self.source, "rb") as f:
+                self._base64_cache = base64.b64encode(f.read()).decode("utf-8")
         elif self.is_url:
             # URL images typically sent as-is to APIs
             return self.source
         else:
             raise ValueError("Invalid image source type")
-            
+
         return self._base64_cache
-    
+
     def get_mime_type(self) -> str:
         """Get or infer MIME type."""
         if self.mime_type:
             return self.mime_type
-            
+
         if self.is_path:
             path = Path(self.source)
             ext = path.suffix.lower()
             mime_map = {
-                '.jpg': 'image/jpeg',
-                '.jpeg': 'image/jpeg',
-                '.png': 'image/png',
-                '.gif': 'image/gif',
-                '.webp': 'image/webp',
-                '.bmp': 'image/bmp'
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".png": "image/png",
+                ".gif": "image/gif",
+                ".webp": "image/webp",
+                ".bmp": "image/bmp",
             }
-            return mime_map.get(ext, 'image/jpeg')
-            
-        return 'image/jpeg'  # Default
+            return mime_map.get(ext, "image/jpeg")
+
+        return "image/jpeg"  # Default

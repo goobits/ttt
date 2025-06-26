@@ -30,54 +30,54 @@ def main():
     """Demonstrate CLI commands."""
     print("AI Library CLI Commands Demo")
     print("=" * 60)
-    
+
     # Check if AI is installed
     print("\nChecking if 'ai' command is available...")
     if not run_command("which ai"):
         print("\nThe 'ai' command is not found in PATH.")
         print("Install with: pip install -e .")
         return
-    
+
     # Show version
     print("\n1. Version Information")
     run_command("ai version")
-    
+
     # Backend status
     print("\n2. Backend Status")
     run_command("ai backend status")
-    
+
     # Backend status verbose
     print("\n3. Backend Status (Verbose)")
     run_command("ai backend status --verbose")
-    
+
     # List all models
     print("\n4. List All Models")
     run_command("ai models list")
-    
+
     # List local models only
     print("\n5. List Local Models")
     run_command("ai models list --local")
-    
+
     # List cloud models only
     print("\n6. List Cloud Models")
     run_command("ai models list --cloud")
-    
+
     # List models with details
     print("\n7. List Models (Verbose)")
     run_command("ai models list --verbose")
-    
+
     # Show model pull help
     print("\n8. Model Pull Help")
     run_command("ai models pull --help")
-    
+
     # Basic ask example
     print("\n9. Basic Ask Example")
     run_command('ai "What is 2+2?" --verbose')
-    
+
     # Help for main command
     print("\n10. Main Command Help")
     run_command("ai --help")
-    
+
     print("\n" + "=" * 60)
     print("CLI Commands Demo Complete!")
     print("\nTips:")

@@ -5,6 +5,7 @@ import sys
 import subprocess
 import re
 
+
 def filter_output(line):
     """Filter out unwanted warnings while keeping real errors."""
     unwanted_patterns = [
@@ -25,20 +26,21 @@ def filter_output(line):
         r"^\s*calculation:\s*$",
         r"openrouter/google/gemini-flash-1\.5",
         r"google/gemini-flash-1\.5.*provider.*openrouter",
-        r"google/gemini-flash-1\.5\s*$"
+        r"google/gemini-flash-1\.5\s*$",
     ]
-    
+
     for pattern in unwanted_patterns:
         if re.search(pattern, line):
             return False
-    
+
     return True
+
 
 def main():
     """Run the AI CLI with filtered output."""
     # Run the actual CLI
     cmd = [sys.executable, "-m", "ai.cli"] + sys.argv[1:]
-    
+
     try:
         process = subprocess.Popen(
             cmd,
@@ -46,34 +48,35 @@ def main():
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
-            universal_newlines=True
+            universal_newlines=True,
         )
-        
+
         # Filter and print stdout
         for line in process.stdout:
             if filter_output(line.strip()):
-                print(line, end='')
-        
+                print(line, end="")
+
         # Filter stderr
         stderr_lines = []
         for line in process.stderr:
             if filter_output(line.strip()):
                 stderr_lines.append(line)
-        
+
         # Print filtered stderr if any
         if stderr_lines:
             for line in stderr_lines:
-                print(line, end='', file=sys.stderr)
-        
+                print(line, end="", file=sys.stderr)
+
         process.wait()
         sys.exit(process.returncode)
-        
+
     except KeyboardInterrupt:
         print("\nCancelled by user")
         sys.exit(1)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

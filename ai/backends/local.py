@@ -23,40 +23,43 @@ logger = get_logger(__name__)
 class LocalBackend(BaseBackend):
     """
     Local backend that communicates with Ollama for local model inference.
-    
+
     This backend provides privacy-first AI by running models locally
     through the Ollama API.
     """
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
         Initialize the local backend.
-        
+
         Args:
             config: Configuration dictionary containing base_url and other settings
         """
         super().__init__(config)
         # Use backend_config from base class which handles merging
-        self.base_url = self.backend_config.get("base_url", 
-                                               self.backend_config.get("ollama_base_url", "http://localhost:11434"))
+        self.base_url = self.backend_config.get(
+            "base_url",
+            self.backend_config.get("ollama_base_url", "http://localhost:11434"),
+        )
         self.default_model = self.backend_config.get("default_model", "llama2")
-        
+
     @property
     def name(self) -> str:
         """Backend name for identification."""
         return "local"
-    
+
     @property
     def is_available(self) -> bool:
         """Check if Ollama is running and available."""
         try:
             import asyncio
+
             # Create a simple sync check
             async def check():
                 async with httpx.AsyncClient(timeout=5) as client:
                     response = await client.get(f"{self.base_url}/api/tags")
                     return response.status_code == 200
-            
+
             # Run the async check
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -67,21 +70,21 @@ class LocalBackend(BaseBackend):
         except Exception as e:
             logger.debug(f"Ollama availability check failed: {e}")
             return False
-    
+
     async def ask(
-        self, 
-        prompt: Union[str, List[Union[str, ImageInput]]], 
-        *, 
+        self,
+        prompt: Union[str, List[Union[str, ImageInput]]],
+        *,
         model: Optional[str] = None,
         system: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         tools: Optional[List] = None,
-        **kwargs
+        **kwargs,
     ) -> AIResponse:
         """
         Send a single prompt to Ollama and get a complete response.
-        
+
         Args:
             prompt: The user prompt - can be a string or list of content (text/images)
             model: Specific model to use (optional)
@@ -89,13 +92,13 @@ class LocalBackend(BaseBackend):
             temperature: Sampling temperature (optional)
             max_tokens: Maximum tokens to generate (optional)
             **kwargs: Additional parameters
-            
+
         Returns:
             AIResponse containing the response and metadata
         """
         start_time = time.time()
         used_model = model or self.default_model
-        
+
         # Check for multi-modal input
         if not isinstance(prompt, str):
             # Check if any images are in the prompt
@@ -103,55 +106,51 @@ class LocalBackend(BaseBackend):
             if has_images:
                 # Raise MultiModalError for image inputs
                 from ..exceptions import MultiModalError
+
                 raise MultiModalError(
                     "Local backend (Ollama) does not support image inputs yet. Please use a cloud backend with vision capabilities."
                 )
             # Extract text from the list
             prompt = " ".join(item for item in prompt if isinstance(item, str))
-        
+
         # Build the request payload
-        payload = {
-            "model": used_model,
-            "prompt": prompt,
-            "stream": False
-        }
-        
+        payload = {"model": used_model, "prompt": prompt, "stream": False}
+
         # Add optional parameters
         options = {}
         if temperature is not None:
             options["temperature"] = temperature
         if max_tokens is not None:
             options["num_predict"] = max_tokens
-        
+
         if options:
             payload["options"] = options
-        
+
         # Add system prompt if provided
         if system:
             payload["system"] = system
-        
+
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 logger.debug(f"Sending request to Ollama: {used_model}")
-                
+
                 response = await client.post(
-                    f"{self.base_url}/api/generate",
-                    json=payload
+                    f"{self.base_url}/api/generate", json=payload
                 )
                 response.raise_for_status()
-                
+
                 data = response.json()
                 content = data.get("response", "")
-                
+
                 if not content:
                     raise EmptyResponseError(used_model, self.name)
-                
+
                 time_taken = time.time() - start_time
-                
+
                 # Extract metadata
                 eval_count = data.get("eval_count", 0)
                 prompt_eval_count = data.get("prompt_eval_count", 0)
-                
+
                 return AIResponse(
                     content,
                     model=used_model,
@@ -163,25 +162,25 @@ class LocalBackend(BaseBackend):
                         "eval_duration": data.get("eval_duration"),
                         "load_duration": data.get("load_duration"),
                         "total_duration": data.get("total_duration"),
-                    }
+                    },
                 )
-                
+
         except httpx.HTTPStatusError as e:
             error_msg = f"HTTP error {e.response.status_code}: {e.response.text}"
             logger.error(f"Ollama request failed: {error_msg}")
-            
+
             # Check for specific error types
             if e.response.status_code == 404:
                 if "model" in e.response.text.lower():
                     raise ModelNotFoundError(used_model, self.name)
-            
+
             raise BackendConnectionError(self.name, e)
         except httpx.TimeoutException as e:
             raise BackendTimeoutError(self.name, self.timeout)
         except Exception as e:
             logger.error(f"Ollama request failed: {str(e)}")
             raise BackendConnectionError(self.name, e)
-    
+
     async def astream(
         self,
         prompt: Union[str, List[Union[str, ImageInput]]],
@@ -191,11 +190,11 @@ class LocalBackend(BaseBackend):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         tools: Optional[List] = None,
-        **kwargs
+        **kwargs,
     ) -> AsyncIterator[str]:
         """
         Stream a response from Ollama token by token.
-        
+
         Args:
             prompt: The user prompt - can be a string or list of content (text/images)
             model: Specific model to use (optional)
@@ -203,12 +202,12 @@ class LocalBackend(BaseBackend):
             temperature: Sampling temperature (optional)
             max_tokens: Maximum tokens to generate (optional)
             **kwargs: Additional parameters
-            
+
         Yields:
             Response chunks as they arrive
         """
         used_model = model or self.default_model
-        
+
         # Check for multi-modal input
         if not isinstance(prompt, str):
             # Check if any images are in the prompt
@@ -216,44 +215,39 @@ class LocalBackend(BaseBackend):
             if has_images:
                 # Raise MultiModalError for image inputs
                 from ..exceptions import MultiModalError
+
                 raise MultiModalError(
                     "Local backend (Ollama) does not support image inputs yet. Please use a cloud backend with vision capabilities."
                 )
             # Extract text from the list
             prompt = " ".join(item for item in prompt if isinstance(item, str))
-        
+
         # Build the request payload
-        payload = {
-            "model": used_model,
-            "prompt": prompt,
-            "stream": True
-        }
-        
+        payload = {"model": used_model, "prompt": prompt, "stream": True}
+
         # Add optional parameters
         options = {}
         if temperature is not None:
             options["temperature"] = temperature
         if max_tokens is not None:
             options["num_predict"] = max_tokens
-        
+
         if options:
             payload["options"] = options
-        
+
         # Add system prompt if provided
         if system:
             payload["system"] = system
-        
+
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 logger.debug(f"Starting stream request to Ollama: {used_model}")
-                
+
                 async with client.stream(
-                    "POST",
-                    f"{self.base_url}/api/generate",
-                    json=payload
+                    "POST", f"{self.base_url}/api/generate", json=payload
                 ) as response:
                     response.raise_for_status()
-                    
+
                     async for line in response.aiter_lines():
                         if line.strip():
                             try:
@@ -262,15 +256,17 @@ class LocalBackend(BaseBackend):
                                     chunk = data["response"]
                                     if chunk:
                                         yield chunk
-                                
+
                                 # Check if this is the final chunk
                                 if data.get("done", False):
                                     break
-                                    
+
                             except json.JSONDecodeError as e:
                                 logger.warning(f"Failed to parse JSON line: {line}")
-                                raise ResponseParsingError(f"Invalid JSON in stream: {line[:100]}", line)
-                                
+                                raise ResponseParsingError(
+                                    f"Invalid JSON in stream: {line[:100]}", line
+                                )
+
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404 and "model" in e.response.text.lower():
                 raise ModelNotFoundError(used_model, self.name)
@@ -280,11 +276,11 @@ class LocalBackend(BaseBackend):
         except Exception as e:
             logger.error(f"Streaming request failed: {str(e)}")
             raise BackendConnectionError(self.name, e)
-    
+
     async def models(self) -> List[str]:
         """
         Get list of available models from Ollama.
-        
+
         Returns:
             List of model names available locally
         """
@@ -292,42 +288,42 @@ class LocalBackend(BaseBackend):
             async with httpx.AsyncClient(timeout=10) as client:
                 response = await client.get(f"{self.base_url}/api/tags")
                 response.raise_for_status()
-                
+
                 data = response.json()
                 models = [model["name"] for model in data.get("models", [])]
-                
+
                 logger.debug(f"Found {len(models)} local models")
                 return models
-                
+
         except httpx.TimeoutException as e:
             raise BackendTimeoutError(self.name, 10.0)
         except Exception as e:
             logger.error(f"Failed to fetch models: {str(e)}")
             raise BackendConnectionError(self.name, e)
-    
+
     async def status(self) -> Dict[str, Any]:
         """
         Get status information from Ollama.
-        
+
         Returns:
             Dictionary containing status information
         """
         try:
             models = await self.models()
-            
+
             return {
                 "backend": self.name,
                 "base_url": self.base_url,
                 "available": self.is_available,
                 "models_count": len(models),
                 "models": models[:5],  # Show first 5 models
-                "default_model": self.default_model
+                "default_model": self.default_model,
             }
-            
+
         except Exception as e:
             return {
                 "backend": self.name,
                 "base_url": self.base_url,
                 "available": False,
-                "error": str(e)
+                "error": str(e),
             }

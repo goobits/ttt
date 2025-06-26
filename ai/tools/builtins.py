@@ -6,10 +6,10 @@ handling, input validation, and security measures.
 
 Usage:
     from ai.tools.builtins import load_builtin_tools
-    
+
     # Load all built-in tools into the registry
     load_builtin_tools()
-    
+
     # Or import specific tools
     from ai.tools.builtins import web_search, read_file
 """
@@ -38,36 +38,38 @@ from .recovery import ErrorRecoverySystem, RetryConfig, InputSanitizer
 
 
 # Initialize recovery system
-recovery_system = ErrorRecoverySystem(RetryConfig(
-    max_attempts=3,
-    base_delay=1.0,
-    max_delay=30.0
-))
+recovery_system = ErrorRecoverySystem(
+    RetryConfig(max_attempts=3, base_delay=1.0, max_delay=30.0)
+)
+
 
 # Get configuration settings
 def _get_max_file_size():
     """Get maximum file size from configuration."""
     try:
         config = get_config()
-        return config.tools_config.get('max_file_size', 10 * 1024 * 1024)
+        return config.tools_config.get("max_file_size", 10 * 1024 * 1024)
     except Exception:
         return 10 * 1024 * 1024  # Fallback to default
+
 
 def _get_code_timeout():
     """Get code execution timeout from configuration."""
     try:
         config = get_config()
-        return config.tools_config.get('code_execution_timeout', 30)
+        return config.tools_config.get("code_execution_timeout", 30)
     except Exception:
         return 30  # Fallback to default
+
 
 def _get_web_timeout():
     """Get web request timeout from configuration."""
     try:
         config = get_config()
-        return config.tools_config.get('web_request_timeout', 10)
+        return config.tools_config.get("web_request_timeout", 10)
     except Exception:
         return 10  # Fallback to default
+
 
 def _safe_execute(func_name: str, func: callable, **kwargs):
     """Execute a function with error recovery and input sanitization."""
@@ -75,34 +77,38 @@ def _safe_execute(func_name: str, func: callable, **kwargs):
         # Sanitize arguments
         sanitized_kwargs = {}
         for key, value in kwargs.items():
-            if key in ['file_path', 'path'] and isinstance(value, str):
+            if key in ["file_path", "path"] and isinstance(value, str):
                 try:
                     sanitized_kwargs[key] = str(InputSanitizer.sanitize_path(value))
                 except ValueError as e:
                     return f"Error: Invalid path '{value}': {e}"
-            elif key in ['url'] and isinstance(value, str):
+            elif key in ["url"] and isinstance(value, str):
                 try:
                     sanitized_kwargs[key] = InputSanitizer.sanitize_url(value)
                 except ValueError as e:
                     return f"Error: Invalid URL '{value}': {e}"
-            elif key in ['query', 'code', 'expression', 'content'] and isinstance(value, str):
+            elif key in ["query", "code", "expression", "content"] and isinstance(
+                value, str
+            ):
                 try:
                     # Allow code for these contexts
-                    allow_code = key in ['code', 'expression']
-                    sanitized_kwargs[key] = InputSanitizer.sanitize_string(value, allow_code=allow_code)
+                    allow_code = key in ["code", "expression"]
+                    sanitized_kwargs[key] = InputSanitizer.sanitize_string(
+                        value, allow_code=allow_code
+                    )
                 except ValueError as e:
                     return f"Error: Invalid input '{key}': {e}"
             else:
                 sanitized_kwargs[key] = value
-        
+
         # Execute with enhanced error handling
         result = func(**sanitized_kwargs)
         return result
-        
+
     except Exception as e:
         # Classify error and provide helpful message
         error_pattern = recovery_system.classify_error(str(e))
-        
+
         # Create user-friendly error message
         if error_pattern.error_type.value == "network_error":
             return f"🌐 Network Error: {error_pattern.message}\n💡 {error_pattern.suggested_action}"
@@ -116,229 +122,290 @@ def _safe_execute(func_name: str, func: callable, **kwargs):
             return f"⚠️ Validation Error: {error_pattern.message}\n💡 {error_pattern.suggested_action}"
         else:
             return f"❌ Error in {func_name}: {str(e)}\n💡 {error_pattern.suggested_action}"
+
+
 ALLOWED_MATH_NAMES = {
-    'abs', 'round', 'pow', 'sum', 'min', 'max',
-    'sqrt', 'log', 'log10', 'exp', 'sin', 'cos', 'tan',
-    'asin', 'acos', 'atan', 'degrees', 'radians',
-    'pi', 'e', 'inf', 'nan'
+    "abs",
+    "round",
+    "pow",
+    "sum",
+    "min",
+    "max",
+    "sqrt",
+    "log",
+    "log10",
+    "exp",
+    "sin",
+    "cos",
+    "tan",
+    "asin",
+    "acos",
+    "atan",
+    "degrees",
+    "radians",
+    "pi",
+    "e",
+    "inf",
+    "nan",
 }
 ALLOWED_MATH_OPERATORS = {
-    ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow,
-    ast.Mod, ast.FloorDiv, ast.USub, ast.UAdd
+    ast.Add,
+    ast.Sub,
+    ast.Mult,
+    ast.Div,
+    ast.Pow,
+    ast.Mod,
+    ast.FloorDiv,
+    ast.USub,
+    ast.UAdd,
 }
 
 
-@tool(category="web", description="Search the web for information using a search engine")
+@tool(
+    category="web", description="Search the web for information using a search engine"
+)
 def web_search(query: str, num_results: int = 5) -> str:
     """Search the web for information.
-    
+
     Args:
         query: The search query
         num_results: Number of results to return (max 10)
-    
+
     Returns:
         Search results as formatted text
     """
+
     def _web_search_impl(query: str, num_results: int = 5) -> str:
         # Validate inputs
         if not query or not query.strip():
             raise ValueError("Search query cannot be empty")
-        
+
         num_results = min(max(1, num_results), 10)
-        
+
         # URL encode the query
         encoded_query = urllib.parse.quote(query)
-        
+
         # Using DuckDuckGo's API for simplicity (no API key needed)
         url = f"https://api.duckduckgo.com/?q={encoded_query}&format=json&no_html=1&skip_disambig=1"
-        
+
         # Make request with timeout
-        req = urllib.request.Request(url, headers={
-            'User-Agent': 'Mozilla/5.0 (compatible; AI-Library/1.0)'
-        })
-        
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "Mozilla/5.0 (compatible; AI-Library/1.0)"}
+        )
+
         with urllib.request.urlopen(req, timeout=_get_web_timeout()) as response:
-            data = json.loads(response.read().decode('utf-8'))
-        
+            data = json.loads(response.read().decode("utf-8"))
+
         # Extract results
         results = []
-        
+
         # Add instant answer if available
-        if data.get('Answer'):
+        if data.get("Answer"):
             results.append(f"Answer: {data['Answer']}")
-        
+
         # Add abstract if available
-        if data.get('Abstract'):
+        if data.get("Abstract"):
             results.append(f"Summary: {data['Abstract']}")
-            if data.get('AbstractURL'):
+            if data.get("AbstractURL"):
                 results.append(f"Source: {data['AbstractURL']}")
-        
+
         # Add related topics
-        for topic in data.get('RelatedTopics', [])[:num_results]:
-            if isinstance(topic, dict) and 'Text' in topic:
+        for topic in data.get("RelatedTopics", [])[:num_results]:
+            if isinstance(topic, dict) and "Text" in topic:
                 results.append(f"- {topic['Text']}")
-                if 'FirstURL' in topic:
+                if "FirstURL" in topic:
                     results.append(f"  URL: {topic['FirstURL']}")
-        
+
         if not results:
             return f"No results found for: {query}\n💡 Try different keywords or check your internet connection"
-        
+
         return "\n".join(results)
-    
-    return _safe_execute("web_search", _web_search_impl, query=query, num_results=num_results)
+
+    return _safe_execute(
+        "web_search", _web_search_impl, query=query, num_results=num_results
+    )
 
 
 @tool(category="file", description="Read the contents of a file")
 def read_file(file_path: str, encoding: str = "utf-8") -> str:
     """Read contents of a file.
-    
+
     Args:
         file_path: Path to the file to read
         encoding: File encoding (default: utf-8)
-    
+
     Returns:
         File contents or error message
     """
+
     def _read_file_impl(file_path: str, encoding: str = "utf-8") -> str:
         # Validate file path
         path = Path(file_path).resolve()
-        
+
         if not path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
-        
+
         if not path.is_file():
             raise ValueError(f"Not a file: {file_path}")
-        
+
         # Check file size
         file_size = path.stat().st_size
         max_file_size = _get_max_file_size()
         if file_size > max_file_size:
-            raise ValueError(f"File too large ({file_size} bytes). Maximum size is {max_file_size} bytes.")
-        
+            raise ValueError(
+                f"File too large ({file_size} bytes). Maximum size is {max_file_size} bytes."
+            )
+
         # Read file
-        with open(path, 'r', encoding=encoding) as f:
+        with open(path, "r", encoding=encoding) as f:
             content = f.read()
-        
+
         return content
-    
-    return _safe_execute("read_file", _read_file_impl, file_path=file_path, encoding=encoding)
+
+    return _safe_execute(
+        "read_file", _read_file_impl, file_path=file_path, encoding=encoding
+    )
 
 
 @tool(category="file", description="Write content to a file")
-def write_file(file_path: str, content: str, encoding: str = "utf-8", create_dirs: bool = False) -> str:
+def write_file(
+    file_path: str, content: str, encoding: str = "utf-8", create_dirs: bool = False
+) -> str:
     """Write content to a file.
-    
+
     Args:
         file_path: Path to the file to write
         content: Content to write to the file
         encoding: File encoding (default: utf-8)
         create_dirs: Whether to create parent directories if they don't exist
-    
+
     Returns:
         Success message or error
     """
-    def _write_file_impl(file_path: str, content: str, encoding: str = "utf-8", create_dirs: bool = False) -> str:
+
+    def _write_file_impl(
+        file_path: str, content: str, encoding: str = "utf-8", create_dirs: bool = False
+    ) -> str:
         # Validate inputs
         if not file_path:
             raise ValueError("File path cannot be empty")
-        
+
         path = Path(file_path).resolve()
-        
+
         # Create parent directories if requested
         if create_dirs:
             path.parent.mkdir(parents=True, exist_ok=True)
         elif not path.parent.exists():
             raise FileNotFoundError(f"Parent directory does not exist: {path.parent}")
-        
+
         # Write file
-        with open(path, 'w', encoding=encoding) as f:
+        with open(path, "w", encoding=encoding) as f:
             f.write(content)
-        
+
         return f"Successfully wrote {len(content)} characters to {file_path}"
-    
-    return _safe_execute("write_file", _write_file_impl, 
-                        file_path=file_path, content=content, 
-                        encoding=encoding, create_dirs=create_dirs)
+
+    return _safe_execute(
+        "write_file",
+        _write_file_impl,
+        file_path=file_path,
+        content=content,
+        encoding=encoding,
+        create_dirs=create_dirs,
+    )
 
 
-@tool(category="code", description="Execute Python code safely in a sandboxed environment")
+@tool(
+    category="code", description="Execute Python code safely in a sandboxed environment"
+)
 def run_python(code: str, timeout: int = None) -> str:
     """Execute Python code safely.
-    
+
     Args:
         code: Python code to execute
         timeout: Maximum execution time in seconds (default: from config)
-    
+
     Returns:
         Output of the code execution or error message
     """
+
     def _run_python_impl(code: str, timeout: int = None) -> str:
         if timeout is None:
             timeout = _get_code_timeout()
-            
+
         # Validate inputs
         if not code or not code.strip():
             raise ValueError("Code cannot be empty")
-        
+
         timeout = min(max(1, timeout), 30)
-        
+
         # Create temporary file for code
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(code)
             temp_file = f.name
-        
+
         try:
             # Run code in subprocess with timeout
             # Try python3 first, then python
-            python_cmd = 'python3' if subprocess.run(['which', 'python3'], capture_output=True).returncode == 0 else 'python'
-            
+            python_cmd = (
+                "python3"
+                if subprocess.run(["which", "python3"], capture_output=True).returncode
+                == 0
+                else "python"
+            )
+
             result = subprocess.run(
                 [python_cmd, temp_file],
                 capture_output=True,
                 text=True,
                 timeout=timeout,
-                check=False
+                check=False,
             )
-            
+
             output = []
             if result.stdout:
                 output.append(result.stdout)
             if result.stderr:
                 output.append(f"Errors:\n{result.stderr}")
-            
+
             if result.returncode != 0:
                 output.append(f"Exit code: {result.returncode}")
-            
-            return "\n".join(output) if output else "Code executed successfully (no output)"
-            
+
+            return (
+                "\n".join(output)
+                if output
+                else "Code executed successfully (no output)"
+            )
+
         finally:
             # Clean up
             os.unlink(temp_file)
-    
+
     return _safe_execute("run_python", _run_python_impl, code=code, timeout=timeout)
 
 
 @tool(category="time", description="Get the current time in a specified timezone")
-def get_current_time(timezone: str = "UTC", format: str = "%Y-%m-%d %H:%M:%S %Z") -> str:
+def get_current_time(
+    timezone: str = "UTC", format: str = "%Y-%m-%d %H:%M:%S %Z"
+) -> str:
     """Get current time in specified timezone.
-    
+
     Args:
         timezone: Timezone name (e.g., 'UTC', 'US/Eastern', 'Europe/London')
         format: Time format string (default: '%Y-%m-%d %H:%M:%S %Z')
-    
+
     Returns:
         Formatted time string or error message
     """
     try:
         # Get timezone
         tz = zoneinfo.ZoneInfo(timezone)
-        
+
         # Get current time
         now = datetime.datetime.now(tz)
-        
+
         # Format time
         return now.strftime(format)
-        
+
     except zoneinfo.ZoneInfoNotFoundError:
         available = ", ".join(sorted(zoneinfo.available_timezones())[:10])
         return f"Error: Unknown timezone '{timezone}'. Examples: {available}..."
@@ -352,79 +419,76 @@ def http_request(
     method: str = "GET",
     headers: Optional[Dict[str, str]] = None,
     data: Optional[Union[str, Dict[str, Any]]] = None,
-    timeout: int = None
+    timeout: int = None,
 ) -> str:
     """Make HTTP requests.
-    
+
     Args:
         url: The URL to request
         method: HTTP method (GET, POST, PUT, DELETE, etc.)
         headers: Optional headers dictionary
         data: Optional data to send (for POST/PUT requests)
         timeout: Request timeout in seconds (default: from config)
-    
+
     Returns:
         Response text or error message
     """
     if timeout is None:
         timeout = _get_web_timeout()
-        
+
     try:
         # Validate inputs
         if not url:
             return "Error: URL cannot be empty"
-        
+
         # Validate URL
         parsed = urllib.parse.urlparse(url)
         if not parsed.scheme or not parsed.netloc:
             return "Error: Invalid URL format"
-        
-        if parsed.scheme not in ('http', 'https'):
+
+        if parsed.scheme not in ("http", "https"):
             return "Error: Only HTTP/HTTPS protocols are supported"
-        
+
         timeout = min(max(1, timeout), 30)
-        
+
         # Prepare request
         if headers is None:
             headers = {}
-        
+
         # Convert headers keys to proper case for consistency
         normalized_headers = {}
         for k, v in headers.items():
             normalized_headers[k] = v
-        
-        if 'User-Agent' not in normalized_headers:
-            normalized_headers['User-Agent'] = 'AI-Library/1.0'
-        
+
+        if "User-Agent" not in normalized_headers:
+            normalized_headers["User-Agent"] = "AI-Library/1.0"
+
         # Handle data
         body_data = None
         if data is not None:
             if isinstance(data, dict):
-                body_data = json.dumps(data).encode('utf-8')
-                normalized_headers['Content-Type'] = 'application/json'
+                body_data = json.dumps(data).encode("utf-8")
+                normalized_headers["Content-Type"] = "application/json"
             else:
-                body_data = str(data).encode('utf-8')
-        
+                body_data = str(data).encode("utf-8")
+
         # Create request
         req = urllib.request.Request(
-            url,
-            data=body_data,
-            headers=normalized_headers,
-            method=method.upper()
+            url, data=body_data, headers=normalized_headers, method=method.upper()
         )
-        
+
         # Make request
         with urllib.request.urlopen(req, timeout=timeout) as response:
             # Read response
-            content = response.read().decode('utf-8', errors='replace')
-            
+            content = response.read().decode("utf-8", errors="replace")
+
             # Try to parse JSON if possible
             try:
                 parsed = json.loads(content)
                 return json.dumps(parsed, indent=2)
             except:
                 return content
-                
+
     except urllib.error.HTTPError as e:
         return f"HTTP Error {e.code}: {e.reason}"
     except urllib.error.URLError as e:
@@ -435,26 +499,32 @@ def http_request(
 
 class MathEvaluator(ast.NodeVisitor):
     """Safe math expression evaluator."""
-    
+
     def visit(self, node):
-        if type(node) not in (ast.Expression, ast.BinOp, ast.UnaryOp, 
-                             ast.Constant, ast.Name, ast.Call):
+        if type(node) not in (
+            ast.Expression,
+            ast.BinOp,
+            ast.UnaryOp,
+            ast.Constant,
+            ast.Name,
+            ast.Call,
+        ):
             raise ValueError(f"Unsupported operation: {type(node).__name__}")
         return super().visit(node)
-    
+
     def visit_Expression(self, node):
         return self.visit(node.body)
-    
+
     def visit_Constant(self, node):
         return node.value
-    
+
     def visit_BinOp(self, node):
         if type(node.op) not in ALLOWED_MATH_OPERATORS:
             raise ValueError(f"Unsupported operator: {type(node.op).__name__}")
-        
+
         left = self.visit(node.left)
         right = self.visit(node.right)
-        
+
         ops = {
             ast.Add: operator.add,
             ast.Sub: operator.sub,
@@ -464,99 +534,99 @@ class MathEvaluator(ast.NodeVisitor):
             ast.Mod: operator.mod,
             ast.FloorDiv: operator.floordiv,
         }
-        
+
         return ops[type(node.op)](left, right)
-    
+
     def visit_UnaryOp(self, node):
         if type(node.op) not in (ast.UAdd, ast.USub):
             raise ValueError(f"Unsupported unary operator: {type(node.op).__name__}")
-        
+
         operand = self.visit(node.operand)
-        
+
         if isinstance(node.op, ast.UAdd):
             return +operand
         else:
             return -operand
-    
+
     def visit_Name(self, node):
         if node.id not in ALLOWED_MATH_NAMES:
             raise ValueError(f"Unsupported name: {node.id}")
-        
+
         # Map names to math module attributes or builtins
-        if node.id == 'abs':
+        if node.id == "abs":
             return abs
-        elif node.id == 'round':
+        elif node.id == "round":
             return round
-        elif node.id == 'pow':
+        elif node.id == "pow":
             return pow
-        elif node.id == 'sum':
+        elif node.id == "sum":
             return sum
-        elif node.id == 'min':
+        elif node.id == "min":
             return min
-        elif node.id == 'max':
+        elif node.id == "max":
             return max
         elif hasattr(math, node.id):
             return getattr(math, node.id)
         else:
             raise ValueError(f"Unsupported name: {node.id}")
-    
+
     def visit_Call(self, node):
         if not isinstance(node.func, ast.Name):
             raise ValueError("Only simple function calls are supported")
-        
+
         func_name = node.func.id
         if func_name not in ALLOWED_MATH_NAMES:
             raise ValueError(f"Unsupported function: {func_name}")
-        
+
         # Get function
-        if func_name == 'abs':
+        if func_name == "abs":
             func = abs
-        elif func_name == 'round':
+        elif func_name == "round":
             func = round
-        elif func_name == 'pow':
+        elif func_name == "pow":
             func = pow
-        elif func_name == 'sum':
+        elif func_name == "sum":
             func = sum
-        elif func_name == 'min':
+        elif func_name == "min":
             func = min
-        elif func_name == 'max':
+        elif func_name == "max":
             func = max
         else:
             func = getattr(math, func_name)
-        
+
         # Evaluate arguments
         args = [self.visit(arg) for arg in node.args]
-        
+
         return func(*args)
 
 
 @tool(category="math", description="Perform mathematical calculations safely")
 def calculate(expression: str) -> str:
     """Perform mathematical calculations.
-    
+
     Args:
         expression: Mathematical expression to evaluate
-    
+
     Supported operations:
         - Basic arithmetic: +, -, *, /, **, %, //
         - Functions: abs, round, pow, sum, min, max, sqrt, log, log10, exp
         - Trigonometry: sin, cos, tan, asin, acos, atan, degrees, radians
         - Constants: pi, e, inf, nan
-    
+
     Returns:
         Calculation result or error message
     """
     try:
         if not expression or not expression.strip():
             return "Error: Expression cannot be empty"
-        
+
         # Parse expression
-        tree = ast.parse(expression, mode='eval')
-        
+        tree = ast.parse(expression, mode="eval")
+
         # Evaluate safely
         evaluator = MathEvaluator()
         result = evaluator.visit(tree)
-        
+
         # Format result
         if isinstance(result, float):
             # Check for special values
@@ -571,7 +641,7 @@ def calculate(expression: str) -> str:
                 return f"Result: {result:.10g}"
         else:
             return f"Result: {result}"
-            
+
     except ZeroDivisionError:
         return "Error: Division by zero"
     except ValueError as e:
@@ -585,32 +655,32 @@ def list_directory(
     path: str = ".",
     pattern: Optional[str] = None,
     recursive: bool = False,
-    include_hidden: bool = False
+    include_hidden: bool = False,
 ) -> str:
     """List files in a directory.
-    
+
     Args:
         path: Directory path to list (default: current directory)
         pattern: Optional glob pattern to filter files (e.g., '*.py')
         recursive: Whether to search recursively
         include_hidden: Whether to include hidden files (starting with .)
-    
+
     Returns:
         List of files and directories or error message
     """
     try:
         # Resolve path
         dir_path = Path(path).resolve()
-        
+
         if not dir_path.exists():
             return f"Error: Directory not found: {path}"
-        
+
         if not dir_path.is_dir():
             return f"Error: Not a directory: {path}"
-        
+
         # List files
         results = []
-        
+
         if recursive and pattern:
             # Use rglob for recursive pattern matching
             items = dir_path.rglob(pattern)
@@ -620,13 +690,13 @@ def list_directory(
         else:
             # List all items
             items = dir_path.iterdir()
-        
+
         # Process items
         for item in sorted(items):
             # Skip hidden files if requested
-            if not include_hidden and item.name.startswith('.'):
+            if not include_hidden and item.name.startswith("."):
                 continue
-            
+
             # Format item
             relative = item.relative_to(dir_path)
             if item.is_dir():
@@ -639,18 +709,18 @@ def list_directory(
                     size_str = f"{size/1024:.1f}KB"
                 else:
                     size_str = f"{size/(1024*1024):.1f}MB"
-                
+
                 results.append(f"[FILE] {relative} ({size_str})")
-        
+
         if not results:
             return "No items found matching criteria"
-        
+
         header = f"Contents of {dir_path}:\n"
         if pattern:
             header += f"Pattern: {pattern}\n"
-        
+
         return header + "\n".join(results)
-        
+
     except PermissionError:
         return f"Error: Permission denied: {path}"
     except Exception as e:
@@ -659,7 +729,7 @@ def list_directory(
 
 def load_builtin_tools():
     """Load all built-in tools into the global registry.
-    
+
     This function is automatically called when the module is imported,
     but can be called manually to reload tools.
     """
@@ -673,13 +743,13 @@ load_builtin_tools()
 
 
 __all__ = [
-    'web_search',
-    'read_file',
-    'write_file',
-    'run_python',
-    'get_current_time',
-    'http_request',
-    'calculate',
-    'list_directory',
-    'load_builtin_tools'
+    "web_search",
+    "read_file",
+    "write_file",
+    "run_python",
+    "get_current_time",
+    "http_request",
+    "calculate",
+    "list_directory",
+    "load_builtin_tools",
 ]

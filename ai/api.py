@@ -26,17 +26,17 @@ def _cleanup_aiohttp_sessions_sync(loop):
     import gc
     import warnings
     import logging
-    
+
     # Temporarily disable logging to prevent cleanup noise
     logging.getLogger("asyncio").setLevel(logging.CRITICAL)
-    
+
     # Suppress specific aiohttp cleanup warnings during our own cleanup
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=".*Task was destroyed.*")
         warnings.filterwarnings("ignore", message=".*ClientSession.*")
         warnings.filterwarnings("ignore", message=".*BaseConnector.*")
         warnings.filterwarnings("ignore", message=".*_wait_for_close.*")
-        
+
         # More aggressive cleanup approach
         try:
             # Get all pending tasks and cancel them
@@ -44,7 +44,7 @@ def _cleanup_aiohttp_sessions_sync(loop):
             for task in all_tasks:
                 if not task.done():
                     task.cancel()
-            
+
             # Force wait for cancellation with multiple attempts
             if all_tasks:
                 for attempt in range(3):
@@ -52,61 +52,70 @@ def _cleanup_aiohttp_sessions_sync(loop):
                         remaining_tasks = [t for t in all_tasks if not t.done()]
                         if not remaining_tasks:
                             break
-                        
+
                         loop.run_until_complete(
                             asyncio.wait_for(
-                                asyncio.gather(*remaining_tasks, return_exceptions=True),
-                                timeout=0.1
+                                asyncio.gather(
+                                    *remaining_tasks, return_exceptions=True
+                                ),
+                                timeout=0.1,
                             )
                         )
                         break
                     except (asyncio.TimeoutError, asyncio.CancelledError, RuntimeError):
                         continue  # Try again with shorter timeout
-                        
+
         except RuntimeError:
             pass  # Event loop may be closing
-        
+
         # Force cleanup of aiohttp objects using gc
         try:
             import aiohttp
-            
+
             # Multiple garbage collection passes to ensure cleanup
             for _ in range(3):
                 gc.collect()
-                
+
                 # Find and close any remaining aiohttp objects
                 for obj in gc.get_objects():
                     try:
-                        if hasattr(obj, '__class__'):
+                        if hasattr(obj, "__class__"):
                             class_name = obj.__class__.__name__
-                            
+
                             # Handle ClientSession cleanup
-                            if isinstance(obj, aiohttp.ClientSession) and not getattr(obj, '_closed', True):
+                            if isinstance(obj, aiohttp.ClientSession) and not getattr(
+                                obj, "_closed", True
+                            ):
                                 try:
                                     # Try to close without creating new loop
-                                    if hasattr(obj, '_connector') and obj._connector:
+                                    if hasattr(obj, "_connector") and obj._connector:
                                         obj._connector._close()
                                     obj._closed = True
                                 except (AttributeError, RuntimeError):
                                     pass  # Expected during cleanup
-                            
+
                             # Handle BaseConnector cleanup
-                            elif class_name == 'TCPConnector' or 'Connector' in class_name:
-                                if hasattr(obj, '_close') and not getattr(obj, '_closed', True):
+                            elif (
+                                class_name == "TCPConnector"
+                                or "Connector" in class_name
+                            ):
+                                if hasattr(obj, "_close") and not getattr(
+                                    obj, "_closed", True
+                                ):
                                     try:
                                         obj._close()
                                     except (AttributeError, RuntimeError):
                                         pass  # Expected during cleanup
-                                        
+
                     except (TypeError, AttributeError, RuntimeError):
                         pass  # Ignore individual cleanup failures
-                        
+
         except ImportError:
             pass  # aiohttp not available
-        
+
         # Final garbage collection
         gc.collect()
-        
+
     # Restore logging level
     logging.getLogger("asyncio").setLevel(logging.WARNING)
 
@@ -119,7 +128,7 @@ def _get_default_backend() -> BaseBackend:
             return backend
     except Exception as e:
         logger.debug(f"Local backend not available: {e}")
-    
+
     return CloudBackend()
 
 
@@ -134,40 +143,40 @@ def ask(
     fast: bool = False,
     quality: bool = False,
     tools: Optional[List] = None,
-    **kwargs
+    **kwargs,
 ) -> AIResponse:
     """
     Ask a question and get a response. The simplest way to use AI.
-    
+
     Examples:
         >>> response = ask("What is Python?")
         >>> print(response)
-        
+
         >>> response = ask("Fix this code", system="You are a code reviewer")
         >>> print(f"Model: {response.model}, Time: {response.time}s")
-        
+
         >>> response = ask("Quick question", fast=True)
         >>> response = ask("Complex analysis", quality=True)
-        
+
         >>> # Multi-modal with images
         >>> response = ask([
         ...     "What's in this image?",
         ...     ImageInput("photo.jpg")
         ... ], model="gpt-4-vision-preview")
-        
+
         >>> # Multiple images
         >>> response = ask([
         ...     "Compare these images:",
         ...     ImageInput("image1.png"),
         ...     ImageInput("image2.png")
         ... ], backend="cloud")
-        
+
         >>> # With tools
         >>> def get_weather(city: str) -> str:
         ...     return f"Weather in {city}: 72°F, sunny"
         >>> response = ask("What's the weather in NYC?", tools=[get_weather])
         >>> print(f"Called {len(response.tool_calls)} tools")
-    
+
     Args:
         prompt: Your question - can be a string or list of content (text/images)
         model: Specific model to use (optional)
@@ -179,7 +188,7 @@ def ask(
         quality: Prefer quality over speed (optional)
         tools: List of functions/tools the AI can call (optional)
         **kwargs: Additional backend-specific parameters
-        
+
     Returns:
         AIResponse that behaves like a string but contains metadata
     """
@@ -190,9 +199,9 @@ def ask(
         backend=backend,
         prefer_speed=fast,
         prefer_quality=quality,
-        **kwargs
+        **kwargs,
     )
-    
+
     # Run async function in sync context with proper cleanup
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -205,13 +214,13 @@ def ask(
                 temperature=temperature,
                 max_tokens=max_tokens,
                 tools=tools,
-                **kwargs
+                **kwargs,
             )
         )
-        
+
         # Properly cleanup aiohttp sessions and tasks
         _cleanup_aiohttp_sessions_sync(loop)
-        
+
         return result
     finally:
         loop.close()
@@ -228,22 +237,22 @@ def stream(
     fast: bool = False,
     quality: bool = False,
     tools: Optional[List] = None,
-    **kwargs
+    **kwargs,
 ) -> Iterator[str]:
     """
     Stream a response token by token.
-    
+
     Examples:
         >>> for chunk in stream("Tell me a story"):
         ...     print(chunk, end="", flush=True)
-        
+
         >>> # Multi-modal streaming
         >>> for chunk in stream([
         ...     "Describe this image:",
         ...     ImageInput("photo.jpg")
         ... ], model="gpt-4-vision-preview"):
         ...     print(chunk, end="", flush=True)
-    
+
     Args:
         prompt: Your question - can be a string or list of content (text/images)
         model: Specific model to use (optional)
@@ -255,7 +264,7 @@ def stream(
         quality: Prefer quality over speed (optional)
         tools: List of functions/tools the AI can call (optional)
         **kwargs: Additional backend-specific parameters
-        
+
     Yields:
         String chunks as they arrive
     """
@@ -266,9 +275,9 @@ def stream(
         backend=backend,
         prefer_speed=fast,
         prefer_quality=quality,
-        **kwargs
+        **kwargs,
     )
-    
+
     # Convert async generator to sync generator
     async def _async_stream():
         async for chunk in backend_instance.astream(
@@ -278,10 +287,10 @@ def stream(
             temperature=temperature,
             max_tokens=max_tokens,
             tools=tools,
-            **kwargs
+            **kwargs,
         ):
             yield chunk
-    
+
     # Run async generator in sync context
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -293,7 +302,7 @@ def stream(
                 yield chunk
             except StopAsyncIteration:
                 break
-        
+
         # Cleanup after streaming is complete
         _cleanup_aiohttp_sessions_sync(loop)
     finally:
@@ -303,11 +312,11 @@ def stream(
 class ChatSession:
     """
     A chat session that maintains conversation history.
-    
+
     This class manages a conversation context, allowing for multi-turn
     conversations with persistent memory.
     """
-    
+
     def __init__(
         self,
         *,
@@ -315,11 +324,11 @@ class ChatSession:
         model: Optional[str] = None,
         backend: Optional[Union[str, BaseBackend]] = None,
         tools: Optional[List] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a chat session.
-        
+
         Args:
             system: System prompt to set the assistant's behavior
             model: Default model to use for this session
@@ -332,7 +341,7 @@ class ChatSession:
         self.kwargs = kwargs
         self.tools = tools
         self.history = []
-        
+
         # Handle backend selection
         if isinstance(backend, str):
             if backend == "local":
@@ -343,28 +352,22 @@ class ChatSession:
             self.backend = backend
         else:
             self.backend = _get_default_backend()
-    
-    def ask(
-        self,
-        prompt: str,
-        *,
-        model: Optional[str] = None,
-        **kwargs
-    ) -> AIResponse:
+
+    def ask(self, prompt: str, *, model: Optional[str] = None, **kwargs) -> AIResponse:
         """
         Ask a question in this chat session.
-        
+
         Args:
             prompt: Your message/question
             model: Override the session's default model
             **kwargs: Additional parameters for this request
-            
+
         Returns:
             AIResponse with the assistant's reply
         """
         # Add user message to history
         self.history.append({"role": "user", "content": prompt})
-        
+
         # Build conversation context
         if len(self.history) == 1:
             # First message, just use the prompt
@@ -377,13 +380,13 @@ class ChatSession:
                     conversation.append(f"Human: {msg['content']}")
                 else:
                     conversation.append(f"Assistant: {msg['content']}")
-            
+
             conversation.append(f"Human: {prompt}")
             full_prompt = "\n\n".join(conversation)
-        
+
         # Merge parameters
         params = {**self.kwargs, **kwargs}
-        
+
         # Make the request
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -394,41 +397,37 @@ class ChatSession:
                     model=model or self.model,
                     system=self.system,
                     tools=self.tools,
-                    **params
+                    **params,
                 )
             )
-            
+
             # Cleanup aiohttp sessions
             _cleanup_aiohttp_sessions_sync(loop)
         finally:
             loop.close()
-        
+
         # Add assistant response to history
         self.history.append({"role": "assistant", "content": str(response)})
-        
+
         return response
-    
+
     def stream(
-        self,
-        prompt: str,
-        *,
-        model: Optional[str] = None,
-        **kwargs
+        self, prompt: str, *, model: Optional[str] = None, **kwargs
     ) -> Iterator[str]:
         """
         Stream a response in this chat session.
-        
+
         Args:
-            prompt: Your message/question  
+            prompt: Your message/question
             model: Override the session's default model
             **kwargs: Additional parameters for this request
-            
+
         Yields:
             String chunks as they arrive
         """
         # Add user message to history
         self.history.append({"role": "user", "content": prompt})
-        
+
         # Build conversation context (same logic as ask)
         if len(self.history) == 1:
             full_prompt = prompt
@@ -439,27 +438,27 @@ class ChatSession:
                     conversation.append(f"Human: {msg['content']}")
                 else:
                     conversation.append(f"Assistant: {msg['content']}")
-            
+
             conversation.append(f"Human: {prompt}")
             full_prompt = "\n\n".join(conversation)
-        
+
         # Merge parameters
         params = {**self.kwargs, **kwargs}
-        
+
         # Stream the response and collect it
         response_parts = []
-        
+
         async def _async_stream():
             async for chunk in self.backend.astream(
                 full_prompt,
                 model=model or self.model,
                 system=self.system,
                 tools=self.tools,
-                **params
+                **params,
             ):
                 response_parts.append(chunk)
                 yield chunk
-        
+
         # Run async generator in sync context
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -471,16 +470,16 @@ class ChatSession:
                     yield chunk
                 except StopAsyncIteration:
                     break
-            
+
             # Cleanup after streaming is complete
             _cleanup_aiohttp_sessions_sync(loop)
         finally:
             loop.close()
-        
+
         # Add complete response to history
         full_response = "".join(response_parts)
         self.history.append({"role": "assistant", "content": full_response})
-    
+
     def clear(self) -> None:
         """Clear the conversation history."""
         self.history = []
@@ -495,39 +494,39 @@ def chat(
     persist: bool = False,
     session_id: Optional[str] = None,
     tools: Optional[List] = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Context manager for chat sessions.
-    
+
     Examples:
         >>> with chat() as session:
         ...     response = session.ask("Hello!")
         ...     print(response)
         ...     response = session.ask("What's 2+2?")
         ...     print(response)
-        
+
         >>> with chat(system="You are a helpful coding assistant") as session:
         ...     response = session.ask("Write a Python function")
         ...     print(response)
-        
+
         >>> # Persistent session that can be saved
         >>> with chat(persist=True) as session:
         ...     session.ask("Remember this: My name is Alice")
         ...     session.save("alice_chat.json")
-        
+
         >>> # Resume a saved session
         >>> from ai.chat import PersistentChatSession
         >>> session = PersistentChatSession.load("alice_chat.json")
         >>> session.ask("What's my name?")  # Will remember it's Alice
-        
+
         >>> # Chat with tools
         >>> def get_weather(city: str) -> str:
         ...     return f"Weather in {city}: 72°F, sunny"
         >>> with chat(tools=[get_weather]) as session:
         ...     response = session.ask("What's the weather in NYC?")
         ...     print(response)
-    
+
     Args:
         system: System prompt to set the assistant's behavior
         model: Default model to use for this session
@@ -536,7 +535,7 @@ def chat(
         session_id: Unique identifier for persistent sessions
         tools: List of functions/tools the AI can call
         **kwargs: Additional parameters passed to each request
-        
+
     Yields:
         ChatSession or PersistentChatSession instance
     """
@@ -547,15 +546,11 @@ def chat(
             backend=backend,
             session_id=session_id,
             tools=tools,
-            **kwargs
+            **kwargs,
         )
     else:
         session = ChatSession(
-            system=system,
-            model=model,
-            backend=backend,
-            tools=tools,
-            **kwargs
+            system=system, model=model, backend=backend, tools=tools, **kwargs
         )
     try:
         yield session
@@ -573,7 +568,7 @@ async def ask_async(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
-    **kwargs
+    **kwargs,
 ) -> AIResponse:
     """Async version of ask()."""
     # Handle backend selection
@@ -586,14 +581,14 @@ async def ask_async(
         backend_instance = backend
     else:
         backend_instance = _get_default_backend()
-    
+
     return await backend_instance.ask(
         prompt,
         model=model,
         system=system,
         temperature=temperature,
         max_tokens=max_tokens,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -605,7 +600,7 @@ async def stream_async(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
-    **kwargs
+    **kwargs,
 ) -> AsyncIterator[str]:
     """Async version of stream()."""
     # Handle backend selection
@@ -618,14 +613,14 @@ async def stream_async(
         backend_instance = backend
     else:
         backend_instance = _get_default_backend()
-    
+
     async for chunk in backend_instance.astream(
         prompt,
         model=model,
         system=system,
         temperature=temperature,
         max_tokens=max_tokens,
-        **kwargs
+        **kwargs,
     ):
         yield chunk
 
@@ -636,15 +631,10 @@ async def achat(
     system: Optional[str] = None,
     model: Optional[str] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
-    **kwargs
+    **kwargs,
 ):
     """Async context manager for chat sessions."""
-    session = ChatSession(
-        system=system,
-        model=model,
-        backend=backend,
-        **kwargs
-    )
+    session = ChatSession(system=system, model=model, backend=backend, **kwargs)
     try:
         yield session
     finally:
