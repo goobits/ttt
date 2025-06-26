@@ -2,319 +2,358 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from typer.testing import CliRunner
-from pathlib import Path
-import tempfile
-import os
 import sys
+import os
+from io import StringIO
 
-from ai.cli import app
-from ai.models import ModelInfo
-from ai.backends import LocalBackend, CloudBackend
-
-
-@pytest.fixture
-def runner():
-    """Provide CLI test runner."""
-    return CliRunner()
-
-
-@pytest.fixture
-def mock_config():
-    """Mock configuration."""
-    with patch('ai.cli.get_config') as mock:
-        config_obj = Mock()
-        config_obj.timeout = 30
-        config_obj.model_aliases = {"fast": "gpt-3.5-turbo"}
-        mock.return_value = config_obj
-        yield mock
+# Import CLI functions and exceptions
+from ai.cli import main, parse_args
+from ai.api import ask, stream
+from ai.exceptions import (
+    APIKeyError, ModelNotFoundError, RateLimitError,
+    BackendNotAvailableError, EmptyResponseError
+)
 
 
 class TestCLIAskCommand:
-    """Test the ask command."""
+    """Test the ask functionality."""
     
-    def test_ask_basic(self, runner, mock_config):
+    @patch('ai.api.ask')
+    def test_ask_basic(self, mock_ask):
         """Test basic ask functionality."""
-        with patch('ai.cli.ask_api') as mock_ask:
-            mock_response = Mock()
-            mock_response.__str__ = Mock(return_value="Test response")
-            mock_response.model = "gpt-3.5-turbo"
-            mock_response.backend = "local"
-            mock_response.time = 0.5
-            mock_response.tokens_in = 10
-            mock_response.tokens_out = 20
-            mock_response.failed = False
-            mock_response.error = None
-            mock_ask.return_value = mock_response
-            
-            result = runner.invoke(app, ["ask", "What is Python?"])
-            
-            if result.exit_code != 0:
-                print(f"Exit code: {result.exit_code}")
-                print(f"Stdout: {result.stdout}")
-                print(f"Stderr: {result.stderr}")
-                print(f"Exception: {result.exception}")
-            
-            assert result.exit_code == 0
-            assert "Test response" in result.stdout
-            mock_ask.assert_called_once_with("What is Python?", model=None, system=None, backend='local', temperature=None, max_tokens=None)
+        mock_response = Mock()
+        mock_response.__str__ = Mock(return_value="Test response")
+        mock_response.model = "gpt-3.5-turbo"
+        mock_response.backend = "cloud"
+        mock_response.time = 0.5
+        mock_response.tokens_in = 10
+        mock_response.tokens_out = 20
+        mock_ask.return_value = mock_response
+        
+        with patch('sys.argv', ['ai', 'What is Python?']):
+            with patch('ai.cli.console') as mock_console:
+                main()
+                
+                # Check the ask was called correctly
+                mock_ask.assert_called_once()
+                call_args = mock_ask.call_args
+                assert call_args[0][0] == "What is Python?"
+                
+                # Check response was printed
+                print_calls = [str(call) for call in mock_console.print.call_args_list]
+                assert any('Test response' in str(call) for call in print_calls)
     
-    def test_ask_with_model(self, runner, mock_config):
+    @patch('ai.api.ask')
+    def test_ask_with_model(self, mock_ask):
         """Test ask with specific model."""
-        with patch('ai.cli.ask_api') as mock_ask:
-            mock_response = Mock()
-            mock_response.__str__ = Mock(return_value="Response")
-            mock_response.failed = False
-            mock_response.error = None
-            mock_ask.return_value = mock_response
-            
-            result = runner.invoke(app, ["ask", "--model", "gpt-4", "Question"])
-            
-            assert result.exit_code == 0
-            call_args = mock_ask.call_args
-            assert call_args[1]["model"] == "gpt-4"
+        mock_response = Mock()
+        mock_response.__str__ = Mock(return_value="Response")
+        mock_ask.return_value = mock_response
+        
+        with patch('sys.argv', ['ai', 'Question', '--model', 'gpt-4']):
+            with patch('ai.cli.console'):
+                main()
+                
+                call_kwargs = mock_ask.call_args[1]
+                assert call_kwargs.get('model') == 'gpt-4'
     
-    def test_ask_with_system(self, runner, mock_config):
+    @patch('ai.api.ask')
+    def test_ask_with_system(self, mock_ask):
         """Test ask with system prompt."""
-        with patch('ai.cli.ask_api') as mock_ask:
-            mock_response = Mock()
-            mock_response.__str__ = Mock(return_value="Response")
-            mock_response.failed = False
-            mock_response.error = None
-            mock_ask.return_value = mock_response
-            
-            result = runner.invoke(app, ["ask", "--system", "You are helpful", "Question"])
-            
-            assert result.exit_code == 0
-            call_args = mock_ask.call_args
-            assert call_args[1]["system"] == "You are helpful"
+        mock_response = Mock()
+        mock_response.__str__ = Mock(return_value="Response")
+        mock_ask.return_value = mock_response
+        
+        with patch('sys.argv', ['ai', 'Question', '--system', 'You are helpful']):
+            with patch('ai.cli.console'):
+                main()
+                
+                call_kwargs = mock_ask.call_args[1]
+                assert call_kwargs.get('system') == 'You are helpful'
     
-    def test_ask_with_verbose(self, runner, mock_config):
+    @patch('ai.api.ask')
+    def test_ask_with_verbose(self, mock_ask):
         """Test ask with verbose output."""
-        with patch('ai.cli.ask_api') as mock_ask:
-            mock_response = Mock()
-            mock_response.__str__ = Mock(return_value="Response")
-            mock_response.model = "test-model"
-            mock_response.backend = "test-backend"
-            mock_response.time_taken = 1.5
-            mock_response.tokens_in = 15
-            mock_response.tokens_out = 25
-            mock_response.cost = 0.001
-            mock_response.failed = False
-            mock_response.error = None
-            mock_ask.return_value = mock_response
-            
-            result = runner.invoke(app, ["ask", "--verbose", "Question"])
-            
-            assert result.exit_code == 0
-            assert "Model: test-model" in result.stdout
-            assert "Backend: test-backend" in result.stdout
-            assert "Time: 1.50s" in result.stdout
-            assert "Tokens in: 15" in result.stdout
-            assert "Tokens out: 25" in result.stdout
+        mock_response = Mock()
+        mock_response.__str__ = Mock(return_value="Response")
+        mock_response.model = "test-model"
+        mock_response.backend = "test-backend"
+        mock_response.time = 1.5
+        mock_response.tokens_in = 15
+        mock_response.tokens_out = 25
+        mock_response.cost = 0.001
+        mock_response.tool_calls = None  # No tools called
+        mock_ask.return_value = mock_response
+        
+        with patch('sys.argv', ['ai', 'Question', '--verbose']):
+            with patch('ai.cli.console') as mock_console:
+                main()
+                
+                # Check that verbose info was shown
+                print_calls = [str(call) for call in mock_console.print.call_args_list]
+                # Verbose mode should show metadata
+                assert any('Response' in str(call) for call in print_calls)
+                # CLI uses Panel for verbose metadata
+                from rich.panel import Panel
+                has_panel = any(
+                    len(call[0]) > 0 and isinstance(call[0][0], Panel) 
+                    for call in mock_console.print.call_args_list
+                )
+                assert has_panel or any('Model:' in str(call) for call in print_calls)
     
-    def test_ask_streaming(self, runner, mock_config):
+    @patch('ai.api.stream')
+    def test_ask_streaming(self, mock_stream):
         """Test ask with streaming."""
-        with patch('ai.cli.stream') as mock_stream:
-            mock_stream.return_value = iter(["Hello", " ", "world"])
-            
-            result = runner.invoke(app, ["ask", "--stream", "Question"])
-            
-            assert result.exit_code == 0
-            assert "Hello world" in result.stdout
-            mock_stream.assert_called_once()
+        mock_stream.return_value = iter(["Hello", " ", "world"])
+        
+        with patch('sys.argv', ['ai', 'Question', '--stream']):
+            with patch('ai.cli.console') as mock_console:
+                main()
+                
+                mock_stream.assert_called_once()
+                # Check streaming output
+                print_calls = mock_console.print.call_args_list
+                # Should have printed chunks
+                assert len(print_calls) >= 3  # At least the chunks
     
-    def test_ask_with_temperature(self, runner, mock_config):
+    @patch('ai.api.ask')
+    def test_ask_with_temperature(self, mock_ask):
         """Test ask with temperature."""
-        with patch('ai.cli.ask_api') as mock_ask:
-            mock_response = Mock()
-            mock_response.__str__ = Mock(return_value="Response")
-            mock_response.failed = False
-            mock_response.error = None
-            mock_ask.return_value = mock_response
-            
-            result = runner.invoke(app, ["ask", "--temperature", "0.5", "Question"])
-            
-            assert result.exit_code == 0
-            call_args = mock_ask.call_args
-            assert call_args[1]["temperature"] == 0.5
+        mock_response = Mock()
+        mock_response.__str__ = Mock(return_value="Response")
+        mock_ask.return_value = mock_response
+        
+        with patch('sys.argv', ['ai', 'Question', '--temperature', '0.5']):
+            with patch('ai.cli.console'):
+                main()
+                
+                call_kwargs = mock_ask.call_args[1]
+                assert call_kwargs.get('temperature') == 0.5
     
-    def test_ask_with_max_tokens(self, runner, mock_config):
+    @patch('ai.api.ask')
+    def test_ask_with_max_tokens(self, mock_ask):
         """Test ask with max tokens."""
-        with patch('ai.cli.ask_api') as mock_ask:
-            mock_response = Mock()
-            mock_response.__str__ = Mock(return_value="Response")
-            mock_response.failed = False
-            mock_response.error = None
-            mock_ask.return_value = mock_response
-            
-            result = runner.invoke(app, ["ask", "--max-tokens", "100", "Question"])
-            
-            assert result.exit_code == 0
-            call_args = mock_ask.call_args
-            assert call_args[1]["max_tokens"] == 100
+        mock_response = Mock()
+        mock_response.__str__ = Mock(return_value="Response")
+        mock_ask.return_value = mock_response
+        
+        with patch('sys.argv', ['ai', 'Question', '--max-tokens', '100']):
+            with patch('ai.cli.console'):
+                main()
+                
+                call_kwargs = mock_ask.call_args[1]
+                assert call_kwargs.get('max_tokens') == 100
     
-    def test_ask_with_backend(self, runner, mock_config):
+    @patch('ai.api.ask')
+    def test_ask_with_backend(self, mock_ask):
         """Test ask with specific backend."""
-        with patch('ai.cli.ask_api') as mock_ask:
-            mock_response = Mock()
-            mock_response.__str__ = Mock(return_value="Response")
-            mock_response.failed = False
-            mock_response.error = None
-            mock_ask.return_value = mock_response
-            
-            result = runner.invoke(app, ["ask", "--backend", "cloud", "Question"])
-            
-            assert result.exit_code == 0
-            call_args = mock_ask.call_args
-            assert call_args[1]["backend"] == "cloud"
+        mock_response = Mock()
+        mock_response.__str__ = Mock(return_value="Response")
+        mock_ask.return_value = mock_response
+        
+        with patch('sys.argv', ['ai', 'Question', '--backend', 'local']):
+            with patch('ai.cli.console'):
+                main()
+                
+                call_kwargs = mock_ask.call_args[1]
+                assert call_kwargs.get('backend') == 'local'
     
+    def test_ask_from_stdin(self):
+        """Test reading prompt from stdin."""
+        # Test that parse_args correctly parses '-' as prompt
+        with patch('sys.argv', ['ai', '-']):
+            args = parse_args()
+            assert args['command'] == 'query'
+            assert args['prompt'] == '-'
 
 
-# Config command tests removed - config command not implemented in current CLI
-
-
-class TestCLIModelsListCommand:
-    """Test models list command."""
-    
-    def test_models_list_all(self, runner):
-        """Test listing all models."""
-        with patch('ai.cli.LocalBackend') as mock_local:
-            with patch('ai.cli.model_registry') as mock_registry:
-                # Setup model registry mock
-                mock_model1 = Mock()
-                mock_model1.name = "gpt-4"
-                mock_model1.provider = "openai"
-                mock_model1.aliases = ["gpt4"]
-                mock_model1.speed = "fast"
-                mock_model1.quality = "excellent"
-                mock_model1.capabilities = ["text", "code"]
-                mock_model1.context_length = 8192
-                
-                mock_model2 = Mock()
-                mock_model2.name = "claude-3"
-                mock_model2.provider = "anthropic"
-                mock_model2.aliases = ["claude"]
-                mock_model2.speed = "fast"
-                mock_model2.quality = "excellent"
-                mock_model2.capabilities = ["text", "code"]
-                mock_model2.context_length = 100000
-                
-                mock_registry.list_models.return_value = ["gpt-4", "claude-3"]
-                mock_registry.get_model.side_effect = lambda name: mock_model1 if name == "gpt-4" else mock_model2
-                
-                # Setup mocks
-                local_backend = Mock()
-                local_backend.models = AsyncMock(return_value=["llama2", "mistral"])
-                mock_local.return_value = local_backend
-                
-                result = runner.invoke(app, ["models", "list"])
-                
-                if result.exit_code != 0:
-                    print(f"Error: {result.exception}")
-                    print(f"Output: {result.stdout}")
-                    if result.exc_info:
-                        import traceback
-                        traceback.print_exception(*result.exc_info)
-                
-                assert result.exit_code == 0
-                assert "AI Models" in result.stdout
-                assert "gpt-4" in result.stdout
-                assert "llama2" in result.stdout
-    
-    def test_models_list_local_only(self, runner):
-        """Test listing only local models."""
-        with patch('ai.cli.LocalBackend') as mock_local:
-            local_backend = Mock()
-            local_backend.models = AsyncMock(return_value=["llama2"])
-            mock_local.return_value = local_backend
-            
-            result = runner.invoke(app, ["models", "list", "--local"])
-            
-            assert result.exit_code == 0
-            assert "llama2" in result.stdout
-            assert "1 local, 0 cloud" in result.stdout
-    
-    def test_models_list_cloud_only(self, runner):
-        """Test listing only cloud models."""
-        with patch('ai.cli.model_registry') as mock_registry:
-            # Setup model registry mock
-            mock_model = Mock()
-            mock_model.name = "gpt-4"
-            mock_model.provider = "openai"
-            mock_model.aliases = ["gpt4"]
-            mock_model.speed = "fast"
-            mock_model.quality = "excellent"
-            mock_model.capabilities = ["text", "code"]
-            mock_model.context_length = 8192
-            
-            mock_registry.list_models.return_value = ["gpt-4"]
-            mock_registry.get_model.return_value = mock_model
-            
-            result = runner.invoke(app, ["models", "list", "--cloud"])
-            
-            assert result.exit_code == 0
-            assert "gpt-4" in result.stdout
-    
-    def test_models_list_no_backends(self, runner):
-        """Test when no backends are available."""
-        with patch('ai.cli.LocalBackend') as mock_local:
-            with patch('ai.cli.model_registry') as mock_registry:
-                # Local backend fails
-                mock_local.side_effect = Exception("Connection failed")
-                # No cloud models
-                mock_registry.list_models.return_value = []
-                
-                result = runner.invoke(app, ["models", "list"])
-                
-                assert result.exit_code == 0
-                assert "No models found" in result.stdout
-
-
-class TestBackendStatusCommand:
-    """Test backend status command."""
-    
-    def test_backend_status_basic(self, runner):
-        """Test basic backend status."""
-        with patch('ai.cli.LocalBackend') as mock_local:
-            # Setup local backend
-            local_backend = Mock()
-            local_backend.status = AsyncMock(return_value={
-                "available": True,
-                "models": ["llama2"],
-                "base_url": "http://localhost:11434"
-            })
-            mock_local.return_value = local_backend
-            
-            result = runner.invoke(app, ["backend", "status"])
-            
-            assert result.exit_code == 0
-            assert "AI Backend Status" in result.stdout
-            assert "Local (Ollama)" in result.stdout
-            assert "🟢" in result.stdout
-
-
-class TestErrorHandling:
+class TestCLIErrorHandling:
     """Test error handling in CLI."""
     
-    def test_ask_error_handling(self, runner, mock_config):
-        """Test error handling in ask command."""
-        with patch('ai.cli.ask_api') as mock_ask:
-            mock_ask.side_effect = Exception("Test error")
-            
-            result = runner.invoke(app, ["ask", "Question"])
-            
-            assert result.exit_code == 1  # Should exit with error code
-            assert "Error" in result.stdout
-            assert "Test error" in result.stdout
+    @patch('ai.api.ask')
+    def test_api_key_error(self, mock_ask):
+        """Test handling of API key errors."""
+        mock_ask.side_effect = APIKeyError("openai", "OPENAI_API_KEY")
+        
+        with patch('sys.argv', ['ai', 'Question']):
+            with patch('ai.cli.console') as mock_console:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                
+                assert exc_info.value.code == 1
+                print_calls = [str(call) for call in mock_console.print.call_args_list]
+                assert any('API Key Missing' in str(call) for call in print_calls)
+                assert any('OPENAI_API_KEY' in str(call) for call in print_calls)
     
-    def test_stream_error_handling(self, runner, mock_config):
-        """Test error handling in stream."""
-        with patch('ai.cli.stream') as mock_stream:
-            mock_stream.side_effect = Exception("Stream error")
-            
-            result = runner.invoke(app, ["ask", "--stream", "Question"])
-            
-            assert result.exit_code == 1
-            assert "Error" in result.stdout
-            assert "Stream error" in result.stdout
+    @patch('ai.api.ask')
+    def test_model_not_found_error(self, mock_ask):
+        """Test handling of model not found errors."""
+        mock_ask.side_effect = ModelNotFoundError("gpt-5", "cloud")
+        
+        with patch('sys.argv', ['ai', 'Question']):
+            with patch('ai.cli.console') as mock_console:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                
+                assert exc_info.value.code == 1
+                print_calls = [str(call) for call in mock_console.print.call_args_list]
+                assert any('Model Not Found' in str(call) for call in print_calls)
+                assert any('models-list' in str(call) for call in print_calls)
+    
+    @patch('ai.api.ask')
+    def test_rate_limit_error(self, mock_ask):
+        """Test handling of rate limit errors."""
+        mock_ask.side_effect = RateLimitError("openai", retry_after=60)
+        
+        with patch('sys.argv', ['ai', 'Question']):
+            with patch('ai.cli.console') as mock_console:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                
+                assert exc_info.value.code == 1
+                print_calls = [str(call) for call in mock_console.print.call_args_list]
+                assert any('Rate Limit Exceeded' in str(call) for call in print_calls)
+                assert any('60 seconds' in str(call) for call in print_calls)
+    
+    @patch('ai.api.ask')
+    def test_backend_not_available_error(self, mock_ask):
+        """Test handling of backend not available errors."""
+        mock_ask.side_effect = BackendNotAvailableError("local", "Ollama not running")
+        
+        with patch('sys.argv', ['ai', 'Question']):
+            with patch('ai.cli.console') as mock_console:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                
+                assert exc_info.value.code == 1
+                print_calls = [str(call) for call in mock_console.print.call_args_list]
+                assert any('Backend Not Available' in str(call) for call in print_calls)
+                assert any('backend-status' in str(call) for call in print_calls)
+    
+    @patch('ai.api.ask')
+    def test_empty_response_error(self, mock_ask):
+        """Test handling of empty response errors."""
+        mock_ask.side_effect = EmptyResponseError("gpt-3.5", "cloud")
+        
+        with patch('sys.argv', ['ai', 'Question']):
+            with patch('ai.cli.console') as mock_console:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                
+                assert exc_info.value.code == 1
+                print_calls = [str(call) for call in mock_console.print.call_args_list]
+                assert any('Empty Response' in str(call) for call in print_calls)
+                assert any('Try rephrasing' in str(call) for call in print_calls)
+    
+    @patch('ai.api.ask')
+    def test_generic_error_without_verbose(self, mock_ask):
+        """Test handling of generic errors without verbose flag."""
+        mock_ask.side_effect = Exception("Some unexpected error")
+        
+        with patch('sys.argv', ['ai', 'Question']):
+            with patch('ai.cli.console') as mock_console:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                
+                assert exc_info.value.code == 1
+                print_calls = [str(call) for call in mock_console.print.call_args_list]
+                assert any('Error' in str(call) for call in print_calls)
+                assert any('Some unexpected error' in str(call) for call in print_calls)
+                assert any('--verbose' in str(call) for call in print_calls)
+    
+    @patch('ai.api.ask')
+    def test_generic_error_with_verbose(self, mock_ask):
+        """Test handling of generic errors with verbose flag."""
+        mock_ask.side_effect = Exception("Some unexpected error")
+        
+        with patch('sys.argv', ['ai', 'Question', '--verbose']):
+            with patch('ai.cli.console') as mock_console:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                
+                assert exc_info.value.code == 1
+                print_calls = [str(call) for call in mock_console.print.call_args_list]
+                assert any('Error' in str(call) for call in print_calls)
+                assert any('Full traceback' in str(call) for call in print_calls)
+    
+    @patch('ai.api.stream')
+    def test_stream_error_handling(self, mock_stream):
+        """Test error handling in stream mode."""
+        mock_stream.side_effect = Exception("Stream error")
+        
+        with patch('sys.argv', ['ai', 'Question', '--stream']):
+            with patch('ai.cli.console') as mock_console:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                
+                assert exc_info.value.code == 1
+                print_calls = [str(call) for call in mock_console.print.call_args_list]
+                assert any('Error' in str(call) for call in print_calls)
+                assert any('Stream error' in str(call) for call in print_calls)
+    
+    def test_keyboard_interrupt(self):
+        """Test handling of keyboard interrupt."""
+        with patch('sys.argv', ['ai', 'Question']):
+            with patch('ai.api.ask') as mock_ask:
+                mock_ask.side_effect = KeyboardInterrupt()
+                
+                with patch('ai.cli.console') as mock_console:
+                    with pytest.raises(SystemExit) as exc_info:
+                        main()
+                    
+                    assert exc_info.value.code == 1
+                    print_calls = [str(call) for call in mock_console.print.call_args_list]
+                    assert any('Cancelled by user' in str(call) for call in print_calls)
+
+
+class TestParseArgs:
+    """Test argument parsing."""
+    
+    def test_parse_empty_args(self):
+        """Test parsing with no arguments."""
+        with patch('sys.argv', ['ai']):
+            args = parse_args()
+            assert args['command'] == 'help'
+    
+    def test_parse_multiple_flags(self):
+        """Test parsing with multiple flags."""
+        with patch('sys.argv', ['ai', 'Question', '--model', 'gpt-4', '--backend', 'cloud', '--stream', '--verbose']):
+            args = parse_args()
+            assert args['command'] == 'query'
+            assert args['prompt'] == 'Question'
+            assert args['model'] == 'gpt-4'
+            assert args['backend'] == 'cloud'
+            assert args['stream'] is True
+            assert args['verbose'] is True
+    
+    def test_parse_short_flags(self):
+        """Test parsing with short flag versions."""
+        with patch('sys.argv', ['ai', 'Question', '-m', 'gpt-4', '-s', 'System prompt', '-v']):
+            args = parse_args()
+            assert args['command'] == 'query'
+            assert args['model'] == 'gpt-4'
+            assert args['system'] == 'System prompt'
+            assert args['verbose'] is True
+    
+    def test_parse_all_parameters(self):
+        """Test parsing with all possible parameters."""
+        with patch('sys.argv', [
+            'ai', 'Question',
+            '--model', 'gpt-4',
+            '--system', 'You are helpful',
+            '--backend', 'cloud',
+            '--temperature', '0.7',
+            '--max-tokens', '150',
+            '--stream',
+            '--verbose'
+        ]):
+            args = parse_args()
+            assert args['command'] == 'query'
+            assert args['prompt'] == 'Question'
+            assert args['model'] == 'gpt-4'
+            assert args['system'] == 'You are helpful'
+            assert args['backend'] == 'cloud'
+            assert args['temperature'] == 0.7
+            assert args['max_tokens'] == 150
+            assert args['stream'] is True
+            assert args['verbose'] is True

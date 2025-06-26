@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ai"
-version = "0.1.0"
+version = "0.3.0"
 description = "The Unified AI Library - A single, elegant interface for local and cloud AI models"
 authors = ["Goobits Team <team@goobits.com>"]
 readme = "README.md"

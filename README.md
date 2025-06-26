@@ -9,9 +9,11 @@ A professional, unified command-line interface for interacting with multiple AI 
 - **🌐 Multi-Provider**: Supports OpenRouter, OpenAI, Anthropic, Google APIs
 - **🤖 Local Support**: Optional Ollama integration for local models
 - **⚡ Fast Setup**: One-command installation with automatic configuration
-- **🛡️ Robust**: Built-in error handling, retries, and fallbacks
+- **🛡️ Robust Error Handling**: Comprehensive error messages with helpful suggestions
 - **🧹 Clean Output**: Minimal logging for production use
 - **📊 Status Monitoring**: Backend health checks and model listing
+- **⚡ Streaming Support**: Real-time response streaming
+- **🎨 Rich Terminal UI**: Beautiful formatted output with color support
 
 ## Quick Start
 
@@ -48,18 +50,87 @@ OPENROUTER_API_KEY=your-openrouter-key-here
 # Basic usage
 ai "What is Python?"
 
+# Stream responses in real-time
+ai "Tell me a story" --stream
+
 # Check system status
 ai backend-status
 
 # List available models
 ai models-list
+
+# Specify model and backend
+ai "Explain quantum computing" --model gpt-4 --backend cloud
+
+# Verbose output with metadata
+ai "Debug this code" --verbose
 ```
 
 ### Tools and Function Calling
 
+The AI library includes a comprehensive set of built-in tools that are ready to use, plus the ability to create custom tools.
+
+#### Built-in Tools
+
 ```python
-# Define tools using the @tool decorator
 from ai import ask
+from ai.tools.builtins import web_search, read_file, calculate, get_current_time
+
+# Use built-in tools directly
+response = ask(
+    "Search for the latest Python release and calculate 2^10",
+    tools=[web_search, calculate]
+)
+
+# All built-in tools are automatically registered
+response = ask(
+    "What time is it in Tokyo?",
+    tools=["get_current_time"]  # Can use tool names
+)
+```
+
+**Available Built-in Tools:**
+
+- **web_search**: Search the web for information
+- **read_file**: Read contents of a file  
+- **write_file**: Write content to a file
+- **list_directory**: List files in a directory
+- **run_python**: Execute Python code safely
+- **get_current_time**: Get current time in any timezone
+- **http_request**: Make HTTP API requests
+- **calculate**: Perform mathematical calculations
+
+#### Using Built-in Tools
+
+```python
+from ai import ask
+from ai.tools import list_tools
+
+# List all available tools
+all_tools = list_tools()
+print(f"Available tools: {[t.name for t in all_tools]}")
+
+# List tools by category
+web_tools = list_tools(category="web")
+file_tools = list_tools(category="file")
+
+# Use multiple built-in tools
+response = ask(
+    "Read the config.json file and tell me what port the server uses",
+    tools=["read_file"]
+)
+
+# Complex multi-tool example
+response = ask(
+    "Search for Python asyncio tutorials, save the top 3 results to tutorials.txt",
+    tools=["web_search", "write_file"]
+)
+```
+
+#### Creating Custom Tools
+
+```python
+# Define custom tools using the @tool decorator
 from ai.tools import tool
 
 @tool
@@ -72,34 +143,24 @@ def get_weather(city: str, units: str = "fahrenheit") -> str:
     """
     return f"Weather in {city}: 72°{units[0].upper()}, sunny"
 
-@tool
-def calculate(x: int, y: int, operation: str = "add") -> int:
-    """Perform a mathematical calculation.
+@tool(category="database", description="Query user database")
+def get_user(user_id: int) -> dict:
+    """Get user information by ID.
     
     Args:
-        x: First number
-        y: Second number
-        operation: Operation to perform (add, subtract, multiply, divide)
+        user_id: The user's ID number
     """
-    if operation == "add":
-        return x + y
-    elif operation == "subtract":
-        return x - y
-    elif operation == "multiply":
-        return x * y
-    elif operation == "divide":
-        return x // y if y != 0 else 0
-    return 0
+    # Simulated database query
+    return {
+        "id": user_id,
+        "name": "John Doe",
+        "email": "john@example.com"
+    }
 
-# Use tools with AI
-response = ask("What's the weather in NYC?", tools=[get_weather])
-print(f"Response: {response}")
-print(f"Tools called: {len(response.tool_calls)}")
-
-# Multiple tools
+# Use custom tools with built-in tools
 response = ask(
-    "Calculate 15 + 25 and tell me the weather in Paris", 
-    tools=[calculate, get_weather]
+    "What's the weather in NYC and what time is it there?",
+    tools=[get_weather, "get_current_time"]
 )
 
 # Check tool usage
@@ -110,6 +171,40 @@ if response.tools_called:
             print(f"  {call.name}: {call.result}")
         else:
             print(f"  {call.name}: Error - {call.error}")
+```
+
+#### Tool Examples
+
+```python
+# File operations
+response = ask(
+    "List all Python files in the current directory",
+    tools=["list_directory"]
+)
+
+# Web and calculation
+response = ask(
+    "Search for the speed of light and calculate how long it takes to reach Mars",
+    tools=["web_search", "calculate"]
+)
+
+# Code execution
+response = ask(
+    "Write and run a Python script that generates the Fibonacci sequence",
+    tools=["run_python"]
+)
+
+# API requests
+response = ask(
+    "Get the current Bitcoin price from the CoinGecko API",
+    tools=["http_request"]
+)
+
+# Time zones
+response = ask(
+    "What time is it in Tokyo, London, and New York?",
+    tools=["get_current_time"]
+)
 ```
 
 ## Command Reference
@@ -131,6 +226,19 @@ ai "Question" --backend local --model llama2
 
 # Verbose output with metadata
 ai "Question" --verbose
+
+# System prompts
+ai "Translate this" --system "You are a translator"
+
+# Temperature control
+ai "Write a poem" --temperature 0.9
+
+# Token limits
+ai "Summarize this" --max-tokens 100
+
+# Read from stdin
+echo "What is this?" | ai -
+cat file.txt | ai "Explain this code" -
 ```
 
 ### System Commands
@@ -161,6 +269,16 @@ ai "Question" --model anthropic/claude-3-haiku
 # Response formatting
 ai "Question" --stream             # Stream response tokens
 ai "Question" --verbose            # Show timing and metadata
+
+# Model parameters
+ai "Question" --temperature 0.7    # Creativity (0.0-2.0)
+ai "Question" --max-tokens 500     # Response length limit
+ai "Question" --system "You are..." # System prompt
+
+# Short flags
+ai "Question" -m gpt-4            # Model
+ai "Question" -s "System prompt"   # System
+ai "Question" -v                   # Verbose
 ```
 
 ## Backend Configuration
@@ -254,12 +372,12 @@ agents/
 ### Architecture
 
 **Core Components:**
-- **API Layer** (`ai/api.py`): Main interface with `ask()` function
+- **API Layer** (`ai/api.py`): Main interface with `ask()` and `stream()` functions
 - **Tool System** (`ai/tools/`): Function calling with automatic schema generation
 - **Backend System**: Pluggable backends for different AI providers
-- **CLI Interface**: Professional command-line tool with rich features
-- **Session Management**: Support for persistent chat sessions
-- **Error Handling**: Comprehensive exception hierarchy
+- **CLI Interface**: Clean, simple argument parsing with rich output formatting
+- **Session Management**: Support for persistent chat sessions (upcoming)
+- **Error Handling**: User-friendly error messages with actionable suggestions
 
 **Design Principles:**
 - **Unified Interface**: Single API for all providers
@@ -354,10 +472,11 @@ curl http://localhost:11434/api/tags
 
 ### Error Codes
 
-- `APIKeyError`: Missing or invalid API key
-- `ModelNotFoundError`: Specified model not available
-- `BackendNotAvailableError`: Backend service unreachable
-- `RateLimitError`: API rate limit exceeded
+- `APIKeyError`: Missing or invalid API key - shows which env var to set
+- `ModelNotFoundError`: Specified model not available - suggests using models-list
+- `BackendNotAvailableError`: Backend service unreachable - suggests checking backend-status
+- `RateLimitError`: API rate limit exceeded - shows retry time
+- `EmptyResponseError`: Model returned empty response - suggests rephrasing
 
 ## Security
 

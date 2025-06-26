@@ -314,6 +314,7 @@ class ChatSession:
         system: Optional[str] = None,
         model: Optional[str] = None,
         backend: Optional[Union[str, BaseBackend]] = None,
+        tools: Optional[List] = None,
         **kwargs
     ):
         """
@@ -323,11 +324,13 @@ class ChatSession:
             system: System prompt to set the assistant's behavior
             model: Default model to use for this session
             backend: Backend to use for this session
+            tools: List of functions/tools the AI can call
             **kwargs: Additional parameters passed to each request
         """
         self.system = system
         self.model = model
         self.kwargs = kwargs
+        self.tools = tools
         self.history = []
         
         # Handle backend selection
@@ -390,6 +393,7 @@ class ChatSession:
                     full_prompt,
                     model=model or self.model,
                     system=self.system,
+                    tools=self.tools,
                     **params
                 )
             )
@@ -450,6 +454,7 @@ class ChatSession:
                 full_prompt,
                 model=model or self.model,
                 system=self.system,
+                tools=self.tools,
                 **params
             ):
                 response_parts.append(chunk)
@@ -489,6 +494,7 @@ def chat(
     backend: Optional[Union[str, BaseBackend]] = None,
     persist: bool = False,
     session_id: Optional[str] = None,
+    tools: Optional[List] = None,
     **kwargs
 ):
     """
@@ -514,6 +520,13 @@ def chat(
         >>> from ai.chat import PersistentChatSession
         >>> session = PersistentChatSession.load("alice_chat.json")
         >>> session.ask("What's my name?")  # Will remember it's Alice
+        
+        >>> # Chat with tools
+        >>> def get_weather(city: str) -> str:
+        ...     return f"Weather in {city}: 72°F, sunny"
+        >>> with chat(tools=[get_weather]) as session:
+        ...     response = session.ask("What's the weather in NYC?")
+        ...     print(response)
     
     Args:
         system: System prompt to set the assistant's behavior
@@ -521,6 +534,7 @@ def chat(
         backend: Backend to use for this session
         persist: Use PersistentChatSession for save/load support
         session_id: Unique identifier for persistent sessions
+        tools: List of functions/tools the AI can call
         **kwargs: Additional parameters passed to each request
         
     Yields:
@@ -532,6 +546,7 @@ def chat(
             model=model,
             backend=backend,
             session_id=session_id,
+            tools=tools,
             **kwargs
         )
     else:
@@ -539,6 +554,7 @@ def chat(
             system=system,
             model=model,
             backend=backend,
+            tools=tools,
             **kwargs
         )
     try:

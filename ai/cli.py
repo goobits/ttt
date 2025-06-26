@@ -3,7 +3,7 @@
 
 import sys
 import os
-from typing import Optional
+from typing import Optional, List
 from rich.console import Console
 from rich.panel import Panel
 
@@ -20,6 +20,7 @@ def show_help():
   ai "Question" --backend local                # Use local backend (Ollama)
   ai "Question" --stream                       # Stream response
   ai "Question" --verbose                      # Show details
+  ai "Question" --tools "module:function,..."  # Use tools/functions
   
 [bold green]Commands:[/bold green]
   ai backend-status                            # Check backend status
@@ -32,6 +33,8 @@ def show_help():
   ai "Tell me a joke" --model openrouter/google/gemini-flash-1.5
   ai "Debug this code" --verbose
   ai "Local question" --backend local --model llama2
+  ai "What's the weather?" --tools "weather:get_weather"
+  ai "Calculate this" --tools "math:add,math:multiply"
   
 [bold green]Environment:[/bold green]
   Set OPENROUTER_API_KEY=your-key for cloud models
@@ -132,6 +135,59 @@ def show_models_list():
     console.print("    • gemini-pro (Google)")
 
 
+def resolve_tools(tool_specs: List[str]) -> List:
+    """Resolve tool specifications to actual tool objects.
+    
+    Args:
+        tool_specs: List of tool specifications in format:
+            - "module:function" - Import function from module
+            - "function" - Use from global registry
+            - "/path/to/file.py:function" - Import from file
+    
+    Returns:
+        List of resolved tool objects
+    """
+    resolved_tools = []
+    
+    for spec in tool_specs:
+        if ':' in spec:
+            # Module:function or path:function format
+            module_path, function_name = spec.rsplit(':', 1)
+            
+            try:
+                if module_path.endswith('.py') or '/' in module_path or '\\' in module_path:
+                    # File path - load module from file
+                    import importlib.util
+                    spec_loader = importlib.util.spec_from_file_location("tool_module", module_path)
+                    if spec_loader and spec_loader.loader:
+                        module = importlib.util.module_from_spec(spec_loader)
+                        spec_loader.loader.exec_module(module)
+                        if hasattr(module, function_name):
+                            resolved_tools.append(getattr(module, function_name))
+                        else:
+                            console.print(f"[yellow]Warning: Function '{function_name}' not found in {module_path}[/yellow]")
+                else:
+                    # Module name - import normally
+                    import importlib
+                    module = importlib.import_module(module_path)
+                    if hasattr(module, function_name):
+                        resolved_tools.append(getattr(module, function_name))
+                    else:
+                        console.print(f"[yellow]Warning: Function '{function_name}' not found in module {module_path}[/yellow]")
+            except Exception as e:
+                console.print(f"[yellow]Warning: Could not load tool '{spec}': {e}[/yellow]")
+        else:
+            # Just function name - try to get from registry
+            from .tools.registry import get_tool
+            tool = get_tool(spec)
+            if tool:
+                resolved_tools.append(tool)
+            else:
+                console.print(f"[yellow]Warning: Tool '{spec}' not found in registry[/yellow]")
+    
+    return resolved_tools
+
+
 def parse_args():
     """Parse command line arguments manually."""
     args = sys.argv[1:]
@@ -155,14 +211,15 @@ def parse_args():
         'temperature': None,
         'max_tokens': None,
         'stream': False,
-        'verbose': False
+        'verbose': False,
+        'tools': []
     }
     
     i = 0
     while i < len(args):
         arg = args[i]
         
-        if arg.startswith('-'):
+        if arg.startswith('-') and arg != '-':
             if arg in ['--model', '-m'] and i + 1 < len(args):
                 result['model'] = args[i + 1]
                 i += 2
@@ -184,6 +241,11 @@ def parse_args():
             elif arg in ['--verbose', '-v']:
                 result['verbose'] = True
                 i += 1
+            elif arg == '--tools' and i + 1 < len(args):
+                # Parse comma-separated tool specifications
+                tools_str = args[i + 1]
+                result['tools'] = [t.strip() for t in tools_str.split(',') if t.strip()]
+                i += 2
             else:
                 i += 1
         else:
@@ -283,6 +345,14 @@ def main():
             if args['max_tokens']:
                 kwargs['max_tokens'] = args['max_tokens']
             
+            # Resolve tools if specified
+            if args['tools']:
+                resolved_tools = resolve_tools(args['tools'])
+                if resolved_tools:
+                    kwargs['tools'] = resolved_tools
+                    if args['verbose']:
+                        console.print(f"[dim]Loaded {len(resolved_tools)} tools[/dim]")
+            
             # Import here to avoid import errors
             from .api import ask, stream
             
@@ -319,6 +389,13 @@ def main():
                             metadata.append(f"[bold]Tokens Out:[/bold] {response.tokens_out}")
                         if hasattr(response, 'cost') and response.cost:
                             metadata.append(f"[bold]Cost:[/bold] ${response.cost:.4f}")
+                        
+                        # Add tool call information if available
+                        if hasattr(response, 'tool_calls') and response.tool_calls:
+                            metadata.append(f"[bold]Tools Called:[/bold] {len(response.tool_calls)}")
+                            for call in response.tool_calls:
+                                status = "✓" if call.succeeded else "✗"
+                                metadata.append(f"  {status} {call.name}({', '.join(f'{k}={v}' for k, v in call.arguments.items())})")
                         
                         console.print(Panel("\n".join(metadata), title="Response Metadata", border_style="green"))
     

@@ -360,7 +360,8 @@ class TestChatContextManager:
                 system=None,
                 model=None,
                 backend=None,
-                session_id="test-session"
+                session_id="test-session",
+                tools=None
             )
 
 

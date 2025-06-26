@@ -43,6 +43,7 @@ class PersistentChatSession:
     - Metadata tracking (timestamps, model usage, costs)
     - Multiple persistence formats (JSON, pickle)
     - Session resumption
+    - Tool persistence and execution
     """
     
     def __init__(
@@ -52,6 +53,7 @@ class PersistentChatSession:
         model: Optional[str] = None,
         backend: Optional[Union[str, BaseBackend]] = None,
         session_id: Optional[str] = None,
+        tools: Optional[List] = None,
         **kwargs
     ):
         """
@@ -62,11 +64,13 @@ class PersistentChatSession:
             model: Default model to use for this session
             backend: Backend to use for this session
             session_id: Unique identifier for this session
+            tools: List of functions/tools the AI can call
             **kwargs: Additional parameters passed to each request
         """
         self.system = system
         self.model = model
         self.kwargs = kwargs
+        self.tools = tools
         self.history: List[Dict[str, Any]] = []
         self.metadata = {
             "session_id": session_id or self._generate_session_id(),
@@ -75,7 +79,8 @@ class PersistentChatSession:
             "total_tokens_out": 0,
             "total_cost": 0.0,
             "model_usage": {},
-            "backend_usage": {}
+            "backend_usage": {},
+            "tools_used": {}
         }
         
         # Resolve backend using router
@@ -182,6 +187,7 @@ class PersistentChatSession:
                     model=model or self.model,
                     system=self.system if len(self.history) == 1 else None,
                     messages=messages if hasattr(self.backend, 'supports_messages') else None,
+                    tools=self.tools,
                     **params
                 )
             )
@@ -189,7 +195,7 @@ class PersistentChatSession:
             loop.close()
         
         # Add assistant response to history
-        self.history.append({
+        response_entry = {
             "role": "assistant",
             "content": str(response),
             "timestamp": datetime.now().isoformat(),
@@ -197,7 +203,30 @@ class PersistentChatSession:
             "tokens_in": response.tokens_in,
             "tokens_out": response.tokens_out,
             "cost": response.cost
-        })
+        }
+        
+        # Add tool call information if tools were called
+        if hasattr(response, 'tools_called') and response.tools_called:
+            response_entry["tools_called"] = True
+            response_entry["tool_calls"] = [
+                {
+                    "id": call.id,
+                    "name": call.name,
+                    "arguments": call.arguments,
+                    "result": call.result,
+                    "succeeded": call.succeeded,
+                    "error": call.error
+                }
+                for call in response.tool_calls
+            ]
+            
+            # Update tools usage metadata
+            for call in response.tool_calls:
+                if call.name not in self.metadata["tools_used"]:
+                    self.metadata["tools_used"][call.name] = 0
+                self.metadata["tools_used"][call.name] += 1
+        
+        self.history.append(response_entry)
         
         # Update metadata
         self._update_metadata(response)
@@ -263,6 +292,7 @@ class PersistentChatSession:
                 model=model or self.model,
                 system=self.system if len(self.history) == 1 else None,
                 messages=messages if hasattr(self.backend, 'supports_messages') else None,
+                tools=self.tools,
                 **params
             ):
                 response_chunks.append(chunk)
@@ -330,6 +360,7 @@ class PersistentChatSession:
             "system": self.system,
             "model": self.model,
             "backend": backend_name,
+            "tools": self._serialize_tools() if self.tools else None,
             "messages": self.history,  # Use 'messages' for compatibility
             "history": self.history,  # Keep 'history' for backward compatibility
             "metadata": self.metadata,
@@ -414,6 +445,7 @@ class PersistentChatSession:
             model=session_data.get("model"),
             backend=backend_name,
             session_id=session_id,
+            tools=cls._deserialize_tools(session_data.get("tools")) if session_data.get("tools") else None,
             **session_data.get("kwargs", {})
         )
         
@@ -629,3 +661,55 @@ class PersistentChatSession:
             logger.debug(f"Could not calculate session duration in minutes: {e}")
         
         return 0.0
+    
+    def _serialize_tools(self) -> List[Dict[str, Any]]:
+        """Serialize tools for storage."""
+        if not self.tools:
+            return []
+        
+        serialized = []
+        for tool in self.tools:
+            if hasattr(tool, '__name__'):
+                # Function or callable
+                serialized.append({
+                    "type": "function_name",
+                    "name": tool.__name__,
+                    "module": tool.__module__ if hasattr(tool, '__module__') else None
+                })
+            elif hasattr(tool, 'name'):
+                # ToolDefinition-like object
+                serialized.append({
+                    "type": "tool_definition",
+                    "name": tool.name,
+                    "description": getattr(tool, 'description', None)
+                })
+            else:
+                # String tool name
+                serialized.append({
+                    "type": "tool_name",
+                    "name": str(tool)
+                })
+        
+        return serialized
+    
+    @staticmethod
+    def _deserialize_tools(serialized_tools: List[Dict[str, Any]]) -> List:
+        """Deserialize tools from storage."""
+        if not serialized_tools:
+            return []
+        
+        # For now, return tool names as strings
+        # In a real implementation, we'd resolve these from a registry
+        # or import the actual functions
+        tools = []
+        for tool_data in serialized_tools:
+            if tool_data["type"] == "tool_name":
+                tools.append(tool_data["name"])
+            elif tool_data["type"] == "function_name":
+                # Could attempt to import the function here
+                tools.append(tool_data["name"])
+            elif tool_data["type"] == "tool_definition":
+                # Return as a dict for now
+                tools.append(tool_data["name"])
+        
+        return tools
