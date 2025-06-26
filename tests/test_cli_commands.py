@@ -1,291 +1,238 @@
-"""Tests for advanced CLI commands."""
+"""Tests for CLI commands."""
 
 import pytest
 from unittest.mock import Mock, patch, AsyncMock, MagicMock
-from typer.testing import CliRunner
+import subprocess
+import sys
 import os
 
-from ai.cli import app
-from ai.backends import HAS_LOCAL_BACKEND
-
-
-runner = CliRunner()
+# Import functions from the CLI directly since it's not a typer app
+from ai.cli import show_backend_status, show_models_list, parse_args, main, show_help
+from ai.backends.local import LocalBackend
+from ai.backends.cloud import CloudBackend
+from ai.api import ask, stream
 
 
 class TestModelsCommands:
-    """Test the models subcommands."""
+    """Test the models-list command."""
     
-    @patch('ai.cli.model_registry')
-    @patch('ai.cli.LocalBackend')
-    def test_models_list_all(self, mock_local_backend, mock_registry):
+    @patch('ai.backends.LocalBackend')
+    @patch('httpx.get')
+    def test_models_list_all(self, mock_httpx_get, mock_local_backend):
         """Test listing all models."""
-        # Mock registry models
-        mock_model = Mock()
-        mock_model.name = "gpt-4"
-        mock_model.provider = "openai"
-        mock_model.aliases = ["best", "gpt4"]
-        mock_model.speed = "slow"
-        mock_model.quality = "high"
-        mock_model.capabilities = ["text", "reasoning"]
-        mock_model.context_length = 8192
-        
-        mock_registry.list_models.return_value = ["gpt-4"]
-        mock_registry.get_model.return_value = mock_model
-        
         # Mock local backend
         mock_backend_instance = Mock()
-        mock_backend_instance.models = AsyncMock(return_value=["llama2", "codellama"])
+        mock_backend_instance.is_available = True
+        mock_backend_instance.base_url = "http://localhost:11434"
         mock_local_backend.return_value = mock_backend_instance
         
-        result = runner.invoke(app, ["models", "list"])
-        assert result.exit_code == 0
-        assert "AI Models" in result.stdout
-        assert "gpt-4" in result.stdout
-        assert "llama2" in result.stdout
-        assert "codellama" in result.stdout
+        # Mock Ollama API response
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'models': [
+                {'name': 'llama2'},
+                {'name': 'codellama'}
+            ]
+        }
+        mock_httpx_get.return_value = mock_response
+        
+        # Capture output
+        with patch('ai.cli.console') as mock_console:
+            show_models_list()
+            
+            # Check that models were printed
+            print_calls = [str(call) for call in mock_console.print.call_args_list]
+            assert any('llama2' in str(call) for call in print_calls)
+            assert any('codellama' in str(call) for call in print_calls)
     
-    @patch('ai.cli.model_registry')
-    @patch('ai.cli.LocalBackend')
-    def test_models_list_local_only(self, mock_local_backend, mock_registry):
-        """Test listing only local models."""
-        # Mock local backend
+    @patch('ai.backends.LocalBackend')
+    def test_models_list_no_local_backend(self, mock_local_backend):
+        """Test listing models when local backend is not available."""
+        # Mock local backend not available
         mock_backend_instance = Mock()
-        mock_backend_instance.models = AsyncMock(return_value=["llama2"])
+        mock_backend_instance.is_available = False
         mock_local_backend.return_value = mock_backend_instance
         
-        result = runner.invoke(app, ["models", "list", "--local"])
-        assert result.exit_code == 0
-        assert "llama2" in result.stdout
-        # Should not call registry when --local is used
-        mock_registry.list_models.assert_not_called()
+        # Capture output
+        with patch('ai.cli.console') as mock_console:
+            show_models_list()
+            
+            # Check that appropriate message was shown
+            print_calls = [str(call) for call in mock_console.print.call_args_list]
+            assert any('Local backend not available' in str(call) for call in print_calls)
     
-    @patch('ai.cli.model_registry')
-    def test_models_list_cloud_only(self, mock_registry):
-        """Test listing only cloud models."""
-        # Mock registry models
-        mock_model = Mock()
-        mock_model.name = "claude-3-opus-20240229"
-        mock_model.provider = "anthropic"
-        mock_model.aliases = ["opus"]
-        mock_model.speed = "slow"
-        mock_model.quality = "high"
-        mock_model.capabilities = ["text", "vision"]
-        mock_model.context_length = 200000
-        
-        mock_registry.list_models.return_value = ["claude-3-opus-20240229"]
-        mock_registry.get_model.return_value = mock_model
-        
-        result = runner.invoke(app, ["models", "list", "--cloud"])
-        assert result.exit_code == 0
-        assert "claude-3-opus-20240229" in result.stdout
-        assert "anthropic" in result.stdout
-    
-    @patch('ai.cli.model_registry')
-    @patch('ai.cli.LocalBackend')
-    def test_models_list_verbose(self, mock_local_backend, mock_registry):
-        """Test verbose model listing."""
-        # Mock a model with all details
-        mock_model = Mock()
-        mock_model.name = "gpt-3.5-turbo"
-        mock_model.provider = "openai"
-        mock_model.aliases = ["fast", "gpt3"]
-        mock_model.speed = "fast"
-        mock_model.quality = "good"
-        mock_model.capabilities = ["text", "code"]
-        mock_model.context_length = 4096
-        
-        mock_registry.list_models.return_value = ["gpt-3.5-turbo"]
-        mock_registry.get_model.return_value = mock_model
-        
-        # Mock empty local models
+    @patch('ai.backends.LocalBackend')
+    @patch('httpx.get')
+    def test_models_list_ollama_error(self, mock_httpx_get, mock_local_backend):
+        """Test listing models when Ollama returns an error."""
+        # Mock local backend available
         mock_backend_instance = Mock()
-        mock_backend_instance.models = AsyncMock(return_value=[])
+        mock_backend_instance.is_available = True
+        mock_backend_instance.base_url = "http://localhost:11434"
         mock_local_backend.return_value = mock_backend_instance
         
-        result = runner.invoke(app, ["models", "list", "--verbose"])
-        assert result.exit_code == 0
-        assert "Speed" in result.stdout
-        # Check for either full or truncated column names
-        assert "Quality" in result.stdout or "Quali" in result.stdout
-        assert "Capabilities" in result.stdout or "Capabi" in result.stdout
-        assert "Context" in result.stdout or "Conte" in result.stdout
-        assert "fast" in result.stdout
-        assert "good" in result.stdout
-        assert "4,096" in result.stdout  # Formatted number
-    
-    @pytest.mark.skipif(not HAS_LOCAL_BACKEND, reason="Local backend not available - httpx not installed")
-    def test_models_pull_success(self):
-        """Test successful model pull - requires Ollama to be installed and running."""
-        import shutil
-        if not shutil.which("ollama"):
-            pytest.skip("Ollama not installed - install from https://ollama.ai to run this test")
+        # Mock Ollama API error
+        mock_httpx_get.side_effect = Exception("Connection error")
         
-        # Test requires actual Ollama installation
-        result = runner.invoke(app, ["models", "pull", "llama2", "--no-test"])
-        # Note: This test may fail if Ollama server is not running
-        # Run 'ollama serve' in another terminal to make this test pass
-        if result.exit_code != 0:
-            pytest.skip("Ollama server not running - run 'ollama serve' to enable this test")
-    
-    @patch('shutil.which')
-    def test_models_pull_no_ollama(self, mock_which):
-        """Test model pull when Ollama is not installed."""
-        mock_which.return_value = None
-        
-        result = runner.invoke(app, ["models", "pull", "llama2"])
-        assert result.exit_code == 1
-        assert "Ollama is not installed" in result.stdout
-        assert "https://ollama.ai" in result.stdout
-    
-    @pytest.mark.skipif(not HAS_LOCAL_BACKEND, reason="Local backend not available - httpx not installed")
-    def test_models_pull_with_progress(self):
-        """Test model pull with progress tracking - requires Ollama to be installed and running."""
-        import shutil
-        if not shutil.which("ollama"):
-            pytest.skip("Ollama not installed - install from https://ollama.ai to run this test")
-        
-        # Test requires actual Ollama installation and server running
-        result = runner.invoke(app, ["models", "pull", "mistral", "--no-test"])
-        # Note: This test may fail if Ollama server is not running
-        # Run 'ollama serve' in another terminal to make this test pass
-        if result.exit_code != 0:
-            pytest.skip("Ollama server not running - run 'ollama serve' to enable this test")
+        # Capture output
+        with patch('ai.cli.console') as mock_console:
+            show_models_list()
+            
+            # Check error handling
+            print_calls = [str(call) for call in mock_console.print.call_args_list]
+            assert any('Ollama not running or not accessible' in str(call) for call in print_calls)
 
 
 class TestBackendCommands:
-    """Test the backend subcommands."""
+    """Test the backend-status command."""
     
     @patch.dict(os.environ, {}, clear=True)
-    @patch('ai.cli.LocalBackend')
+    @patch('ai.backends.LocalBackend')
     def test_backend_status_basic(self, mock_local_backend):
         """Test basic backend status check."""
         # Mock local backend
         mock_backend_instance = Mock()
-        mock_backend_instance.status = AsyncMock(return_value={
-            "available": True,
-            "models": ["llama2", "codellama"],
-            "base_url": "http://localhost:11434"
-        })
+        mock_backend_instance.is_available = True
+        mock_backend_instance.base_url = "http://localhost:11434"
+        mock_backend_instance.default_model = "llama2"
         mock_local_backend.return_value = mock_backend_instance
         
-        result = runner.invoke(app, ["backend", "status"])
-        assert result.exit_code == 0
-        assert "AI Backend Status" in result.stdout
-        assert "Local (Ollama)" in result.stdout
-        assert "🟢" in result.stdout  # Online status
-        assert "2 models available" in result.stdout
-        
-        # Should show missing API keys
-        assert "Missing API keys" in result.stdout
-        assert "OPENAI_API_KEY" in result.stdout
-        assert "ANTHROPIC_API_KEY" in result.stdout
-        assert "GOOGLE_API_KEY" in result.stdout
+        # Capture output
+        with patch('ai.cli.console') as mock_console:
+            show_backend_status()
+            
+            # Check output
+            print_calls = [str(call) for call in mock_console.print.call_args_list]
+            assert any('Backend Status' in str(call) for call in print_calls)
+            assert any('Local Backend' in str(call) for call in print_calls)
+            assert any('Available' in str(call) for call in print_calls)
     
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key-123"})
-    @patch('ai.cli.LocalBackend')
-    @patch('ai.cli.ask_api')
-    def test_backend_status_with_api_key(self, mock_ask, mock_local_backend):
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key-123"}, clear=True)
+    @patch('ai.backends.CloudBackend')
+    def test_backend_status_with_api_key(self, mock_cloud_backend):
         """Test backend status with API key present."""
-        # Mock local backend offline
+        # Mock cloud backend
         mock_backend_instance = Mock()
-        mock_backend_instance.status = AsyncMock(return_value={"available": False})
-        mock_local_backend.return_value = mock_backend_instance
+        mock_backend_instance.is_available = True
+        mock_backend_instance.default_model = "gpt-3.5-turbo"
+        mock_cloud_backend.return_value = mock_backend_instance
         
-        # Mock successful API test
-        mock_response = Mock()
-        mock_response.failed = False
-        mock_ask.return_value = mock_response
-        
-        result = runner.invoke(app, ["backend", "status"])
-        assert result.exit_code == 0
-        assert "Cloud (OpenAI)" in result.stdout
-        assert "🟢" in result.stdout  # Ready status
-        assert "API key valid" in result.stdout
+        # Capture output
+        with patch('ai.cli.console') as mock_console:
+            show_backend_status()
+            
+            # Check output
+            print_calls = [str(call) for call in mock_console.print.call_args_list]
+            assert any('Cloud Backend' in str(call) for call in print_calls)
+            assert any('Available' in str(call) for call in print_calls)
+            assert any('OPENAI' in str(call) for call in print_calls)
     
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "invalid-key"})
-    @patch('ai.cli.LocalBackend')
-    @patch('ai.cli.ask_api')
-    def test_backend_status_invalid_key(self, mock_ask, mock_local_backend):
-        """Test backend status with invalid API key."""
-        # Mock local backend
-        mock_backend_instance = Mock()
-        mock_backend_instance.status = AsyncMock(return_value={"available": True})
-        mock_local_backend.return_value = mock_backend_instance
-        
-        # Mock failed API test
-        mock_response = Mock()
-        mock_response.failed = True
-        mock_response.error = "401 Unauthorized: Invalid API key"
-        mock_ask.return_value = mock_response
-        
-        result = runner.invoke(app, ["backend", "status"])
-        assert result.exit_code == 0
-        assert "Cloud (Anthropic)" in result.stdout
-        assert "🟠" in result.stdout  # Error status
-        assert "Invalid API key" in result.stdout
-    
-    @patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key-456"})
-    @patch('ai.cli.LocalBackend')
-    @patch('ai.cli.ask_api')
-    def test_backend_status_verbose(self, mock_ask, mock_local_backend):
-        """Test verbose backend status."""
-        # Mock local backend
-        mock_backend_instance = Mock()
-        mock_backend_instance.status = AsyncMock(return_value={
-            "available": True,
-            "models": ["llama2"],
-            "base_url": "http://localhost:11434"
-        })
-        mock_local_backend.return_value = mock_backend_instance
-        
-        # Mock successful API test
-        mock_response = Mock()
-        mock_response.failed = False
-        mock_ask.return_value = mock_response
-        
-        result = runner.invoke(app, ["backend", "status", "--verbose"])
-        assert result.exit_code == 0
-        assert "Configuration" in result.stdout
-        assert "http://localhost:11" in result.stdout  # May be truncated
-        assert "Key: test-key...-456" in result.stdout  # Masked key (no dashes in ellipsis)
-        assert "Configuration file:" in result.stdout
-    
-    @patch('ai.cli.LocalBackend')
+    @patch('ai.backends.LocalBackend')
     def test_backend_status_connection_error(self, mock_local_backend):
         """Test backend status with connection errors."""
         # Mock connection error
         mock_local_backend.side_effect = Exception("Connection refused")
         
-        result = runner.invoke(app, ["backend", "status"])
-        assert result.exit_code == 0
-        assert "🔴" in result.stdout  # Offline status
-        assert "Error: Connection refused" in result.stdout
+        # Capture output
+        with patch('ai.cli.console') as mock_console:
+            show_backend_status()
+            
+            # Check error handling
+            print_calls = [str(call) for call in mock_console.print.call_args_list]
+            assert any('Error' in str(call) for call in print_calls)
 
 
 class TestMainCommand:
-    """Test updates to main command."""
+    """Test main command functionality."""
     
-    def test_help_shows_subcommands(self):
-        """Test that help shows new subcommands."""
-        result = runner.invoke(app, ["--help"])
-        assert result.exit_code == 0
-        assert "models" in result.stdout
-        assert "backend" in result.stdout
-        assert "Manage AI models" in result.stdout
-        assert "Manage AI backends" in result.stdout
+    def test_parse_args_help(self):
+        """Test parsing --help argument."""
+        with patch('sys.argv', ['ai', '--help']):
+            args = parse_args()
+            assert args['command'] == 'help'
     
-    def test_models_help(self):
-        """Test models subcommand help."""
-        result = runner.invoke(app, ["models", "--help"])
-        assert result.exit_code == 0
-        assert "list" in result.stdout
-        assert "pull" in result.stdout
-        assert "List all available models" in result.stdout
-        assert "Pull a model" in result.stdout
+    def test_parse_args_backend_status(self):
+        """Test parsing backend-status command."""
+        with patch('sys.argv', ['ai', 'backend-status']):
+            args = parse_args()
+            assert args['command'] == 'backend-status'
     
-    def test_backend_help(self):
-        """Test backend subcommand help."""
-        result = runner.invoke(app, ["backend", "--help"])
-        assert result.exit_code == 0
-        assert "status" in result.stdout
-        assert "Check connectivity" in result.stdout
+    def test_parse_args_models_list(self):
+        """Test parsing models-list command."""
+        with patch('sys.argv', ['ai', 'models-list']):
+            args = parse_args()
+            assert args['command'] == 'models-list'
+    
+    def test_parse_args_query_basic(self):
+        """Test parsing basic query."""
+        with patch('sys.argv', ['ai', 'What is Python?']):
+            args = parse_args()
+            assert args['command'] == 'query'
+            assert args['prompt'] == 'What is Python?'
+            assert args['model'] is None
+            assert args['stream'] is False
+    
+    def test_parse_args_query_with_model(self):
+        """Test parsing query with model."""
+        with patch('sys.argv', ['ai', 'Question', '--model', 'gpt-4']):
+            args = parse_args()
+            assert args['command'] == 'query'
+            assert args['prompt'] == 'Question'
+            assert args['model'] == 'gpt-4'
+    
+    def test_parse_args_query_with_stream(self):
+        """Test parsing query with stream flag."""
+        with patch('sys.argv', ['ai', 'Question', '--stream']):
+            args = parse_args()
+            assert args['command'] == 'query'
+            assert args['prompt'] == 'Question'
+            assert args['stream'] is True
+    
+    def test_parse_args_query_with_backend(self):
+        """Test parsing query with backend."""
+        with patch('sys.argv', ['ai', 'Question', '--backend', 'local']):
+            args = parse_args()
+            assert args['command'] == 'query'
+            assert args['prompt'] == 'Question'
+            assert args['backend'] == 'local'
+    
+    def test_main_help(self):
+        """Test main function with help command."""
+        with patch('sys.argv', ['ai', '--help']):
+            with patch('ai.cli.show_help') as mock_help:
+                main()
+                mock_help.assert_called_once()
+    
+    @patch('ai.api.ask')
+    def test_main_query(self, mock_ask):
+        """Test main function with query."""
+        mock_response = Mock()
+        mock_response.__str__ = Mock(return_value="Test response")
+        mock_response.model = "test-model"
+        mock_response.backend = "test-backend"
+        mock_response.time = 0.5
+        mock_ask.return_value = mock_response
+        
+        with patch('sys.argv', ['ai', 'Test question']):
+            with patch('ai.cli.console') as mock_console:
+                main()
+                
+                # Check that response was printed
+                print_calls = [str(call) for call in mock_console.print.call_args_list]
+                assert any('Test response' in str(call) for call in print_calls)
+    
+    @patch('ai.api.stream')
+    def test_main_stream(self, mock_stream):
+        """Test main function with streaming."""
+        mock_stream.return_value = iter(["Hello", " ", "world"])
+        
+        with patch('sys.argv', ['ai', 'Test question', '--stream']):
+            with patch('ai.cli.console') as mock_console:
+                main()
+                
+                # Check that stream was processed
+                print_calls = [call[0][0] if call[0] else '' for call in mock_console.print.call_args_list]
+                # The streaming output might be combined or separate
+                output = ''.join(str(call) for call in print_calls)
+                assert 'Hello' in output and 'world' in output
