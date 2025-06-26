@@ -239,6 +239,22 @@ ai "Summarize this" --max-tokens 100
 # Read from stdin
 echo "What is this?" | ai -
 cat file.txt | ai "Explain this code" -
+
+# Use tools from CLI
+ai "What time is it in Tokyo?" --tools get_current_time
+ai "Search for Python tutorials" --tools web_search
+ai "List files in current directory" --tools list_directory
+
+# Multiple tools
+ai "Search web and save results" --tools web_search,write_file
+
+# Custom tools (module:function format)
+ai "Process data" --tools my_module:process_data
+ai "Analyze file" --tools /path/to/tools.py:analyze
+
+# Built-in tools by category
+ai "Read config.json" --tools read_file
+ai "Calculate 15% of 250" --tools calculate
 ```
 
 ### System Commands
