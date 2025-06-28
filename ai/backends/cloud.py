@@ -211,6 +211,7 @@ class CloudBackend(BaseBackend):
 
         try:
             logger.debug(f"Sending request to {used_model}")
+            logger.debug(f"Parameters: max_tokens={params.get('max_tokens')}, temperature={params.get('temperature')}")
 
             # Use LiteLLM's completion function
             response = await self.litellm.acompletion(**params)
@@ -443,6 +444,7 @@ class CloudBackend(BaseBackend):
 
         try:
             logger.debug(f"Starting stream request to {used_model}")
+            logger.debug(f"Stream parameters: max_tokens={params.get('max_tokens')}, temperature={params.get('temperature')}")
 
             # Use LiteLLM's streaming completion
             response = await self.litellm.acompletion(**params)
