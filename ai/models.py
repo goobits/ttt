@@ -182,7 +182,7 @@ class ConfigModel(BaseModel):
             "fast": "gpt-3.5-turbo",
             "best": "gpt-4",
             "cheap": "gpt-3.5-turbo",
-            "coding": "claude-3-sonnet-20240229",
+            "coding": "google/gemini-1.5-pro",
             "local": "llama2",
         }
     )
