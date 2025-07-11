@@ -511,41 +511,48 @@ agents/
 
 ### Running Tests
 
-**Unit Tests (Mocked - No API calls):**
+**Unified Test Runner:**
 ```bash
-# Quick run - all unit tests
-./run_tests.sh
+# Run unit tests (default - free, fast)
+./test.sh
 
-# Run with options
-./run_tests.sh --coverage          # With coverage report
-./run_tests.sh --verbose           # Detailed output
-./run_tests.sh --test cloud_backend # Specific test file
-./run_tests.sh --markers "not slow" # Skip slow tests
+# Run unit tests with coverage
+./test.sh unit --coverage
 
-# Direct pytest (alternative)
-python -m pytest tests/ -m "not integration"
-python -m pytest tests/test_cloud_backend.py
-python -m pytest tests/ --cov=ai --cov-report=html
-```
+# Run specific test file
+./test.sh --test test_api
 
-**Integration Tests (Real API calls - Costs money):**
-```bash
-# Set API keys first
-export OPENROUTER_API_KEY="your-key-here"
-# or OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.
+# Run integration tests (costs money, requires API keys)
+./test.sh integration
 
-# Run integration tests (use sparingly)
-./run_integration_tests.sh
+# Run all tests (unit first, then integration)
+./test.sh all
 
-# Or run specific integration test categories
-python -m pytest tests/test_integration.py::TestRealAPIIntegration -m integration
-python -m pytest tests/test_integration.py::TestProviderSpecificIntegration -m integration
+# Skip slow tests
+./test.sh --markers "not slow"
+
+# Verbose output
+./test.sh unit --verbose
+
+# Show help
+./test.sh --help
 ```
 
 **Test Types:**
 - **Unit Tests**: Fast, mocked, no API costs - use for development
 - **Integration Tests**: Real API calls, small costs (~$0.01-0.10) - use for validation
-- **Ollama Tests**: Skipped unless Ollama is installed and running
+- **Combined**: Run unit tests first, then integration tests if unit tests pass
+
+**API Key Setup for Integration Tests:**
+```bash
+# Set one or more API keys
+export OPENROUTER_API_KEY="your-key-here"
+export OPENAI_API_KEY="your-key-here"
+export ANTHROPIC_API_KEY="your-key-here"
+
+# Then run integration tests
+./test.sh integration
+```
 
 ### Development Setup
 
