@@ -227,12 +227,28 @@ class Router:
 
         # If specific model requested, determine backend from model
         if model is not None:
+            # First check if it's in the registry
             model_info = model_registry.get_model(model)
             if model_info:
                 if model_info.provider == "local":
                     selected_backend = self.get_backend("local")
                 else:
                     selected_backend = self.get_backend("cloud")
+                selected_model = self.resolve_model(model, selected_backend)
+                return selected_backend, selected_model
+            
+            # If not in registry, detect cloud models by naming patterns
+            cloud_model_patterns = [
+                "openrouter/", "anthropic/", "openai/", "google/", 
+                "gpt-", "claude-", "gemini-", "mistral/", "meta/",
+                "cohere/", "replicate/", "huggingface/"
+            ]
+            
+            is_cloud_model = any(model.startswith(pattern) for pattern in cloud_model_patterns)
+            
+            if is_cloud_model:
+                logger.debug(f"Detected cloud model pattern: {model}")
+                selected_backend = self.get_backend("cloud")
                 selected_model = self.resolve_model(model, selected_backend)
                 return selected_backend, selected_model
 
