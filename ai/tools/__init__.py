@@ -18,7 +18,7 @@ Example usage:
     response = ask("What's the weather in NYC?", tools=[get_weather])
 """
 
-from typing import Callable, Optional, Union, List
+from typing import Callable, Optional, Union, List, Dict, Any
 from functools import wraps
 
 from .base import (
@@ -40,13 +40,12 @@ from .registry import (
     clear_registry,
     get_registry,
 )
-from .execution import (
+from .executor import (
     ToolExecutor,
-    execute_tool_call,
-    execute_tool_call_async,
-    execute_multiple,
-    execute_multiple_async,
-    get_executor,
+    ExecutionConfig,
+    execute_tool,
+    execute_tools,
+    get_execution_stats,
 )
 
 
@@ -127,6 +126,84 @@ def get_tool_definition(func: Callable) -> Optional[ToolDefinition]:
     return getattr(func, "_tool_definition", None)
 
 
+# Compatibility wrapper functions for the old execution API
+import asyncio
+import uuid
+
+_global_executor = None
+
+def get_executor() -> ToolExecutor:
+    """Get or create the global tool executor instance."""
+    global _global_executor
+    if _global_executor is None:
+        _global_executor = ToolExecutor()
+    return _global_executor
+
+
+async def execute_tool_call_async(
+    tool_def: ToolDefinition, call_id: str, arguments: Dict[str, Any]
+) -> ToolCall:
+    """Execute a single tool call asynchronously (compatibility wrapper)."""
+    # First, try to register the tool if it's not already registered
+    existing_tool = get_tool(tool_def.name)
+    if not existing_tool:
+        # Temporarily register the tool
+        register_tool(tool_def.function, tool_def.name, tool_def.description, "test")
+    
+    try:
+        # The new executor expects tool name, not definition
+        result = await execute_tool(tool_def.name, arguments)
+        # Update the result with the provided call_id
+        result.id = call_id
+        return result
+    finally:
+        # Clean up if we temporarily registered the tool
+        if not existing_tool:
+            try:
+                unregister_tool(tool_def.name)
+            except:
+                pass
+
+
+def execute_tool_call(
+    tool_def: ToolDefinition, call_id: str, arguments: Dict[str, Any]
+) -> ToolCall:
+    """Execute a single tool call synchronously (compatibility wrapper)."""
+    return asyncio.run(execute_tool_call_async(tool_def, call_id, arguments))
+
+
+async def execute_multiple_async(
+    tool_calls: List[Dict[str, Any]], tool_definitions: Dict[str, ToolDefinition]
+) -> ToolResult:
+    """Execute multiple tool calls asynchronously (compatibility wrapper)."""
+    # Register any tools that aren't already in the registry
+    temp_registered = []
+    for tool_name, tool_def in tool_definitions.items():
+        if not get_tool(tool_name):
+            register_tool(tool_def.function, tool_name, tool_def.description, "test")
+            temp_registered.append(tool_name)
+    
+    try:
+        # Convert to the format expected by the new executor
+        # The new executor's execute_tools expects a list of dicts with 'name' and 'arguments'
+        # and doesn't need the tool definitions separately
+        return await execute_tools(tool_calls, parallel=True)
+    finally:
+        # Clean up temporarily registered tools
+        for tool_name in temp_registered:
+            try:
+                unregister_tool(tool_name)
+            except:
+                pass
+
+
+def execute_multiple(
+    tool_calls: List[Dict[str, Any]], tool_definitions: Dict[str, ToolDefinition]
+) -> ToolResult:
+    """Execute multiple tool calls synchronously (compatibility wrapper)."""
+    return asyncio.run(execute_multiple_async(tool_calls, tool_definitions))
+
+
 # Export all public classes and functions
 __all__ = [
     # Decorator
@@ -152,9 +229,13 @@ __all__ = [
     "get_registry",
     # Execution functions
     "ToolExecutor",
+    "ExecutionConfig",
     "execute_tool_call",
     "execute_tool_call_async",
     "execute_multiple",
     "execute_multiple_async",
     "get_executor",
+    "execute_tool",
+    "execute_tools",
+    "get_execution_stats",
 ]
