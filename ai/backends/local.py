@@ -5,7 +5,7 @@ import time
 from typing import AsyncIterator, Dict, Any, Optional, List, Union
 import httpx
 from ..models import AIResponse, ImageInput
-from ..utils import get_logger
+from ..utils import get_logger, run_async
 from .base import BaseBackend
 from ..exceptions import (
     BackendConnectionError,
@@ -52,21 +52,14 @@ class LocalBackend(BaseBackend):
     def is_available(self) -> bool:
         """Check if Ollama is running and available."""
         try:
-            import asyncio
-
             # Create a simple sync check
             async def check():
                 async with httpx.AsyncClient(timeout=5) as client:
                     response = await client.get(f"{self.base_url}/api/tags")
                     return response.status_code == 200
 
-            # Run the async check
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                return loop.run_until_complete(check())
-            finally:
-                loop.close()
+            # Use run_async to handle the event loop properly
+            return run_async(check())
         except Exception as e:
             logger.debug(f"Ollama availability check failed: {e}")
             return False

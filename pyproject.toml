@@ -127,6 +127,7 @@ markers = [
     "benchmark: marks tests as performance benchmarks",
     "examples: marks tests as usage examples",
     "real_api: marks tests that make real API calls",
+    "asyncio: marks tests as async tests",
 ]
 
 [tool.coverage.run]

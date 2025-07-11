@@ -4,7 +4,7 @@ The Unified AI Library
 A single, elegant interface for local and cloud AI models.
 """
 
-from .api import ask, stream, chat
+from .api import ask, stream, chat, ask_async, stream_async, achat
 from .models import AIResponse, ImageInput
 from .config import configure, model_registry
 from .backends import LocalBackend, CloudBackend
@@ -51,6 +51,9 @@ __all__ = [
     "ask",
     "stream",
     "chat",
+    "ask_async",
+    "stream_async",
+    "achat",
     "AIResponse",
     "ImageInput",
     "PersistentChatSession",

@@ -336,6 +336,112 @@ ai "Question" --backend local --model llama2
 OLLAMA_BASE_URL=http://localhost:11434
 ```
 
+## Python Library Usage
+
+The AI library provides both synchronous and asynchronous APIs for integration into your Python applications.
+
+### Synchronous API (Recommended for most use cases)
+
+```python
+from ai import ask, stream, chat
+
+# Simple question
+response = ask("What is Python?")
+print(response)
+
+# With model selection
+response = ask("Explain async/await", model="gpt-4")
+print(f"Response: {response}")
+print(f"Model used: {response.model}")
+print(f"Time taken: {response.time}s")
+
+# Streaming responses
+for chunk in stream("Tell me a story"):
+    print(chunk, end="", flush=True)
+
+# Chat sessions
+with chat(system="You are a helpful coding assistant") as session:
+    response1 = session.ask("What is a decorator?")
+    response2 = session.ask("Show me an example")
+    print(f"Conversation history: {len(session.history)} messages")
+```
+
+### Asynchronous API (For performance-critical applications)
+
+For applications that need to handle many concurrent requests or integrate with async frameworks like FastAPI, use the async API:
+
+```python
+import asyncio
+from ai import ask_async, stream_async, achat
+
+async def main():
+    # Async ask - non-blocking
+    response = await ask_async("What is Python?")
+    print(response)
+    
+    # Async streaming
+    async for chunk in stream_async("Tell me a story"):
+        print(chunk, end="", flush=True)
+    
+    # Async chat sessions
+    async with achat(system="You are helpful") as session:
+        response = session.ask("Hello")  # Session.ask() works in async context
+        print(response)
+
+# Run async code
+asyncio.run(main())
+```
+
+### When to use Async vs Sync
+
+**Use Synchronous API when:**
+- Building simple scripts or CLI tools
+- Working with synchronous code
+- Processing requests one at a time
+- Just getting started with the library
+
+**Use Asynchronous API when:**
+- Building web applications (FastAPI, aiohttp)
+- Processing multiple requests concurrently
+- Integration with async frameworks
+- Performance is critical (can handle 10x+ more concurrent requests)
+
+### Library Features
+
+All features work with both sync and async APIs:
+
+```python
+from ai import ask, chat
+from ai.tools.builtins import web_search, calculate
+
+# Function calling with built-in tools
+response = ask(
+    "Search for Python 3.12 release date and calculate days since release",
+    tools=[web_search, calculate]
+)
+
+# Custom tools
+from ai.tools import tool
+
+@tool
+def get_user_data(user_id: int) -> dict:
+    """Get user data from database."""
+    return {"id": user_id, "name": "John Doe"}
+
+response = ask("Get user 123's information", tools=[get_user_data])
+
+# Persistent chat with save/load
+from ai.chat import PersistentChatSession
+
+session = PersistentChatSession()
+session.ask("Remember: my name is Alice")
+session.save("alice_session.json")
+
+# Later...
+session = PersistentChatSession.load("alice_session.json")
+response = session.ask("What's my name?")  # Will remember "Alice"
+```
+
 ## API Keys Setup
 
 ### OpenRouter (Recommended)

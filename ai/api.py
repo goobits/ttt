@@ -96,7 +96,6 @@ def ask(
         AIResponse that behaves like a string but contains metadata
     """
     logger.debug(f"API ask() called with: model={model}, max_tokens={max_tokens}, temperature={temperature}")
-    
     # Use smart routing
     backend_instance, resolved_model = router.smart_route(
         prompt,
@@ -202,172 +201,7 @@ def stream(
         asyncio.set_event_loop(None)
 
 
-class ChatSession:
-    """
-    A chat session that maintains conversation history.
-
-    This class manages a conversation context, allowing for multi-turn
-    conversations with persistent memory.
-    """
-
-    def __init__(
-        self,
-        *,
-        system: Optional[str] = None,
-        model: Optional[str] = None,
-        backend: Optional[Union[str, BaseBackend]] = None,
-        tools: Optional[List] = None,
-        **kwargs,
-    ):
-        """
-        Initialize a chat session.
-
-        Args:
-            system: System prompt to set the assistant's behavior
-            model: Default model to use for this session
-            backend: Backend to use for this session
-            tools: List of functions/tools the AI can call
-            **kwargs: Additional parameters passed to each request
-        """
-        self.system = system
-        self.model = model
-        self.kwargs = kwargs
-        self.tools = tools
-        self.history = []
-
-        # Handle backend selection
-        if isinstance(backend, str):
-            if backend == "local":
-                self.backend = LocalBackend()
-            else:
-                raise ValueError(f"Unknown backend: {backend}")
-        elif isinstance(backend, BaseBackend):
-            self.backend = backend
-        else:
-            self.backend = _get_default_backend()
-
-    def ask(self, prompt: str, *, model: Optional[str] = None, **kwargs) -> AIResponse:
-        """
-        Ask a question in this chat session.
-
-        Args:
-            prompt: Your message/question
-            model: Override the session's default model
-            **kwargs: Additional parameters for this request
-
-        Returns:
-            AIResponse with the assistant's reply
-        """
-        # Add user message to history
-        self.history.append({"role": "user", "content": prompt})
-
-        # Build conversation context
-        if len(self.history) == 1:
-            # First message, just use the prompt
-            full_prompt = prompt
-        else:
-            # Build conversation history
-            conversation = []
-            for msg in self.history[:-1]:  # All but the last message
-                if msg["role"] == "user":
-                    conversation.append(f"Human: {msg['content']}")
-                else:
-                    conversation.append(f"Assistant: {msg['content']}")
-
-            conversation.append(f"Human: {prompt}")
-            full_prompt = "\n\n".join(conversation)
-
-        # Merge parameters
-        params = {**self.kwargs, **kwargs}
-
-        # Make the request
-        async def _ask_wrapper():
-            return await self.backend.ask(
-                full_prompt,
-                model=model or self.model,
-                system=self.system,
-                tools=self.tools,
-                **params,
-            )
-            
-        response = run_async(_ask_wrapper())
-
-        # Add assistant response to history
-        self.history.append({"role": "assistant", "content": str(response)})
-
-        return response
-
-    def stream(
-        self, prompt: str, *, model: Optional[str] = None, **kwargs
-    ) -> Iterator[str]:
-        """
-        Stream a response in this chat session.
-
-        Args:
-            prompt: Your message/question
-            model: Override the session's default model
-            **kwargs: Additional parameters for this request
-
-        Yields:
-            String chunks as they arrive
-        """
-        # Add user message to history
-        self.history.append({"role": "user", "content": prompt})
-
-        # Build conversation context (same logic as ask)
-        if len(self.history) == 1:
-            full_prompt = prompt
-        else:
-            conversation = []
-            for msg in self.history[:-1]:
-                if msg["role"] == "user":
-                    conversation.append(f"Human: {msg['content']}")
-                else:
-                    conversation.append(f"Assistant: {msg['content']}")
-
-            conversation.append(f"Human: {prompt}")
-            full_prompt = "\n\n".join(conversation)
-
-        # Merge parameters
-        params = {**self.kwargs, **kwargs}
-
-        # Stream the response and collect it
-        response_parts = []
-
-        # This is the async generator from the backend
-        async_gen = self.backend.astream(
-            full_prompt,
-            model=model or self.model,
-            system=self.system,
-            tools=self.tools,
-            **params,
-        )
-
-        # We create a bridge to pull from the async generator synchronously
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            while True:
-                try:
-                    # Run the __anext__ coroutine to get the next item
-                    chunk = loop.run_until_complete(async_gen.__anext__())
-                    response_parts.append(chunk)
-                    yield chunk
-                except StopAsyncIteration:
-                    # The async generator is exhausted
-                    break
-        finally:
-            # Cleanly close the loop when done
-            loop.close()
-            asyncio.set_event_loop(None)
-
-        # Add complete response to history
-        full_response = "".join(response_parts)
-        self.history.append({"role": "assistant", "content": full_response})
-
-    def clear(self) -> None:
-        """Clear the conversation history."""
-        self.history = []
+# ChatSession class removed - now using PersistentChatSession as the unified session class
 
 
 @contextmanager
@@ -376,7 +210,6 @@ def chat(
     system: Optional[str] = None,
     model: Optional[str] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
-    persist: bool = False,
     session_id: Optional[str] = None,
     tools: Optional[List] = None,
     **kwargs,
@@ -395,8 +228,8 @@ def chat(
         ...     response = session.ask("Write a Python function")
         ...     print(response)
 
-        >>> # Persistent session that can be saved
-        >>> with chat(persist=True) as session:
+        >>> # Session that can be saved
+        >>> with chat() as session:
         ...     session.ask("Remember this: My name is Alice")
         ...     session.save("alice_chat.json")
 
@@ -416,31 +249,29 @@ def chat(
         system: System prompt to set the assistant's behavior
         model: Default model to use for this session
         backend: Backend to use for this session
-        persist: Use PersistentChatSession for save/load support
         session_id: Unique identifier for persistent sessions
         tools: List of functions/tools the AI can call
         **kwargs: Additional parameters passed to each request
 
     Yields:
-        ChatSession or PersistentChatSession instance
+        PersistentChatSession instance
     """
-    if persist:
-        session = PersistentChatSession(
-            system=system,
-            model=model,
-            backend=backend,
-            session_id=session_id,
-            tools=tools,
-            **kwargs,
-        )
-    else:
-        session = ChatSession(
-            system=system, model=model, backend=backend, tools=tools, **kwargs
-        )
+    # Always create the powerful session object. It handles both
+    # transient and persistent use cases gracefully.
+    session = PersistentChatSession(
+        system=system,
+        model=model,
+        backend=backend,
+        session_id=session_id,
+        tools=tools,
+        **kwargs,
+    )
     try:
         yield session
     finally:
-        # Clean up if needed
+        # No specific cleanup needed here anymore. The session object
+        # can handle its own state. Auto-save logic could be
+        # implemented within PersistentChatSession if desired.
         pass
 
 
@@ -460,6 +291,8 @@ async def ask_async(
     if isinstance(backend, str):
         if backend == "local":
             backend_instance = LocalBackend()
+        elif backend == "cloud":
+            backend_instance = CloudBackend()
         else:
             raise ValueError(f"Unknown backend: {backend}")
     elif isinstance(backend, BaseBackend):
@@ -492,6 +325,8 @@ async def stream_async(
     if isinstance(backend, str):
         if backend == "local":
             backend_instance = LocalBackend()
+        elif backend == "cloud":
+            backend_instance = CloudBackend()
         else:
             raise ValueError(f"Unknown backend: {backend}")
     elif isinstance(backend, BaseBackend):
@@ -516,10 +351,33 @@ async def achat(
     system: Optional[str] = None,
     model: Optional[str] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
+    session_id: Optional[str] = None,
+    tools: Optional[List] = None,
     **kwargs,
 ):
-    """Async context manager for chat sessions."""
-    session = ChatSession(system=system, model=model, backend=backend, **kwargs)
+    """
+    Async context manager for chat sessions.
+
+    Args:
+        system: System prompt to set the assistant's behavior
+        model: Default model to use for this session
+        backend: Backend to use for this session
+        session_id: Unique identifier for persistent sessions
+        tools: List of functions/tools the AI can call
+        **kwargs: Additional parameters passed to each request
+
+    Yields:
+        PersistentChatSession instance
+    """
+    # Use PersistentChatSession for consistency with sync version
+    session = PersistentChatSession(
+        system=system,
+        model=model,
+        backend=backend,
+        session_id=session_id,
+        tools=tools,
+        **kwargs,
+    )
     try:
         yield session
     finally:

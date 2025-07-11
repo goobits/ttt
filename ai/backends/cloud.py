@@ -7,6 +7,7 @@ import os
 from ..models import AIResponse, ImageInput
 from ..utils import get_logger
 from .base import BaseBackend
+from ..config import model_registry  # Import the central registry
 from ..exceptions import (
     BackendNotAvailableError,
     BackendConnectionError,
@@ -491,54 +492,27 @@ class CloudBackend(BaseBackend):
 
     async def models(self) -> List[str]:
         """
-        Get list of available models from configured providers.
+        Get list of available models from the central model registry.
+        This backend supports all non-local models.
 
         Returns:
             List of model names available on cloud providers
         """
-        available_models = []
-
-        # Add OpenAI models if configured
-        if os.getenv("OPENAI_API_KEY"):
-            available_models.extend(
-                [
-                    "gpt-4",
-                    "gpt-4-turbo-preview",
-                    "gpt-4-vision-preview",
-                    "gpt-3.5-turbo",
-                    "gpt-3.5-turbo-16k",
-                ]
-            )
-
-        # Add Anthropic models if configured
-        if os.getenv("ANTHROPIC_API_KEY"):
-            available_models.extend(
-                [
-                    "claude-3-opus-20240229",
-                    "claude-3-sonnet-20240229",
-                    "claude-3-haiku-20240307",
-                ]
-            )
-
-        # Add Google models if configured
-        if os.getenv("GOOGLE_API_KEY"):
-            available_models.extend(
-                [
-                    "gemini-pro",
-                    "gemini-pro-vision",
-                    "gemini-1.5-pro",
-                    "gemini-1.5-pro-vision",
-                ]
-            )
-
-        logger.debug(f"Found {len(available_models)} cloud models")
-        return available_models
+        # Get all model definitions from the registry
+        all_model_info = model_registry.models.values()
+        
+        # Filter for models that are NOT from the 'local' provider
+        cloud_models = [
+            model.name for model in all_model_info if model.provider != "local"
+        ]
+        logger.debug(f"Found {len(cloud_models)} cloud models in registry")
+        return sorted(cloud_models)
 
     async def list_models(
         self, detailed: bool = False
     ) -> List[Union[str, Dict[str, Any]]]:
         """
-        List available models, optionally with detailed information.
+        List available models from the registry, optionally with details.
 
         Args:
             detailed: Whether to return detailed model information
@@ -546,62 +520,31 @@ class CloudBackend(BaseBackend):
         Returns:
             List of model names or detailed model information
         """
-        # Return all supported models regardless of API key configuration
-        all_models = [
-            # OpenAI models
-            "gpt-4",
-            "gpt-4-turbo-preview",
-            "gpt-4-vision-preview",
-            "gpt-3.5-turbo",
-            "gpt-3.5-turbo-16k",
-            # Anthropic models
-            "claude-3-opus-20240229",
-            "claude-3-sonnet-20240229",
-            "claude-3-haiku-20240307",
-            # Google models
-            "gemini-pro",
-            "gemini-pro-vision",
-            "gemini-1.5-pro",
-            "gemini-1.5-pro-vision",
+        # Get all non-local models from the registry
+        all_model_info = [
+            model for model in model_registry.models.values() if model.provider != "local"
         ]
 
         if not detailed:
-            return all_models
+            return sorted([model.name for model in all_model_info])
 
-        # Return detailed information - for now just basic info
+        # Return detailed information directly from the model info objects
         detailed_models = []
-        for model in all_models:
+        for model in sorted(all_model_info, key=lambda m: m.name):
             detailed_models.append(
                 {
-                    "name": model,
-                    "provider": self._get_provider_for_model(model),
-                    "capabilities": self._get_capabilities_for_model(model),
+                    "name": model.name,
+                    "provider": model.provider,
+                    "capabilities": model.capabilities,
+                    "speed": model.speed,
+                    "quality": model.quality,
+                    "context_length": model.context_length,
                 }
             )
-
         return detailed_models
 
-    def _get_provider_for_model(self, model: str) -> str:
-        """Get the provider for a given model."""
-        if model.startswith("gpt-"):
-            return "openai"
-        elif model.startswith("claude-"):
-            return "anthropic"
-        elif model.startswith("gemini-"):
-            return "google"
-        return "unknown"
-
-    def _get_capabilities_for_model(self, model: str) -> List[str]:
-        """Get capabilities for a given model."""
-        capabilities = ["text", "chat"]
-
-        if "vision" in model or "gpt-4" in model:
-            capabilities.append("vision")
-
-        if "claude" in model or "gpt-4" in model:
-            capabilities.append("reasoning")
-
-        return capabilities
+    # Removed _get_provider_for_model and _get_capabilities_for_model
+    # This logic is now handled by the ModelInfo dataclass in the registry
 
     async def status(self, test_connection: bool = False) -> Dict[str, Any]:
         """

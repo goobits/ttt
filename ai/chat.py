@@ -10,7 +10,7 @@ import asyncio
 from .models import AIResponse, ImageInput
 from .backends import BaseBackend
 from .routing import router
-from .utils import get_logger
+from .utils import get_logger, run_async
 from .exceptions import SessionLoadError, SessionSaveError, InvalidParameterError
 
 
@@ -173,23 +173,19 @@ class PersistentChatSession:
         params = {**self.kwargs, **kwargs}
 
         # Make the request
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            response = loop.run_until_complete(
-                self.backend.ask(
-                    full_prompt,
-                    model=model or self.model,
-                    system=self.system if len(self.history) == 1 else None,
-                    messages=(
-                        messages if hasattr(self.backend, "supports_messages") else None
-                    ),
-                    tools=self.tools,
-                    **params,
-                )
+        async def _ask_wrapper():
+            return await self.backend.ask(
+                full_prompt,
+                model=model or self.model,
+                system=self.system if len(self.history) == 1 else None,
+                messages=(
+                    messages if hasattr(self.backend, "supports_messages") else None
+                ),
+                tools=self.tools,
+                **params,
             )
-        finally:
-            loop.close()
+        
+        response = run_async(_ask_wrapper())
 
         # Add assistant response to history
         response_entry = {
@@ -306,6 +302,7 @@ class PersistentChatSession:
                     break
         finally:
             loop.close()
+            asyncio.set_event_loop(None)
 
         # Add complete response to history
         full_response = "".join(response_chunks)

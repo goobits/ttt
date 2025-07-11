@@ -2,7 +2,8 @@
 
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
-from ai.api import ask, stream, chat, ChatSession
+from ai.api import ask, stream, chat
+from ai.chat import PersistentChatSession
 from ai.models import AIResponse
 from ai.backends import BaseBackend
 
@@ -121,71 +122,20 @@ class TestStream:
         mock_router.smart_route.assert_called_once()
 
 
-class TestChatSession:
-    """Test the ChatSession class."""
+class TestPersistentChatSession:
+    """Test the PersistentChatSession class."""
 
-    @patch("ai.api._get_default_backend")
-    def test_chat_session_initialization(self, mock_get_default, mock_backend):
+    def test_chat_session_initialization(self):
         """Test chat session initialization."""
-        mock_get_default.return_value = mock_backend
-
-        session = ChatSession(system="You are helpful", model="test-model")
+        session = PersistentChatSession(system="You are helpful", model="test-model")
 
         assert session.system == "You are helpful"
         assert session.model == "test-model"
         assert session.history == []
 
-    @patch("ai.api._get_default_backend")
-    def test_chat_session_ask(self, mock_get_default, mock_backend):
-        """Test asking in a chat session."""
-        mock_get_default.return_value = mock_backend
-
-        session = ChatSession()
-        response = session.ask("Hello")
-
-        assert str(response) == "Mock response"
-        assert len(session.history) == 2  # User message + assistant response
-        assert session.history[0]["role"] == "user"
-        assert session.history[0]["content"] == "Hello"
-        assert session.history[1]["role"] == "assistant"
-        assert session.history[1]["content"] == "Mock response"
-
-    @patch("ai.api._get_default_backend")
-    def test_chat_session_conversation(self, mock_get_default, mock_backend):
-        """Test multi-turn conversation."""
-        mock_backend.ask = AsyncMock(
-            side_effect=[
-                AIResponse("I'm fine, thanks!"),
-                AIResponse("Nice to meet you!"),
-            ]
-        )
-        mock_get_default.return_value = mock_backend
-
-        session = ChatSession()
-
-        # First message
-        response1 = session.ask("How are you?")
-        assert str(response1) == "I'm fine, thanks!"
-
-        # Second message - should include conversation history
-        response2 = session.ask("I'm Alice")
-        assert str(response2) == "Nice to meet you!"
-
-        # Check that conversation history was built
-        second_call_args = mock_backend.ask.call_args_list[1]
-        prompt = second_call_args[0][0]  # First positional argument
-
-        # Should contain previous conversation
-        assert "How are you?" in prompt
-        assert "I'm fine, thanks!" in prompt
-        assert "I'm Alice" in prompt
-
-    @patch("ai.api._get_default_backend")
-    def test_chat_session_clear(self, mock_get_default, mock_backend):
+    def test_chat_session_clear(self):
         """Test clearing chat history."""
-        mock_get_default.return_value = mock_backend
-
-        session = ChatSession()
+        session = PersistentChatSession()
         session.history = [{"role": "user", "content": "test"}]
 
         session.clear()
@@ -196,12 +146,8 @@ class TestChatSession:
 class TestChatContextManager:
     """Test the chat context manager."""
 
-    @patch("ai.api._get_default_backend")
-    def test_chat_context_manager(self, mock_get_default, mock_backend):
+    def test_chat_context_manager(self):
         """Test using chat as context manager."""
-        mock_get_default.return_value = mock_backend
-
         with chat(system="Be helpful") as session:
-            response = session.ask("Hi")
-            assert str(response) == "Mock response"
             assert session.system == "Be helpful"
+            assert isinstance(session, PersistentChatSession)

@@ -38,9 +38,21 @@ def run_async(coro: Awaitable[T]) -> T:
                 asyncio.set_event_loop(None)
     else:
         # A loop is already running. We can't use asyncio.run().
-        # Instead, we run the coroutine in the existing loop.
-        # This is crucial for compatibility with environments like Jupyter
-        # notebooks or existing async applications.
-        return asyncio.run_coroutine_threadsafe(coro, loop).result()
+        # We need to run the coroutine in a new thread to avoid deadlock.
+        import concurrent.futures
+        import threading
+        # Create a new thread with its own event loop
+        def run_in_thread():
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            try:
+                return new_loop.run_until_complete(coro)
+            finally:
+                new_loop.close()
+                asyncio.set_event_loop(None)
+        # Use ThreadPoolExecutor to run the coroutine in a separate thread
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(run_in_thread)
+            return future.result()
 
 __all__ = ["get_logger", "console", "run_async"]
