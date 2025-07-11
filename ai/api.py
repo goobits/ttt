@@ -8,7 +8,7 @@ from .models import AIResponse, ImageInput
 from .backends import BaseBackend, LocalBackend, CloudBackend
 from .routing import router
 from .plugins import discover_plugins
-from .utils import get_logger
+from .utils import get_logger, run_async
 from .chat import PersistentChatSession
 
 
@@ -21,103 +21,6 @@ except Exception as e:
     logger.debug(f"Plugin discovery failed: {e}")
 
 
-def _cleanup_aiohttp_sessions_sync(loop):
-    """Synchronously cleanup aiohttp sessions and tasks to prevent warnings."""
-    import gc
-    import warnings
-    import logging
-
-    # Temporarily disable logging to prevent cleanup noise
-    logging.getLogger("asyncio").setLevel(logging.CRITICAL)
-
-    # Suppress specific aiohttp cleanup warnings during our own cleanup
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message=".*Task was destroyed.*")
-        warnings.filterwarnings("ignore", message=".*ClientSession.*")
-        warnings.filterwarnings("ignore", message=".*BaseConnector.*")
-        warnings.filterwarnings("ignore", message=".*_wait_for_close.*")
-
-        # More aggressive cleanup approach
-        try:
-            # Get all pending tasks and cancel them
-            all_tasks = list(asyncio.all_tasks(loop))
-            for task in all_tasks:
-                if not task.done():
-                    task.cancel()
-
-            # Force wait for cancellation with multiple attempts
-            if all_tasks:
-                for attempt in range(3):
-                    try:
-                        remaining_tasks = [t for t in all_tasks if not t.done()]
-                        if not remaining_tasks:
-                            break
-
-                        loop.run_until_complete(
-                            asyncio.wait_for(
-                                asyncio.gather(
-                                    *remaining_tasks, return_exceptions=True
-                                ),
-                                timeout=0.1,
-                            )
-                        )
-                        break
-                    except (asyncio.TimeoutError, asyncio.CancelledError, RuntimeError):
-                        continue  # Try again with shorter timeout
-
-        except RuntimeError:
-            pass  # Event loop may be closing
-
-        # Force cleanup of aiohttp objects using gc
-        try:
-            import aiohttp
-
-            # Multiple garbage collection passes to ensure cleanup
-            for _ in range(3):
-                gc.collect()
-
-                # Find and close any remaining aiohttp objects
-                for obj in gc.get_objects():
-                    try:
-                        if hasattr(obj, "__class__"):
-                            class_name = obj.__class__.__name__
-
-                            # Handle ClientSession cleanup
-                            if isinstance(obj, aiohttp.ClientSession) and not getattr(
-                                obj, "_closed", True
-                            ):
-                                try:
-                                    # Try to close without creating new loop
-                                    if hasattr(obj, "_connector") and obj._connector:
-                                        obj._connector._close()
-                                    obj._closed = True
-                                except (AttributeError, RuntimeError):
-                                    pass  # Expected during cleanup
-
-                            # Handle BaseConnector cleanup
-                            elif (
-                                class_name == "TCPConnector"
-                                or "Connector" in class_name
-                            ):
-                                if hasattr(obj, "_close") and not getattr(
-                                    obj, "_closed", True
-                                ):
-                                    try:
-                                        obj._close()
-                                    except (AttributeError, RuntimeError):
-                                        pass  # Expected during cleanup
-
-                    except (TypeError, AttributeError, RuntimeError):
-                        pass  # Ignore individual cleanup failures
-
-        except ImportError:
-            pass  # aiohttp not available
-
-        # Final garbage collection
-        gc.collect()
-
-    # Restore logging level
-    logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 
 def _get_default_backend() -> BaseBackend:
@@ -204,28 +107,18 @@ def ask(
         **kwargs,
     )
 
-    # Run async function in sync context with proper cleanup
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        result = loop.run_until_complete(
-            backend_instance.ask(
-                prompt,
-                model=resolved_model,
-                system=system,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                tools=tools,
-                **kwargs,
-            )
+    async def _ask_wrapper():
+        return await backend_instance.ask(
+            prompt,
+            model=resolved_model,
+            system=system,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            tools=tools,
+            **kwargs,
         )
 
-        # Properly cleanup aiohttp sessions and tasks
-        _cleanup_aiohttp_sessions_sync(loop)
-
-        return result
-    finally:
-        loop.close()
+    return run_async(_ask_wrapper())
 
 
 def stream(
@@ -280,35 +173,33 @@ def stream(
         **kwargs,
     )
 
-    # Convert async generator to sync generator
-    async def _async_stream():
-        async for chunk in backend_instance.astream(
-            prompt,
-            model=resolved_model,
-            system=system,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            tools=tools,
-            **kwargs,
-        ):
-            yield chunk
+    # This is the async generator from the backend
+    async_gen = backend_instance.astream(
+        prompt,
+        model=resolved_model,
+        system=system,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        tools=tools,
+        **kwargs,
+    )
 
-    # Run async generator in sync context
+    # We create a bridge to pull from the async generator synchronously
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        async_gen = _async_stream()
         while True:
             try:
+                # Run the __anext__ coroutine to get the next item
                 chunk = loop.run_until_complete(async_gen.__anext__())
                 yield chunk
             except StopAsyncIteration:
+                # The async generator is exhausted
                 break
-
-        # Cleanup after streaming is complete
-        _cleanup_aiohttp_sessions_sync(loop)
     finally:
+        # Cleanly close the loop when done
         loop.close()
+        asyncio.set_event_loop(None)
 
 
 class ChatSession:
@@ -390,23 +281,16 @@ class ChatSession:
         params = {**self.kwargs, **kwargs}
 
         # Make the request
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            response = loop.run_until_complete(
-                self.backend.ask(
-                    full_prompt,
-                    model=model or self.model,
-                    system=self.system,
-                    tools=self.tools,
-                    **params,
-                )
+        async def _ask_wrapper():
+            return await self.backend.ask(
+                full_prompt,
+                model=model or self.model,
+                system=self.system,
+                tools=self.tools,
+                **params,
             )
-
-            # Cleanup aiohttp sessions
-            _cleanup_aiohttp_sessions_sync(loop)
-        finally:
-            loop.close()
+            
+        response = run_async(_ask_wrapper())
 
         # Add assistant response to history
         self.history.append({"role": "assistant", "content": str(response)})
@@ -450,33 +334,32 @@ class ChatSession:
         # Stream the response and collect it
         response_parts = []
 
-        async def _async_stream():
-            async for chunk in self.backend.astream(
-                full_prompt,
-                model=model or self.model,
-                system=self.system,
-                tools=self.tools,
-                **params,
-            ):
-                response_parts.append(chunk)
-                yield chunk
+        # This is the async generator from the backend
+        async_gen = self.backend.astream(
+            full_prompt,
+            model=model or self.model,
+            system=self.system,
+            tools=self.tools,
+            **params,
+        )
 
-        # Run async generator in sync context
+        # We create a bridge to pull from the async generator synchronously
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            async_gen = _async_stream()
             while True:
                 try:
+                    # Run the __anext__ coroutine to get the next item
                     chunk = loop.run_until_complete(async_gen.__anext__())
+                    response_parts.append(chunk)
                     yield chunk
                 except StopAsyncIteration:
+                    # The async generator is exhausted
                     break
-
-            # Cleanup after streaming is complete
-            _cleanup_aiohttp_sessions_sync(loop)
         finally:
+            # Cleanly close the loop when done
             loop.close()
+            asyncio.set_event_loop(None)
 
         # Add complete response to history
         full_response = "".join(response_parts)
