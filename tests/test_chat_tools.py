@@ -5,8 +5,8 @@ from unittest.mock import Mock, AsyncMock, patch
 import json
 from pathlib import Path
 
-from ai.chat import PersistentChatSession
-from ai.api import ChatSession, chat
+from ai.chat import PersistentChatSession as ChatSession
+from ai.api import chat
 from ai.models import AIResponse
 from ai.tools import ToolCall, ToolResult
 

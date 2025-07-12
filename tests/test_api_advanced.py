@@ -9,12 +9,12 @@ from ai.api import (
     ask,
     stream,
     chat,
-    ChatSession,
     ask_async,
     stream_async,
     achat,
     _get_default_backend,
 )
+from ai.chat import PersistentChatSession as ChatSession
 from ai.models import AIResponse, ImageInput
 from ai.backends import BaseBackend
 from ai.exceptions import BackendNotAvailableError
