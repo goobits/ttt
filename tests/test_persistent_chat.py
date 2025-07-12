@@ -325,17 +325,9 @@ class TestPersistentChatSession:
 class TestChatContextManager:
     """Test the chat() context manager with persistence."""
 
-    def test_chat_without_persistence(self):
-        """Test normal chat without persistence."""
+    def test_chat_always_persistent(self):
+        """Test that chat() always returns PersistentChatSession."""
         with chat() as session:
-            assert not isinstance(session, PersistentChatSession)
-            assert hasattr(session, "ask")
-            assert hasattr(session, "stream")
-            assert not hasattr(session, "save")
-
-    def test_chat_with_persistence(self):
-        """Test chat with persistence enabled."""
-        with chat(persist=True) as session:
             assert isinstance(session, PersistentChatSession)
             assert hasattr(session, "ask")
             assert hasattr(session, "stream")
@@ -344,7 +336,7 @@ class TestChatContextManager:
 
     def test_chat_with_custom_session_id(self):
         """Test chat with custom session ID."""
-        with chat(persist=True, session_id="custom_123") as session:
+        with chat(session_id="custom_123") as session:
             assert session.metadata["session_id"] == "custom_123"
 
     def test_save_and_resume_workflow(self, tmp_path):
@@ -352,7 +344,7 @@ class TestChatContextManager:
         save_path = tmp_path / "workflow_test.json"
 
         # Create and save a session
-        with chat(persist=True, system="Test assistant") as session:
+        with chat(system="Test assistant") as session:
             # Mock the backend
             with patch.object(session, "backend") as mock_backend:
                 mock_backend.ask = AsyncMock(

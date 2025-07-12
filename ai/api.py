@@ -8,8 +8,10 @@ from .models import AIResponse, ImageInput
 from .backends import BaseBackend, LocalBackend, CloudBackend
 from .routing import router
 from .plugins import discover_plugins
-from .utils import get_logger, run_async
+from .utils import get_logger, run_async, run_coro_in_background
 from .chat import PersistentChatSession
+
+
 
 
 logger = get_logger(__name__)
@@ -23,16 +25,6 @@ except Exception as e:
 
 
 
-def _get_default_backend() -> BaseBackend:
-    """Get the default backend (local if available, otherwise cloud)."""
-    try:
-        backend = LocalBackend()
-        if backend.is_available:
-            return backend
-    except Exception as e:
-        logger.debug(f"Local backend not available: {e}")
-
-    return CloudBackend()
 
 
 def ask(
@@ -184,21 +176,15 @@ def stream(
     )
 
     # We create a bridge to pull from the async generator synchronously
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        while True:
-            try:
-                # Run the __anext__ coroutine to get the next item
-                chunk = loop.run_until_complete(async_gen.__anext__())
-                yield chunk
-            except StopAsyncIteration:
-                # The async generator is exhausted
-                break
-    finally:
-        # Cleanly close the loop when done
-        loop.close()
-        asyncio.set_event_loop(None)
+    # Using the optimized approach to avoid creating new event loops
+    while True:
+        try:
+            # Use the background loop to get the next item
+            chunk = run_coro_in_background(async_gen.__anext__())
+            yield chunk
+        except StopAsyncIteration:
+            # The async generator is exhausted
+            break
 
 
 # ChatSession class removed - now using PersistentChatSession as the unified session class
@@ -277,69 +263,105 @@ def chat(
 
 # Async versions for advanced users
 async def ask_async(
-    prompt: str,
+    prompt: Union[str, List[Union[str, ImageInput]]],
     *,
     model: Optional[str] = None,
     system: Optional[str] = None,
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
+    fast: bool = False,
+    quality: bool = False,
+    tools: Optional[List] = None,
     **kwargs,
 ) -> AIResponse:
-    """Async version of ask()."""
-    # Handle backend selection
-    if isinstance(backend, str):
-        if backend == "local":
-            backend_instance = LocalBackend()
-        elif backend == "cloud":
-            backend_instance = CloudBackend()
-        else:
-            raise ValueError(f"Unknown backend: {backend}")
-    elif isinstance(backend, BaseBackend):
-        backend_instance = backend
-    else:
-        backend_instance = _get_default_backend()
+    """
+    Async version of ask().
+    
+    Args:
+        prompt: Your question - can be a string or list of content (text/images)
+        model: Specific model to use (optional)
+        system: System prompt to set context (optional)
+        temperature: Sampling temperature 0-1 (optional)
+        max_tokens: Maximum tokens to generate (optional)
+        backend: Backend to use, "local", "cloud", "auto", or Backend instance (optional)
+        fast: Prefer speed over quality (optional)
+        quality: Prefer quality over speed (optional)
+        tools: List of functions/tools the AI can call (optional)
+        **kwargs: Additional backend-specific parameters
+        
+    Returns:
+        AIResponse that behaves like a string but contains metadata
+    """
+    # Use smart routing (same as synchronous version)
+    backend_instance, resolved_model = router.smart_route(
+        prompt,
+        model=model,
+        backend=backend,
+        prefer_speed=fast,
+        prefer_quality=quality,
+        **kwargs,
+    )
 
     return await backend_instance.ask(
         prompt,
-        model=model,
+        model=resolved_model,
         system=system,
         temperature=temperature,
         max_tokens=max_tokens,
+        tools=tools,
         **kwargs,
     )
 
 
 async def stream_async(
-    prompt: str,
+    prompt: Union[str, List[Union[str, ImageInput]]],
     *,
     model: Optional[str] = None,
     system: Optional[str] = None,
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
+    fast: bool = False,
+    quality: bool = False,
+    tools: Optional[List] = None,
     **kwargs,
 ) -> AsyncIterator[str]:
-    """Async version of stream()."""
-    # Handle backend selection
-    if isinstance(backend, str):
-        if backend == "local":
-            backend_instance = LocalBackend()
-        elif backend == "cloud":
-            backend_instance = CloudBackend()
-        else:
-            raise ValueError(f"Unknown backend: {backend}")
-    elif isinstance(backend, BaseBackend):
-        backend_instance = backend
-    else:
-        backend_instance = _get_default_backend()
+    """
+    Async version of stream().
+    
+    Args:
+        prompt: Your question - can be a string or list of content (text/images)
+        model: Specific model to use (optional)
+        system: System prompt to set context (optional)
+        temperature: Sampling temperature 0-1 (optional)
+        max_tokens: Maximum tokens to generate (optional)
+        backend: Backend to use, "local", "cloud", "auto", or Backend instance (optional)
+        fast: Prefer speed over quality (optional)
+        quality: Prefer quality over speed (optional)
+        tools: List of functions/tools the AI can call (optional)
+        **kwargs: Additional backend-specific parameters
+        
+    Yields:
+        String chunks as they arrive
+    """
+    # Use smart routing (same as synchronous version)
+    backend_instance, resolved_model = router.smart_route(
+        prompt,
+        model=model,
+        backend=backend,
+        prefer_speed=fast,
+        prefer_quality=quality,
+        **kwargs,
+    )
 
     async for chunk in backend_instance.astream(
         prompt,
-        model=model,
+        model=resolved_model,
         system=system,
         temperature=temperature,
         max_tokens=max_tokens,
+        tools=tools,
         **kwargs,
     ):
         yield chunk

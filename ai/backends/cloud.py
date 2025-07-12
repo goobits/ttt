@@ -227,7 +227,7 @@ class CloudBackend(BaseBackend):
             message = response.choices[0].message
             if hasattr(message, "tool_calls") and message.tool_calls:
                 # Import tool execution here to avoid circular imports
-                from ..tools import execute_multiple_async
+                from ..tools import execute_tools
 
                 # Build tool calls data
                 tool_calls_data = []
@@ -254,11 +254,8 @@ class CloudBackend(BaseBackend):
 
                 # Execute tool calls
                 if tool_calls_data and tools:
-                    # Create tool definition map
-                    tool_def_dict = {td.name: td for td in resolved_tools}
-                    tool_result = await execute_multiple_async(
-                        tool_calls_data, tool_def_dict
-                    )
+                    # The new executor doesn't need tool definitions map
+                    tool_result = await execute_tools(tool_calls_data, parallel=True)
 
                     # Update content with tool results if content is empty
                     if not content:

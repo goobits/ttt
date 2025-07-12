@@ -77,18 +77,6 @@ class Agent(ABC):
         response = self.get_response(prompt, **kwargs)
         yield response.content
 
-    def get_response_string(self, prompt: str, **kwargs) -> str:
-        """
-        Compatibility method that returns just the response string.
-
-        Args:
-            prompt: The prompt to send to the agent
-            **kwargs: Additional agent-specific parameters
-
-        Returns:
-            The agent's response as a string
-        """
-        return self.get_response(prompt, **kwargs).content
 
 
 class OpenRouterAgent(Agent):

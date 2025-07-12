@@ -5,7 +5,7 @@ from unittest.mock import Mock, AsyncMock, patch
 import json
 from pathlib import Path
 
-from ai.chat import PersistentChatSession as ChatSession
+from ai.chat import PersistentChatSession as ChatSession, PersistentChatSession
 from ai.api import chat
 from ai.models import AIResponse
 from ai.tools import ToolCall, ToolResult
@@ -29,12 +29,12 @@ class TestChatSessionTools:
         def test_tool(x: int) -> int:
             return x * 2
 
-        with patch("ai.api._get_default_backend") as mock_backend:
+        with patch("ai.routing.router.smart_route") as mock_route:
             backend_instance = Mock()
             backend_instance.ask = AsyncMock(
                 return_value=AIResponse("Response", model="test", backend="test")
             )
-            mock_backend.return_value = backend_instance
+            mock_route.return_value = (backend_instance, "test-model")
 
             session = ChatSession(tools=[test_tool])
             response = session.ask("Test prompt")

@@ -12,7 +12,6 @@ from ai.api import (
     ask_async,
     stream_async,
     achat,
-    _get_default_backend,
 )
 from ai.chat import PersistentChatSession as ChatSession
 from ai.models import AIResponse, ImageInput
@@ -87,35 +86,6 @@ def mock_router(mock_backend):
         mock.smart_route.return_value = (mock_backend, "mock-model")
         yield mock
 
-
-class TestGetDefaultBackend:
-    """Test _get_default_backend function."""
-
-    def test_get_default_backend_local_available(self):
-        """Test getting default backend when local is available."""
-        with patch("ai.api.LocalBackend") as mock_local:
-            mock_instance = Mock()
-            mock_instance.is_available = True
-            mock_local.return_value = mock_instance
-
-            backend = _get_default_backend()
-
-            assert backend == mock_instance
-
-    def test_get_default_backend_cloud_fallback(self):
-        """Test falling back to cloud when local unavailable."""
-        with patch("ai.api.LocalBackend") as mock_local:
-            with patch("ai.api.CloudBackend") as mock_cloud:
-                mock_local_instance = Mock()
-                mock_local_instance.is_available = False
-                mock_local.return_value = mock_local_instance
-
-                mock_cloud_instance = Mock()
-                mock_cloud.return_value = mock_cloud_instance
-
-                backend = _get_default_backend()
-
-                assert backend == mock_cloud_instance
 
 
 class TestAskFunction:
@@ -218,22 +188,27 @@ class TestChatSession:
 
     def test_chat_session_initialization_default(self):
         """Test ChatSession initialization with defaults."""
-        with patch("ai.api._get_default_backend") as mock_get_default:
+        with patch("ai.routing.router") as mock_router:
             mock_backend = MockBackend()
-            mock_get_default.return_value = mock_backend
+            # Mock the smart_route to return backend and model
+            mock_router.smart_route.return_value = (mock_backend, "default-model")
+            mock_router.resolve_backend.return_value = mock_backend
 
             session = ChatSession()
 
             assert session.system is None
-            assert session.model is None
+            # Model gets auto-resolved now
+            assert session.model == "default-model"
             assert session.backend == mock_backend
             assert session.history == []
 
     def test_chat_session_initialization_with_params(self):
         """Test ChatSession initialization with parameters."""
-        with patch("ai.api.LocalBackend") as mock_local:
+        with patch("ai.routing.router") as mock_router:
             mock_backend = MockBackend("local")
-            mock_local.return_value = mock_backend
+            # Mock router to return our backend
+            mock_router.resolve_backend.return_value = mock_backend
+            mock_router.resolve_model.return_value = "specific-model"
 
             session = ChatSession(
                 system="You are helpful",
@@ -323,12 +298,12 @@ class TestChatContextManager:
 
     def test_chat_context_basic(self):
         """Test basic chat context manager."""
-        with patch("ai.api._get_default_backend") as mock_get_default:
+        with patch("ai.routing.router.smart_route") as mock_route:
             mock_backend = MockBackend()
-            mock_get_default.return_value = mock_backend
+            mock_route.return_value = (mock_backend, "mock-model")
 
             with chat() as session:
-                assert isinstance(session, ChatSession)
+                assert isinstance(session, PersistentChatSession)
                 response = session.ask("Test")
                 assert str(response) == "Mock response"
 
@@ -345,22 +320,6 @@ class TestChatContextManager:
                 assert session.model == "model"
                 assert session.backend == mock_backend
 
-    def test_chat_context_persist_mode(self):
-        """Test chat context manager in persist mode."""
-        with patch("ai.api.PersistentChatSession") as mock_persistent:
-            mock_session = Mock()
-            mock_persistent.return_value = mock_session
-
-            with chat(persist=True, session_id="test-session") as session:
-                assert session == mock_session
-
-            mock_persistent.assert_called_once_with(
-                system=None,
-                model=None,
-                backend=None,
-                session_id="test-session",
-                tools=None,
-            )
 
 
 class TestAsyncFunctions:
@@ -389,10 +348,10 @@ class TestAsyncFunctions:
     @pytest.mark.asyncio
     async def test_stream_async(self):
         """Test async stream function."""
-        with patch("ai.api._get_default_backend") as mock_get_default:
+        with patch("ai.routing.router.smart_route") as mock_route:
             mock_backend = MockBackend()
             mock_backend.response_text = "Async stream test"
-            mock_get_default.return_value = mock_backend
+            mock_route.return_value = (mock_backend, "mock-model")
 
             chunks = []
             async for chunk in stream_async("Test"):
@@ -403,9 +362,9 @@ class TestAsyncFunctions:
     @pytest.mark.asyncio
     async def test_achat_context_manager(self):
         """Test async chat context manager."""
-        with patch("ai.api._get_default_backend") as mock_get_default:
+        with patch("ai.routing.router.smart_route") as mock_route:
             mock_backend = MockBackend()
-            mock_get_default.return_value = mock_backend
+            mock_route.return_value = (mock_backend, "mock-model")
 
             async with achat(system="Async system") as session:
                 assert isinstance(session, ChatSession)
