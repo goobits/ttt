@@ -44,26 +44,52 @@ OPENROUTER_API_KEY=your-openrouter-key-here
 # GOOGLE_API_KEY=your-google-key-here
 ```
 
-### Usage
+## Migration from Other AI Tools
+
+**Migrating from `llm` or similar tools?** The AI library provides drop-in compatibility with enhanced features:
 
 ```bash
-# Basic usage
+# If you used: llm "question"
+ai "question"                    # Same simple interface
+
+# Enhanced with new features:
+ai "question" --offline          # Force local models (Ollama)
+ai "question" --online           # Force cloud models  
+ai "question" --code             # Coding-optimized responses
+ai "question" --verbose          # Show detailed metadata
+
+# Flexible flag positioning (all equivalent):
+ai "write a function" --code
+ai --code "write a function"  
+ai "write" --code "a function"
+
+# Interactive mode (coming soon):
+# ai --chat                      # Start persistent conversation
+```
+
+### Usage Examples
+
+```bash
+# Basic usage - just like llm
 ai "What is Python?"
+
+# Coding assistance with optimization
+ai "write a Python function to sort a list" --code --verbose
+
+# Force specific backend
+ai "private question" --offline          # Uses local Ollama models
+ai "complex analysis" --online --model gpt-4
 
 # Stream responses in real-time
 ai "Tell me a story" --stream
 
-# Check system status
-ai backend-status
+# System status and discovery
+ai backend-status                        # Check what's configured
+ai models-list                          # See available models
 
-# List available models
-ai models-list
-
-# Specify model and backend
-ai "Explain quantum computing" --model gpt-4 --backend cloud
-
-# Verbose output with metadata
-ai "Debug this code" --verbose
+# Read from stdin (pipe support)
+cat script.py | ai "review this code" --code
+echo "2 + 2" | ai "what is this?" -
 ```
 
 ### Tools and Function Calling
@@ -212,8 +238,14 @@ response = ask(
 ### Basic Commands
 
 ```bash
-# Ask questions
+# Simple usage (like llm)
 ai "Your question here"
+
+# NEW: Enhanced backend control
+ai "Question" --offline                  # Force local models (Ollama)
+ai "Question" --online                   # Force cloud models
+ai "Question" --code                     # Coding-optimized responses
+ai "Question" --verbose                  # Show detailed metadata
 
 # Stream responses (real-time output)
 ai "Tell me a story" --stream
@@ -221,11 +253,8 @@ ai "Tell me a story" --stream
 # Specify model
 ai "Code question" --model openrouter/anthropic/claude-3-sonnet
 
-# Use local backend (requires Ollama)
+# Legacy backend specification (still supported)
 ai "Question" --backend local --model llama2
-
-# Verbose output with metadata
-ai "Question" --verbose
 
 # System prompts
 ai "Translate this" --system "You are a translator"
@@ -236,9 +265,10 @@ ai "Write a poem" --temperature 0.9
 # Token limits
 ai "Summarize this" --max-tokens 100
 
-# Read from stdin
+# Read from stdin (enhanced pipe support)
 echo "What is this?" | ai -
 cat file.txt | ai "Explain this code" -
+cat script.py | ai "review this code" --code
 
 # Use tools from CLI
 ai "What time is it in Tokyo?" --tools get_current_time
@@ -255,6 +285,11 @@ ai "Analyze file" --tools /path/to/tools.py:analyze
 # Built-in tools by category
 ai "Read config.json" --tools read_file
 ai "Calculate 15% of 250" --tools calculate
+
+# NEW: Flexible flag positioning (all equivalent)
+ai "write a function" --code --verbose
+ai --code "write a function" --verbose  
+ai --verbose --code "write a function"
 ```
 
 ### System Commands
@@ -273,7 +308,12 @@ ai --help
 ### Advanced Options
 
 ```bash
-# Backend selection
+# NEW: Simple backend selection  
+ai "Question" --offline            # Force local backend (Ollama)
+ai "Question" --online             # Force cloud backend
+ai "Question" --code               # Coding-optimized responses
+
+# Legacy backend selection (still supported)
 ai "Question" --backend cloud      # Force cloud backend
 ai "Question" --backend local      # Force local backend (Ollama)
 
@@ -295,6 +335,11 @@ ai "Question" --system "You are..." # System prompt
 ai "Question" -m gpt-4            # Model
 ai "Question" -s "System prompt"   # System
 ai "Question" -v                   # Verbose
+
+# NEW: Smart features
+ai "debug this function" --code    # Auto-detects coding context
+ai "debug this function"           # Also works (auto-detection)
+ai "Question" --verbose --online   # Combine multiple flags
 ```
 
 ## Backend Configuration
