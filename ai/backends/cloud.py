@@ -114,6 +114,11 @@ class CloudBackend(BaseBackend):
     def supports_streaming(self) -> bool:
         """Check if backend supports streaming."""
         return True
+    
+    @property
+    def supports_messages(self) -> bool:
+        """Check if backend supports message history format."""
+        return True
 
     async def ask(
         self,
@@ -144,38 +149,42 @@ class CloudBackend(BaseBackend):
         used_model = model or self.default_model
 
         # Build messages
-        messages = []
-        if system:
-            messages.append({"role": "system", "content": system})
-
-        # Handle multi-modal content
-        if isinstance(prompt, str):
-            messages.append({"role": "user", "content": prompt})
+        # Check if we received pre-built messages from chat session
+        if 'messages' in kwargs and kwargs['messages']:
+            messages = kwargs['messages']
         else:
-            # Build content array for multi-modal input
-            content = []
-            for item in prompt:
-                if isinstance(item, str):
-                    content.append({"type": "text", "text": item})
-                elif isinstance(item, ImageInput):
-                    # Format image for the provider
-                    if item.is_url:
-                        content.append(
-                            {"type": "image_url", "image_url": {"url": item.source}}
-                        )
-                    else:
-                        # Base64 encode for non-URL images
-                        base64_data = item.to_base64()
-                        mime_type = item.get_mime_type()
-                        content.append(
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:{mime_type};base64,{base64_data}"
-                                },
-                            }
-                        )
-            messages.append({"role": "user", "content": content})
+            messages = []
+            if system:
+                messages.append({"role": "system", "content": system})
+
+            # Handle multi-modal content
+            if isinstance(prompt, str):
+                messages.append({"role": "user", "content": prompt})
+            else:
+                # Build content array for multi-modal input
+                content = []
+                for item in prompt:
+                    if isinstance(item, str):
+                        content.append({"type": "text", "text": item})
+                    elif isinstance(item, ImageInput):
+                        # Format image for the provider
+                        if item.is_url:
+                            content.append(
+                                {"type": "image_url", "image_url": {"url": item.source}}
+                            )
+                        else:
+                            # Base64 encode for non-URL images
+                            base64_data = item.to_base64()
+                            mime_type = item.get_mime_type()
+                            content.append(
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:{mime_type};base64,{base64_data}"
+                                    },
+                                }
+                            )
+                messages.append({"role": "user", "content": content})
 
         # Build parameters
         params = {
@@ -207,8 +216,10 @@ class CloudBackend(BaseBackend):
                 params["tools"] = tool_definitions
                 params["tool_choice"] = "auto"  # Let the model decide when to use tools
 
-        # Add any additional parameters
-        params.update(kwargs)
+        # Add any additional parameters, filtering out None values
+        # Also remove 'messages' from kwargs since we build it ourselves
+        filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None and k != 'messages'}
+        params.update(filtered_kwargs)
 
         try:
             logger.debug(f"Sending request to {used_model}")
@@ -437,8 +448,10 @@ class CloudBackend(BaseBackend):
                 params["tools"] = tool_definitions
                 params["tool_choice"] = "auto"
 
-        # Add any additional parameters
-        params.update(kwargs)
+        # Add any additional parameters, filtering out None values
+        # Also remove 'messages' from kwargs since we build it ourselves
+        filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None and k != 'messages'}
+        params.update(filtered_kwargs)
 
         try:
             logger.debug(f"Starting stream request to {used_model}")

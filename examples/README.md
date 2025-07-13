@@ -214,7 +214,7 @@ This is the **consolidated version** of the examples, designed to provide a much
 - **Cross-references** between examples
 - **Production-ready patterns** throughout
 
-The old examples have been consolidated as follows:
+The examples have been reorganized as follows:
 - `basic_usage.py` → `01_basic_usage.py` (simplified)
 - `builtin_tools_demo.py` + `chat_with_tools.py` → `02_tools_and_workflows.py`
 - `persistent_chat.py` + chat components → `03_chat_and_persistence.py`

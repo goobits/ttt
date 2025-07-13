@@ -37,7 +37,6 @@ def main(ctx, version):
 @click.option('--system', '-s', help='System prompt to set context')
 @click.option('--temperature', '-t', type=float, help='Sampling temperature (0-1)')
 @click.option('--max-tokens', type=int, help='Maximum tokens to generate')
-@click.option('--backend', '-b', type=click.Choice(['local', 'cloud', 'auto']), help='Backend to use')
 @click.option('--fast', is_flag=True, help='Prefer speed over quality')
 @click.option('--quality', is_flag=True, help='Prefer quality over speed')
 @click.option('--tools', help='Comma-separated list of tools to enable')
@@ -46,7 +45,7 @@ def main(ctx, version):
 @click.option('--offline', is_flag=True, help='Force local backend')
 @click.option('--online', is_flag=True, help='Force cloud backend')
 @click.option('--code', is_flag=True, help='Optimize for code-related tasks')
-def ask(prompt, model, system, temperature, max_tokens, backend, fast, quality, 
+def ask(prompt, model, system, temperature, max_tokens, fast, quality, 
         tools, stream, verbose, offline, online, code):
     """Ask the AI a question and get a response."""
     
@@ -57,7 +56,8 @@ def ask(prompt, model, system, temperature, max_tokens, backend, fast, quality,
             click.echo("Error: No input provided via stdin", err=True)
             sys.exit(1)
     
-    # Handle shortcuts
+    # Handle backend selection
+    backend = None
     if offline:
         backend = 'local'
     elif online:
@@ -79,14 +79,14 @@ def ask(prompt, model, system, temperature, max_tokens, backend, fast, quality,
         kwargs['temperature'] = temperature
     if max_tokens:
         kwargs['max_tokens'] = max_tokens
-    if backend:
-        kwargs['backend'] = backend
     if fast:
         kwargs['fast'] = True
     if quality:
         kwargs['quality'] = True
     if tools_list:
         kwargs['tools'] = tools_list
+    if backend:
+        kwargs['backend'] = backend
     
     # Apply coding optimizations
     if code or is_coding_request(prompt):
@@ -118,12 +118,11 @@ def ask(prompt, model, system, temperature, max_tokens, backend, fast, quality,
 @main.command()
 @click.option('--model', '-m', help='Default model for the session')
 @click.option('--system', '-s', help='System prompt for the session')
-@click.option('--backend', '-b', type=click.Choice(['local', 'cloud', 'auto']), help='Backend to use')
 @click.option('--session-id', help='Session ID for persistent chat')
 @click.option('--tools', help='Comma-separated list of tools to enable')
 @click.option('--load', help='Load chat session from file')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
-def chat(model, system, backend, session_id, tools, load, verbose):
+def chat(model, system, session_id, tools, load, verbose):
     """Start an interactive chat session."""
     
     # Parse tools
@@ -138,8 +137,6 @@ def chat(model, system, backend, session_id, tools, load, verbose):
         kwargs['model'] = model
     if system:
         kwargs['system'] = system
-    if backend:
-        kwargs['backend'] = backend
     if session_id:
         kwargs['session_id'] = session_id
     if tools_list:
@@ -361,16 +358,22 @@ def resolve_tools(tool_specs: List[str]) -> List:
             if ':' in spec:
                 # Category:tool format
                 category, tool_name = spec.split(':', 1)
-                tool_dict = list_tools(category=category)
-                if tool_name in tool_dict:
-                    tools.append(tool_dict[tool_name])
+                tool_list = list_tools(category=category)
+                # Find tool by name in the list
+                found_tool = None
+                for tool_def in tool_list:
+                    if tool_def.name == tool_name:
+                        found_tool = tool_def.function
+                        break
+                if found_tool:
+                    tools.append(found_tool)
                 else:
                     console.print(f"[yellow]Warning: Tool {tool_name} not found in category {category}[/yellow]")
             else:
                 # Just tool name
-                tool = get_tool(spec)
-                if tool:
-                    tools.append(tool)
+                tool_def = get_tool(spec)
+                if tool_def:
+                    tools.append(tool_def.function)
                 else:
                     console.print(f"[yellow]Warning: Tool {spec} not found[/yellow]")
     except Exception as e:

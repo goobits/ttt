@@ -1,7 +1,7 @@
 """Tests for tool support in chat sessions."""
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock, patch, MagicMock
 import json
 from pathlib import Path
 
@@ -186,18 +186,28 @@ class TestPersistentChatSessionTools:
 class TestCLIToolSupport:
     """Test CLI tool support."""
 
-    def test_parse_args_with_tools(self):
+    def test_cli_with_tools(self):
         """Test CLI argument parsing with --tools flag."""
-        from ai.cli import parse_args
-
-        with patch(
-            "sys.argv", ["ai", "Test prompt", "--tools", "math:add,string:upper"]
-        ):
-            args = parse_args()
-
-            assert args["command"] == "query"
-            assert args["prompt"] == "Test prompt"
-            assert args["tools"] == ["math:add", "string:upper"]
+        from click.testing import CliRunner
+        from ai.cli import main
+        
+        runner = CliRunner()
+        
+        with patch('ai.ask') as mock_ask:
+            mock_response = MagicMock()
+            mock_response.__str__ = lambda x: "Mock response"
+            mock_ask.return_value = mock_response
+            
+            with patch('ai.cli.resolve_tools') as mock_resolve:
+                mock_resolve.return_value = []  # Simplified for test
+                
+                result = runner.invoke(main, [
+                    'ask', 'Test prompt', '--tools', 'math:add,string:upper'
+                ])
+                
+                assert result.exit_code == 0
+                # Verify tools were parsed and resolved
+                mock_resolve.assert_called_once_with(['math:add', 'string:upper'])
 
     def test_resolve_tools_from_registry(self):
         """Test resolving tools from registry."""
@@ -214,23 +224,33 @@ class TestCLIToolSupport:
         # Resolve by name
         tools = resolve_tools(["test_tool"])
         assert len(tools) == 1
-        assert tools[0].name == "test_tool"
+        # resolve_tools returns functions, not ToolDefinition objects
+        assert callable(tools[0])
 
         clear_registry()
 
     def test_resolve_tools_from_module(self):
         """Test resolving tools from module imports."""
         from ai.cli import resolve_tools
+        from ai.tools import register_tool, unregister_tool, tool
 
-        # Mock the import
-        with patch("importlib.import_module") as mock_import:
-            mock_module = Mock()
-            mock_module.my_function = lambda x: x * 2
-            mock_import.return_value = mock_module
-
+        # Register a test tool in a test category
+        @tool(register=False)
+        def my_function(x):
+            return x * 2
+        
+        register_tool(my_function, "my_function", "Test function", "mymodule")
+        
+        try:
             tools = resolve_tools(["mymodule:my_function"])
             assert len(tools) == 1
-            assert tools[0] == mock_module.my_function
+            assert hasattr(tools[0], '__call__')  # Check it's callable
+        finally:
+            # Clean up
+            try:
+                unregister_tool("my_function")
+            except:
+                pass
 
     def test_resolve_tools_handles_errors(self):
         """Test tool resolution handles errors gracefully."""

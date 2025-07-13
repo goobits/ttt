@@ -10,6 +10,8 @@ from .routing import router
 from .plugins import discover_plugins
 from .utils import get_logger, run_async, run_coro_in_background
 from .chat import PersistentChatSession
+# Backward compatibility alias - prefer PersistentChatSession in new code
+ChatSession = PersistentChatSession
 
 
 
@@ -187,7 +189,6 @@ def stream(
             break
 
 
-# ChatSession class removed - now using PersistentChatSession as the unified session class
 
 
 @contextmanager

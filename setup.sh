@@ -85,7 +85,7 @@ setup_shell() {
     detect_shell
     
     # Create function instead of alias for better compatibility
-    local ai_function="function ai() { source $VENV_DIR/bin/activate && python $AI_DIR/ai_wrapper.py \"\$@\"; }"
+    local ai_function="function ai() { source $VENV_DIR/bin/activate && python -m ai \"\$@\"; }"
     local ai_path_export="export PATH=\"$VENV_DIR/bin:\$PATH\""
     local ai_comment="# AI Library Integration"
     
@@ -114,8 +114,8 @@ setup_shell() {
 # Change to the AI library directory
 cd $AI_DIR
 
-# Activate virtual environment and run the AI wrapper
-source .venv/bin/activate && python ai_wrapper.py "\$@"
+# Activate virtual environment and run the AI CLI
+source .venv/bin/activate && python -m ai "\$@"
 EOF
     
     chmod +x "$bin_dir/ai"
@@ -262,8 +262,8 @@ test_current_session() {
         source "$API_KEY_FILE" 2>/dev/null || true
     fi
     
-    echo "Running: python $AI_DIR/ai_wrapper.py backend-status"
-    python "$AI_DIR/ai_wrapper.py" backend-status || {
+    echo "Running: python -m ai backend-status"
+    python -m ai backend-status || {
         print_warning "CLI test failed, trying Python API..."
         python -c "
 from ai.api import ask

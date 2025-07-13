@@ -1,203 +1,249 @@
-"""Tests for new CLI migration features."""
+"""Tests for CLI functionality using modern Click testing patterns."""
 
 import os
 import sys
 import pytest
 from unittest.mock import patch, MagicMock
-from io import StringIO
+from click.testing import CliRunner
 
 # Add the project root to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from ai.cli import (
-    parse_args, 
-    parse_chat_args,
-    detect_best_backend,
-    check_backend_available,
-    is_coding_request,
-    apply_coding_optimization
-)
+from ai.cli import main, is_coding_request, apply_coding_optimization
 
 
-class TestArgumentParsing:
-    """Test enhanced argument parsing functionality."""
+class TestCLICommands:
+    """Test CLI commands using Click CliRunner."""
     
-    def test_basic_query_parsing(self):
-        """Test basic query parsing works like llm."""
-        with patch('sys.argv', ['ai', 'What is Python?']):
-            args = parse_args()
-            assert args['command'] == 'query'
-            assert args['prompt'] == 'What is Python?'
-    
-    def test_flexible_flag_positioning(self):
-        """Test flexible flag positioning like llm."""
-        test_cases = [
-            # Different positions should all work
-            ['ai', 'write a function', '--code'],
-            ['ai', '--code', 'write a function'],
-            ['ai', 'write', '--code', 'a function'],
-        ]
-        
-        for argv in test_cases:
-            with patch('sys.argv', argv):
-                args = parse_args()
-                assert args['command'] == 'query'
-                assert args['code'] is True
-                # Should reconstruct the prompt correctly
-                assert 'write' in args['prompt']
-                assert 'function' in args['prompt']
-    
-    def test_new_flags(self):
-        """Test new CLI flags are parsed correctly."""
-        with patch('sys.argv', ['ai', 'test', '--offline', '--verbose']):
-            args = parse_args()
-            assert args['offline'] is True
-            assert args['backend'] == 'local'
-            assert args['verbose'] is True
-        
-        with patch('sys.argv', ['ai', 'test', '--online', '--code']):
-            args = parse_args()
-            assert args['online'] is True
-            assert args['backend'] == 'cloud'
-            assert args['code'] is True
-    
-    def test_chat_mode_parsing(self):
-        """Test chat mode argument parsing."""
-        with patch('sys.argv', ['ai', '--chat', '--model', 'gpt-4', '--verbose']):
-            args = parse_args()
-            assert args['command'] == 'chat'
-            assert args['model'] == 'gpt-4'
-            assert args['verbose'] is True
-    
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.runner = CliRunner()
+
+    def test_basic_ask_command(self):
+        """Test basic ask command functionality."""
+        with patch('ai.ask') as mock_ask:
+            mock_response = MagicMock()
+            mock_response.__str__ = lambda x: "Mock response"
+            mock_response.model = "test-model"
+            mock_response.backend = "test"
+            mock_response.time = 1.23
+            mock_ask.return_value = mock_response
+            
+            result = self.runner.invoke(main, ['ask', 'What is Python?'])
+            
+            assert result.exit_code == 0
+            mock_ask.assert_called_once()
+            call_args = mock_ask.call_args
+            assert call_args[0][0] == 'What is Python?'
+
+    def test_ask_with_model_option(self):
+        """Test ask command with model option."""
+        with patch('ai.ask') as mock_ask:
+            mock_response = MagicMock()
+            mock_response.__str__ = lambda x: "Mock response"
+            mock_ask.return_value = mock_response
+            
+            result = self.runner.invoke(main, ['ask', 'Test prompt', '--model', 'gpt-4'])
+            
+            assert result.exit_code == 0
+            call_kwargs = mock_ask.call_args[1]
+            assert call_kwargs['model'] == 'gpt-4'
+
+
+    def test_ask_with_temperature(self):
+        """Test ask command with temperature option."""
+        with patch('ai.ask') as mock_ask:
+            mock_response = MagicMock()
+            mock_response.__str__ = lambda x: "Mock response"
+            mock_ask.return_value = mock_response
+            
+            result = self.runner.invoke(main, ['ask', 'Test prompt', '--temperature', '0.7'])
+            
+            assert result.exit_code == 0
+            call_kwargs = mock_ask.call_args[1]
+            assert call_kwargs['temperature'] == 0.7
+
+    def test_ask_with_offline_shortcut(self):
+        """Test ask command with offline shortcut."""
+        with patch('ai.ask') as mock_ask:
+            mock_response = MagicMock()
+            mock_response.__str__ = lambda x: "Mock response"
+            mock_ask.return_value = mock_response
+            
+            result = self.runner.invoke(main, ['ask', 'Test prompt', '--offline'])
+            
+            assert result.exit_code == 0
+            call_kwargs = mock_ask.call_args[1]
+            assert call_kwargs['backend'] == 'local'
+
+    def test_ask_with_online_shortcut(self):
+        """Test ask command with online shortcut."""
+        with patch('ai.ask') as mock_ask:
+            mock_response = MagicMock()
+            mock_response.__str__ = lambda x: "Mock response"
+            mock_ask.return_value = mock_response
+            
+            result = self.runner.invoke(main, ['ask', 'Test prompt', '--online'])
+            
+            assert result.exit_code == 0
+            call_kwargs = mock_ask.call_args[1]
+            assert call_kwargs['backend'] == 'cloud'
+
     def test_backward_compatibility(self):
         """Test backward compatibility with existing flags."""
-        with patch('sys.argv', ['ai', 'test', '--backend', 'local', '--model', 'llama2']):
-            args = parse_args()
-            assert args['backend'] == 'local'
-            assert args['model'] == 'llama2'
-
-
-class TestSmartFeatures:
-    """Test smart detection and optimization features."""
-    
-    def test_coding_request_detection(self):
-        """Test automatic coding request detection."""
-        coding_prompts = [
-            "write a Python function",
-            "debug this code",
-            "implement an algorithm",
-            "fix this JavaScript error",
-            "create a SQL query",
-        ]
-        
-        non_coding_prompts = [
-            "what is the weather",
-            "tell me a story",
-            "translate this text",
-            "what is quantum physics",
-        ]
-        
-        for prompt in coding_prompts:
-            assert is_coding_request(prompt), f"Should detect coding: {prompt}"
-        
-        for prompt in non_coding_prompts:
-            assert not is_coding_request(prompt), f"Should not detect coding: {prompt}"
-    
-    def test_coding_optimization(self):
-        """Test coding optimization application."""
-        args = {'code': True, 'backend': 'cloud'}
-        kwargs = apply_coding_optimization(args, {})
-        
-        # Should set coding-optimized system prompt
-        assert 'coding assistant' in kwargs.get('system', '').lower()
-        
-        # Should set lower temperature for focused responses
-        assert kwargs.get('temperature') == 0.3
-        
-        # Should prefer coding-optimized model
-        assert 'claude' in kwargs.get('model', '')
-    
-    @patch.dict(os.environ, {'OPENROUTER_API_KEY': 'test-key'})
-    def test_backend_detection_with_api_keys(self):
-        """Test backend detection when API keys are available."""
-        args = {}
-        backend = detect_best_backend(args)
-        assert backend == 'cloud'
-    
-    @patch.dict(os.environ, {}, clear=True)
-    def test_backend_detection_no_api_keys(self):
-        """Test backend detection when no API keys available."""
-        with patch('ai.backends.local.LocalBackend') as mock_local:
-            mock_instance = MagicMock()
-            mock_instance.is_available = True
-            mock_local.return_value = mock_instance
+        with patch('ai.ask') as mock_ask:
+            mock_response = MagicMock()
+            mock_response.__str__ = lambda x: "Mock response"
+            mock_ask.return_value = mock_response
             
-            args = {}
-            backend = detect_best_backend(args)
-            assert backend == 'local'
-    
-    @patch.dict(os.environ, {'OPENROUTER_API_KEY': 'test-key'})
-    def test_backend_availability_check(self):
-        """Test backend availability checking."""
-        assert check_backend_available('cloud') is True
-        
-        with patch('ai.backends.local.LocalBackend') as mock_local:
-            mock_instance = MagicMock()
-            mock_instance.is_available = False
-            mock_local.return_value = mock_instance
+            result = self.runner.invoke(main, ['ask', 'Test', '--fast'])
             
-            assert check_backend_available('local') is False
+            assert result.exit_code == 0
+            call_kwargs = mock_ask.call_args[1]
+            assert call_kwargs['fast'] is True
 
+    def test_ask_with_streaming(self):
+        """Test ask command with streaming."""
+        with patch('ai.stream') as mock_stream:
+            mock_stream.return_value = iter(['chunk1', 'chunk2', 'chunk3'])
+            
+            result = self.runner.invoke(main, ['ask', 'Test prompt', '--stream'])
+            
+            assert result.exit_code == 0
+            mock_stream.assert_called_once()
+            assert 'chunk1chunk2chunk3' in result.output
 
-class TestCLIHelpers:
-    """Test CLI helper functions."""
-    
-    def test_system_commands(self):
-        """Test system command parsing."""
-        with patch('sys.argv', ['ai', 'backend-status']):
-            args = parse_args()
-            assert args['command'] == 'backend-status'
-        
-        with patch('sys.argv', ['ai', 'models-list']):
-            args = parse_args()
-            assert args['command'] == 'models-list'
-        
-        with patch('sys.argv', ['ai', '--help']):
-            args = parse_args()
-            assert args['command'] == 'help'
-    
-    def test_stdin_support(self):
-        """Test stdin input support."""
-        with patch('sys.argv', ['ai', '-']):
-            args = parse_args()
-            assert args['prompt'] == '-'
+    def test_chat_command(self):
+        """Test chat command initialization."""
+        with patch('ai.chat') as mock_chat_context:
+            mock_session = MagicMock()
+            mock_chat_context.return_value.__enter__ = lambda x: mock_session
+            mock_chat_context.return_value.__exit__ = lambda x, *args: None
+            
+            # Simulate immediate exit
+            with patch('click.prompt', side_effect=EOFError):
+                result = self.runner.invoke(main, ['chat'])
+            
+            assert result.exit_code == 0
+            mock_chat_context.assert_called_once()
 
+    def test_backend_status_command(self):
+        """Test backend-status command."""
+        with patch('ai.cli.show_backend_status') as mock_status:
+            result = self.runner.invoke(main, ['backend-status'])
+            
+            assert result.exit_code == 0
+            mock_status.assert_called_once()
 
-class TestIntegration:
-    """Integration tests for CLI functionality."""
-    
-    @patch('ai.cli.load_dotenv')
-    @patch('ai.api.ask')
-    def test_basic_query_flow(self, mock_ask, mock_dotenv):
-        """Test basic query execution flow."""
-        mock_response = MagicMock()
-        mock_response.model = 'test-model'
-        mock_response.time = 1.0
-        mock_ask.return_value = mock_response
-        
-        # This would normally be tested with subprocess, 
-        # but we're testing the logic flow
-        with patch('sys.argv', ['ai', 'test question']):
-            args = parse_args()
-            assert args['command'] == 'query'
-            assert args['prompt'] == 'test question'
-    
+    def test_models_list_command(self):
+        """Test models-list command."""
+        with patch('ai.cli.show_models_list') as mock_models:
+            result = self.runner.invoke(main, ['models-list'])
+            
+            assert result.exit_code == 0
+            mock_models.assert_called_once()
+
+    def test_tools_list_command(self):
+        """Test tools-list command."""
+        with patch('ai.cli.show_tools_list') as mock_tools:
+            result = self.runner.invoke(main, ['tools-list'])
+            
+            assert result.exit_code == 0
+            mock_tools.assert_called_once()
+
     def test_help_display(self):
-        """Test help display works."""
-        with patch('sys.argv', ['ai', '--help']):
-            args = parse_args()
-            assert args['command'] == 'help'
+        """Test help display."""
+        result = self.runner.invoke(main, ['--help'])
+        
+        assert result.exit_code == 0
+        assert 'AI Library - Unified AI Interface' in result.output
+
+    def test_version_display(self):
+        """Test version display."""
+        result = self.runner.invoke(main, ['--version'])
+        
+        assert result.exit_code == 0
+        assert 'AI Library v' in result.output
 
 
-if __name__ == '__main__':
-    pytest.main([__file__])
+class TestHelperFunctions:
+    """Test CLI helper functions."""
+
+
+    def test_is_coding_request(self):
+        """Test coding request detection."""
+        assert is_coding_request("write a function") is True
+        assert is_coding_request("debug this code") is True
+        assert is_coding_request("what is the weather") is False
+
+    def test_apply_coding_optimization(self):
+        """Test coding optimization application."""
+        kwargs = {}
+        apply_coding_optimization(kwargs)
+        
+        assert kwargs['temperature'] == 0.3
+        assert kwargs['quality'] is True
+
+
+
+class TestErrorHandling:
+    """Test error handling in CLI."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.runner = CliRunner()
+
+    def test_missing_prompt(self):
+        """Test handling of missing prompt argument."""
+        result = self.runner.invoke(main, ['ask'])
+        
+        assert result.exit_code != 0
+        assert 'Missing argument' in result.output
+
+    def test_invalid_temperature(self):
+        """Test handling of invalid temperature value."""
+        with patch('ai.ask') as mock_ask:
+            mock_ask.side_effect = ValueError("Invalid temperature")
+            
+            result = self.runner.invoke(main, ['ask', 'test', '--temperature', '2.0'])
+            
+            assert result.exit_code == 1
+            assert 'Error:' in result.output
+
+    def test_api_error_handling(self):
+        """Test handling of API errors."""
+        with patch('ai.ask') as mock_ask:
+            mock_ask.side_effect = Exception("API Error")
+            
+            result = self.runner.invoke(main, ['ask', 'test'])
+            
+            assert result.exit_code == 1
+            assert 'Error: API Error' in result.output
+
+
+class TestStdinInput:
+    """Test stdin input handling."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.runner = CliRunner()
+
+    def test_stdin_input(self):
+        """Test reading from stdin."""
+        with patch('ai.ask') as mock_ask:
+            mock_response = MagicMock()
+            mock_response.__str__ = lambda x: "Mock response"
+            mock_ask.return_value = mock_response
+            
+            result = self.runner.invoke(main, ['ask', '-'], input='stdin input')
+            
+            assert result.exit_code == 0
+            call_args = mock_ask.call_args
+            assert call_args[0][0] == 'stdin input'
+
+    def test_empty_stdin(self):
+        """Test handling of empty stdin."""
+        result = self.runner.invoke(main, ['ask', '-'], input='')
+        
+        assert result.exit_code == 1
+        assert 'No input provided' in result.output

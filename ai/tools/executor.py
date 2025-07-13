@@ -382,7 +382,7 @@ class ToolExecutor:
     ) -> ToolResult:
         """Execute multiple tool calls asynchronously (compatibility method).
         
-        This method provides backward compatibility with the old execution API.
+        This method provides backward compatibility with previous execution patterns.
         It temporarily registers any tools not in the global registry.
         """
         # Register any tools that aren't already in the registry

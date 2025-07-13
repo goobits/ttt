@@ -6,8 +6,8 @@ import subprocess
 import sys
 import os
 
-# Import functions from the CLI directly since it's not a typer app
-from ai.cli import show_backend_status, show_models_list, parse_args, main, show_help
+# Import functions from the CLI
+from ai.cli import show_backend_status, show_models_list, main
 from ai.backends.local import LocalBackend
 from ai.backends.cloud import CloudBackend
 from ai.api import ask, stream
@@ -16,7 +16,7 @@ from ai.api import ask, stream
 class TestModelsCommands:
     """Test the models-list command."""
 
-    @patch("ai.backends.LocalBackend")
+    @patch("ai.backends.local.LocalBackend")
     @patch("httpx.get")
     def test_models_list_all(self, mock_httpx_get, mock_local_backend):
         """Test listing all models."""
@@ -40,10 +40,19 @@ class TestModelsCommands:
 
             # Check that models were printed
             print_calls = [str(call) for call in mock_console.print.call_args_list]
+            
+            # Debug: print what's actually being called
+            # for call in print_calls:
+            #     print(f"DEBUG: {call}")
+            
+            # The models are printed as "• llama2", not just "llama2"
+            # Check for the bullet format
             assert any("llama2" in str(call) for call in print_calls)
             assert any("codellama" in str(call) for call in print_calls)
+            # Also check that cloud models are shown
+            assert any("gpt-4o" in str(call) or "gpt-3.5-turbo" in str(call) for call in print_calls)
 
-    @patch("ai.backends.LocalBackend")
+    @patch("ai.backends.local.LocalBackend")
     def test_models_list_no_local_backend(self, mock_local_backend):
         """Test listing models when local backend is not available."""
         # Mock local backend not available
@@ -61,7 +70,7 @@ class TestModelsCommands:
                 "Local backend not available" in str(call) for call in print_calls
             )
 
-    @patch("ai.backends.LocalBackend")
+    @patch("ai.backends.local.LocalBackend")
     @patch("httpx.get")
     def test_models_list_ollama_error(self, mock_httpx_get, mock_local_backend):
         """Test listing models when Ollama returns an error."""
@@ -90,7 +99,7 @@ class TestBackendCommands:
     """Test the backend-status command."""
 
     @patch.dict(os.environ, {}, clear=True)
-    @patch("ai.backends.LocalBackend")
+    @patch("ai.backends.local.LocalBackend")
     def test_backend_status_basic(self, mock_local_backend):
         """Test basic backend status check."""
         # Mock local backend
@@ -111,7 +120,7 @@ class TestBackendCommands:
             assert any("Available" in str(call) for call in print_calls)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key-123"}, clear=True)
-    @patch("ai.backends.CloudBackend")
+    @patch("ai.backends.cloud.CloudBackend")
     def test_backend_status_with_api_key(self, mock_cloud_backend):
         """Test backend status with API key present."""
         # Mock cloud backend
@@ -130,7 +139,7 @@ class TestBackendCommands:
             assert any("Available" in str(call) for call in print_calls)
             assert any("OPENAI" in str(call) for call in print_calls)
 
-    @patch("ai.backends.LocalBackend")
+    @patch("ai.backends.local.LocalBackend")
     def test_backend_status_connection_error(self, mock_local_backend):
         """Test backend status with connection errors."""
         # Mock connection error
@@ -146,98 +155,102 @@ class TestBackendCommands:
 
 
 class TestMainCommand:
-    """Test main command functionality."""
+    """Test main command functionality using modern Click patterns."""
 
-    def test_parse_args_help(self):
-        """Test parsing --help argument."""
-        with patch("sys.argv", ["ai", "--help"]):
-            args = parse_args()
-            assert args["command"] == "help"
+    def setup_method(self):
+        """Set up test fixtures."""
+        from click.testing import CliRunner
+        self.runner = CliRunner()
 
-    def test_parse_args_backend_status(self):
-        """Test parsing backend-status command."""
-        with patch("sys.argv", ["ai", "backend-status"]):
-            args = parse_args()
-            assert args["command"] == "backend-status"
+    def test_cli_help(self):
+        """Test --help argument."""
+        result = self.runner.invoke(main, ["--help"])
+        assert result.exit_code == 0
+        assert "AI Library - Unified AI Interface" in result.output
 
-    def test_parse_args_models_list(self):
-        """Test parsing models-list command."""
-        with patch("sys.argv", ["ai", "models-list"]):
-            args = parse_args()
-            assert args["command"] == "models-list"
+    def test_backend_status_command(self):
+        """Test backend-status command."""
+        with patch("ai.cli.show_backend_status") as mock_status:
+            result = self.runner.invoke(main, ["backend-status"])
+            assert result.exit_code == 0
+            mock_status.assert_called_once()
 
-    def test_parse_args_query_basic(self):
-        """Test parsing basic query."""
-        with patch("sys.argv", ["ai", "What is Python?"]):
-            args = parse_args()
-            assert args["command"] == "query"
-            assert args["prompt"] == "What is Python?"
-            assert args["model"] is None
-            assert args["stream"] is False
+    def test_models_list_command(self):
+        """Test models-list command."""
+        with patch("ai.cli.show_models_list") as mock_models:
+            result = self.runner.invoke(main, ["models-list"])
+            assert result.exit_code == 0
+            mock_models.assert_called_once()
 
-    def test_parse_args_query_with_model(self):
-        """Test parsing query with model."""
-        with patch("sys.argv", ["ai", "Question", "--model", "gpt-4"]):
-            args = parse_args()
-            assert args["command"] == "query"
-            assert args["prompt"] == "Question"
-            assert args["model"] == "gpt-4"
+    def test_ask_basic_query(self):
+        """Test basic ask query."""
+        with patch('ai.ask') as mock_ask:
+            mock_response = MagicMock()
+            mock_response.__str__ = lambda x: "Mock response"
+            mock_ask.return_value = mock_response
+            
+            result = self.runner.invoke(main, ["ask", "What is Python?"])
+            assert result.exit_code == 0
+            
+            call_args = mock_ask.call_args
+            assert call_args[0][0] == "What is Python?"
 
-    def test_parse_args_query_with_stream(self):
-        """Test parsing query with stream flag."""
-        with patch("sys.argv", ["ai", "Question", "--stream"]):
-            args = parse_args()
-            assert args["command"] == "query"
-            assert args["prompt"] == "Question"
-            assert args["stream"] is True
+    def test_ask_with_model(self):
+        """Test ask query with model."""
+        with patch('ai.ask') as mock_ask:
+            mock_response = MagicMock()
+            mock_response.__str__ = lambda x: "Mock response"
+            mock_ask.return_value = mock_response
+            
+            result = self.runner.invoke(main, ["ask", "Question", "--model", "gpt-4"])
+            assert result.exit_code == 0
+            
+            call_kwargs = mock_ask.call_args[1]
+            assert call_kwargs["model"] == "gpt-4"
 
-    def test_parse_args_query_with_backend(self):
-        """Test parsing query with backend."""
-        with patch("sys.argv", ["ai", "Question", "--backend", "local"]):
-            args = parse_args()
-            assert args["command"] == "query"
-            assert args["prompt"] == "Question"
-            assert args["backend"] == "local"
+    def test_ask_with_stream(self):
+        """Test ask query with stream flag."""
+        with patch('ai.stream') as mock_stream:
+            mock_stream.return_value = iter(["chunk1", "chunk2"])
+            
+            result = self.runner.invoke(main, ["ask", "Question", "--stream"])
+            assert result.exit_code == 0
+            mock_stream.assert_called_once()
 
-    def test_main_help(self):
-        """Test main function with help command."""
-        with patch("sys.argv", ["ai", "--help"]):
-            with patch("ai.cli.show_help") as mock_help:
-                main()
-                mock_help.assert_called_once()
+    def test_ask_with_backend(self):
+        """Test ask query with backend."""
+        with patch('ai.ask') as mock_ask:
+            mock_response = MagicMock()
+            mock_response.__str__ = lambda x: "Mock response"
+            mock_ask.return_value = mock_response
+            
+            result = self.runner.invoke(main, ["ask", "Question", "--offline"])
+            assert result.exit_code == 0
+            
+            call_kwargs = mock_ask.call_args[1]
+            assert call_kwargs["backend"] == "local"
 
-    @patch("ai.api.ask")
-    def test_main_query(self, mock_ask):
+    def test_main_query(self):
         """Test main function with query."""
-        mock_response = Mock()
-        mock_response.__str__ = Mock(return_value="Test response")
-        mock_response.model = "test-model"
-        mock_response.backend = "test-backend"
-        mock_response.time = 0.5
-        mock_ask.return_value = mock_response
+        with patch('ai.ask') as mock_ask:
+            mock_response = Mock()
+            mock_response.__str__ = Mock(return_value="Test response")
+            mock_response.model = "test-model"
+            mock_response.backend = "test-backend"
+            mock_response.time = 0.5
+            mock_ask.return_value = mock_response
 
-        with patch("sys.argv", ["ai", "Test question"]):
-            with patch("ai.cli.console") as mock_console:
-                main()
+            result = self.runner.invoke(main, ['ask', 'Test question'])
+            
+            assert result.exit_code == 0
+            assert "Test response" in result.output
 
-                # Check that response was printed
-                print_calls = [str(call) for call in mock_console.print.call_args_list]
-                assert any("Test response" in str(call) for call in print_calls)
-
-    @patch("ai.api.stream")
-    def test_main_stream(self, mock_stream):
+    def test_main_stream(self):
         """Test main function with streaming."""
-        mock_stream.return_value = iter(["Hello", " ", "world"])
+        with patch('ai.stream') as mock_stream:
+            mock_stream.return_value = iter(["Hello", " ", "world"])
 
-        with patch("sys.argv", ["ai", "Test question", "--stream"]):
-            with patch("ai.cli.console") as mock_console:
-                main()
-
-                # Check that stream was processed
-                print_calls = [
-                    call[0][0] if call[0] else ""
-                    for call in mock_console.print.call_args_list
-                ]
-                # The streaming output might be combined or separate
-                output = "".join(str(call) for call in print_calls)
-                assert "Hello" in output and "world" in output
+            result = self.runner.invoke(main, ['ask', 'Test question', '--stream'])
+            
+            assert result.exit_code == 0
+            assert "Hello" in result.output and "world" in result.output

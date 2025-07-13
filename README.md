@@ -253,8 +253,8 @@ ai "Tell me a story" --stream
 # Specify model
 ai "Code question" --model openrouter/anthropic/claude-3-sonnet
 
-# Legacy backend specification (still supported)
-ai "Question" --backend local --model llama2
+# Local model specification
+ai "Question" --offline --model llama2
 
 # System prompts
 ai "Translate this" --system "You are a translator"
@@ -308,14 +308,10 @@ ai --help
 ### Advanced Options
 
 ```bash
-# NEW: Simple backend selection  
+# Simple backend selection  
 ai "Question" --offline            # Force local backend (Ollama)
 ai "Question" --online             # Force cloud backend
 ai "Question" --code               # Coding-optimized responses
-
-# Legacy backend selection (still supported)
-ai "Question" --backend cloud      # Force cloud backend
-ai "Question" --backend local      # Force local backend (Ollama)
 
 # Model specification
 ai "Question" --model gpt-4
@@ -372,7 +368,7 @@ ollama pull codellama
 ollama pull mistral
 
 # Use local models
-ai "Question" --backend local --model llama2
+ai "Question" --offline --model llama2
 ```
 
 **Configuration:**
@@ -530,7 +526,7 @@ agents/
 │   │   ├── registry.py    # Tool registration system
 │   │   └── execution.py   # Tool execution engine
 │   └── exceptions.py      # Custom exceptions
-├── ai_wrapper.py          # CLI entry point wrapper
+├── ai/__main__.py         # CLI entry point
 ├── setup.sh               # Installation script
 ├── pyproject.toml         # Package configuration
 └── tests/                 # Test suite

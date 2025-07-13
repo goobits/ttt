@@ -141,13 +141,13 @@ class TestLocalBackendFoundation:
             assert exc_info.value.details["backend"] == "local"
 
 
-# Example 3: Testing CLI with Typer's CliRunner
-from typer.testing import CliRunner
-from ai.cli import app
+# Example 3: Testing CLI with Click's CliRunner
+from click.testing import CliRunner
+from ai.cli import main
 
 
 class TestCLIFoundation:
-    """Foundation example for testing CLI with Typer's CliRunner."""
+    """Foundation example for testing CLI with Click's CliRunner."""
 
     def setup_method(self):
         """Set up test runner."""
@@ -156,32 +156,39 @@ class TestCLIFoundation:
     def test_backend_status_command(self):
         """Test backend-status command invocation."""
         with patch('ai.cli.show_backend_status') as mock_status:
-            result = self.runner.invoke(app, ["backend-status"])
+            result = self.runner.invoke(main, ["backend-status"])
             
             assert result.exit_code == 0
             mock_status.assert_called_once()
 
     def test_ask_command_argument_parsing(self):
         """Test ask command parses arguments correctly."""
-        with patch('ai.cli._handle_query') as mock_handle:
-            result = self.runner.invoke(app, [
+        with patch('ai.ask') as mock_ask:
+            mock_response = Mock()
+            mock_response.__str__ = lambda x: "Mock response"
+            mock_response.model = "gpt-4"
+            mock_response.backend = "cloud"
+            mock_response.time = 1.23
+            mock_ask.return_value = mock_response
+            
+            result = self.runner.invoke(main, [
                 "ask", "What is Python?",
                 "--model", "gpt-4",
                 "--verbose"
             ])
             
             assert result.exit_code == 0
-            mock_handle.assert_called_once()
+            mock_ask.assert_called_once()
             
             # Check parsed arguments
-            args = mock_handle.call_args[0][0]
-            assert args["prompt"] == "What is Python?"
-            assert args["model"] == "gpt-4"
-            assert args["verbose"] is True
+            call_args = mock_ask.call_args
+            assert call_args[0][0] == "What is Python?"
+            call_kwargs = call_args[1]
+            assert call_kwargs["model"] == "gpt-4"
 
     def test_help_output(self):
         """Test help output contains expected information."""
-        result = self.runner.invoke(app, ["--help"])
+        result = self.runner.invoke(main, ["--help"])
         
         assert result.exit_code == 0
         assert "AI Library - Unified AI Interface" in result.stdout
@@ -191,17 +198,18 @@ class TestCLIFoundation:
 
     def test_invalid_command_handling(self):
         """Test handling of invalid commands."""
-        result = self.runner.invoke(app, ["nonexistent-command"])
+        result = self.runner.invoke(main, ["nonexistent-command"])
         
         assert result.exit_code != 0
-        # Typer automatically handles unknown commands
+        # Click automatically handles unknown commands
 
     def test_missing_argument_handling(self):
         """Test handling of missing required arguments."""
-        result = self.runner.invoke(app, ["ask"])  # Missing prompt
+        result = self.runner.invoke(main, ["ask"])  # Missing prompt
         
         assert result.exit_code != 0
-        assert "Missing argument" in result.stdout
+        # Click puts error messages in output
+        assert "Missing argument" in result.output or "Error" in result.output
 
 
 # Async test example

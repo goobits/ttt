@@ -30,8 +30,8 @@ print_color() {
     echo -e "${color}${message}${NC}"
 }
 
-# Show help
-show_help() {
+# Show help for test script
+show_test_help() {
     cat << EOF
 $SCRIPT_NAME - Unified Test Runner for AI Library
 
@@ -250,8 +250,8 @@ run_integration_tests() {
     return $exit_code
 }
 
-# Parse command line arguments
-parse_args() {
+# Parse command line arguments for test script
+parse_test_args() {
     while [[ $# -gt 0 ]]; do
         case $1 in
             unit)
@@ -267,7 +267,7 @@ parse_args() {
                 shift
                 ;;
             help)
-                show_help
+                show_test_help
                 exit 0
                 ;;
             -c|--coverage)
@@ -291,7 +291,7 @@ parse_args() {
                 shift
                 ;;
             -h|--help)
-                show_help
+                show_test_help
                 exit 0
                 ;;
             --version)
@@ -314,7 +314,7 @@ main() {
     echo
     
     # Parse arguments
-    parse_args "$@"
+    parse_test_args "$@"
     
     # Check environment
     check_virtual_env

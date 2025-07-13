@@ -19,7 +19,7 @@ The testing suite is built on pytest with the following key components:
 - **Async Testing**: Proper async/await patterns with `@pytest.mark.asyncio`
 
 ### 3. **CLI Testing** (`test_modern_cli.py`)
-- **Typer CliRunner**: Uses Typer's built-in testing utilities for reliable CLI testing
+- **Click CliRunner**: Uses Click's built-in testing utilities for reliable CLI testing
 - **Command Testing**: Tests all CLI commands (ask, chat, backend-status, etc.)
 - **Argument Parsing**: Verifies proper parsing of flags and options
 - **Help Output**: Tests help text generation and error handling
@@ -68,12 +68,17 @@ async def test_ask_success_mocked(self, backend):
 def test_ask_command_basic(self):
     """Test basic ask command functionality."""
     runner = CliRunner()
-    with patch('ai.cli._handle_query') as mock_handle:
-        result = runner.invoke(app, ["ask", "What is Python?"])
+    with patch('ai.ask') as mock_ask:
+        mock_response = Mock()
+        mock_response.__str__ = lambda x: "Mock response"
+        mock_ask.return_value = mock_response
+        
+        result = runner.invoke(main, ["ask", "What is Python?"])
         
         assert result.exit_code == 0
-        args = mock_handle.call_args[0][0]
-        assert args["prompt"] == "What is Python?"
+        mock_ask.assert_called_once()
+        call_args = mock_ask.call_args
+        assert call_args[0][0] == "What is Python?"
 ```
 
 ## Running Tests
@@ -117,7 +122,7 @@ pytest tests/test_builtin_tools.py::TestCalculate -v
 pytest tests/test_local_backend.py::TestLocalBackend -v
 
 # Run CLI tests
-pytest tests/test_modern_cli.py::TestTyperCLI -v
+pytest tests/test_modern_cli.py::TestClickCLI -v
 ```
 
 ## Dependencies
@@ -153,14 +158,14 @@ markers = [
 See `test_foundation_example.py` for comprehensive examples of:
 1. **Tool Testing**: Calculate tool with edge cases and security testing
 2. **Backend Testing**: LocalBackend with properly mocked httpx client
-3. **CLI Testing**: Typer CLI with CliRunner and argument validation
+3. **CLI Testing**: Click CLI with CliRunner and argument validation
 4. **Async Testing**: Proper async/await patterns with mocking
 
 ## Key Principles
 
 1. **Comprehensive Edge Cases**: Test valid inputs, invalid inputs, edge cases, and error conditions
 2. **Proper Mocking**: Use `unittest.mock` and `pytest-mock` to isolate units under test
-3. **CLI Testing**: Use Typer's CliRunner for reliable CLI testing instead of subprocess
+3. **CLI Testing**: Use Click's CliRunner for reliable CLI testing instead of subprocess
 4. **Async Patterns**: Use `@pytest.mark.asyncio` and `AsyncMock` for async testing
 5. **Security Testing**: Ensure unsafe operations are properly blocked
 6. **Error Handling**: Test all error paths and exception scenarios
