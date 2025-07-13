@@ -1,8 +1,19 @@
 """Utility modules for the AI library."""
 
+import asyncio
+import sys
+from typing import Awaitable, TypeVar
+
 from .logger import get_logger
+from .async_utils import optimized_run_async, run_coro_in_background
 from rich.console import Console
 
 console = Console()
 
-__all__ = ["get_logger", "console"]
+T = TypeVar("T")
+
+# Use the optimized version by default
+run_async = optimized_run_async
+
+
+__all__ = ["get_logger", "console", "run_async", "run_coro_in_background", "optimized_run_async"]

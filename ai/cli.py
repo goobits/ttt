@@ -1,51 +1,264 @@
 #!/usr/bin/env python3
-"""Simple command-line interface for the AI library."""
+"""Modern Click-based CLI for the AI library."""
 
 import sys
 import os
 from typing import Optional, List
+import click
 from rich.console import Console
 from rich.panel import Panel
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 console = Console()
 
+# Import AI library modules
+import ai
 
-def show_help():
-    """Show help message."""
-    help_text = """
-[bold blue]AI Library - Unified AI Interface[/bold blue]
 
-[bold green]Usage:[/bold green]
-  ai "Your question here"                      # Basic usage
-  ai "Question" --model MODEL                  # Specify model
-  ai "Question" --backend local                # Use local backend (Ollama)
-  ai "Question" --stream                       # Stream response
-  ai "Question" --verbose                      # Show details
-  ai "Question" --tools "module:function,..."  # Use tools/functions
-  
-[bold green]Commands:[/bold green]
-  ai backend-status                            # Check backend status
-  ai models-list                               # List available models
-  ai tools-list                                # List available tools
-  ai --help                                    # Show this help
+@click.group(invoke_without_command=True)
+@click.option('--version', is_flag=True, help='Show version information')
+@click.pass_context
+def main(ctx, version):
+    """AI Library - Unified AI Interface for local and cloud models."""
+    if version:
+        click.echo(f"AI Library v{getattr(ai, '__version__', '0.4.0')}")
+        return
+    
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
 
-[bold green]Examples:[/bold green]
-  ai "What is Python?"
-  ai "Explain quantum computing" --stream
-  ai "Tell me a joke" --model openrouter/google/gemini-flash-1.5
-  ai "Debug this code" --verbose
-  ai "Local question" --backend local --model llama2
-  ai "What's the weather?" --tools "weather:get_weather"
-  ai "Calculate this" --tools "math:add,math:multiply"
-  
-[bold green]Environment:[/bold green]
-  Set OPENROUTER_API_KEY=your-key for cloud models
-  Set OPENAI_API_KEY=your-key for OpenAI models
-  Set ANTHROPIC_API_KEY=your-key for Anthropic models
+
+@main.command()
+@click.argument('prompt', required=True)
+@click.option('--model', '-m', help='Specific model to use')
+@click.option('--system', '-s', help='System prompt to set context')
+@click.option('--temperature', '-t', type=float, help='Sampling temperature (0-1)')
+@click.option('--max-tokens', type=int, help='Maximum tokens to generate')
+@click.option('--fast', is_flag=True, help='Prefer speed over quality')
+@click.option('--quality', is_flag=True, help='Prefer quality over speed')
+@click.option('--tools', help='Comma-separated list of tools to enable')
+@click.option('--stream', is_flag=True, help='Stream the response')
+@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--offline', is_flag=True, help='Force local backend')
+@click.option('--online', is_flag=True, help='Force cloud backend')
+@click.option('--code', is_flag=True, help='Optimize for code-related tasks')
+def ask(prompt, model, system, temperature, max_tokens, fast, quality, 
+        tools, stream, verbose, offline, online, code):
+    """Ask the AI a question and get a response."""
+    
+    # Handle stdin input
+    if prompt == '-':
+        prompt = sys.stdin.read().strip()
+        if not prompt:
+            click.echo("Error: No input provided via stdin", err=True)
+            sys.exit(1)
+    
+    # Handle backend selection
+    backend = None
+    if offline:
+        backend = 'local'
+    elif online:
+        backend = 'cloud'
+    
+    # Parse tools
+    tools_list = None
+    if tools:
+        tools_list = [tool.strip() for tool in tools.split(',')]
+        tools_list = resolve_tools(tools_list)
+    
+    # Build request parameters
+    kwargs = {}
+    if model:
+        kwargs['model'] = model
+    if system:
+        kwargs['system'] = system
+    if temperature is not None:
+        kwargs['temperature'] = temperature
+    if max_tokens:
+        kwargs['max_tokens'] = max_tokens
+    if fast:
+        kwargs['fast'] = True
+    if quality:
+        kwargs['quality'] = True
+    if tools_list:
+        kwargs['tools'] = tools_list
+    if backend:
+        kwargs['backend'] = backend
+    
+    # Apply coding optimizations
+    if code or is_coding_request(prompt):
+        apply_coding_optimization(kwargs)
+    
+    try:
+        if stream:
+            # Stream response
+            for chunk in ai.stream(prompt, **kwargs):
+                click.echo(chunk, nl=False)
+            click.echo()  # Final newline
+        else:
+            # Regular response
+            response = ai.ask(prompt, **kwargs)
+            click.echo(str(response))
+            
+            if verbose:
+                click.echo(f"\nModel: {response.model}", err=True)
+                click.echo(f"Backend: {response.backend}", err=True)
+                click.echo(f"Time: {response.time:.2f}s", err=True)
+                if hasattr(response, 'tokens_in') and response.tokens_in:
+                    click.echo(f"Tokens: {response.tokens_in} in, {response.tokens_out} out", err=True)
+                    
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+
+@main.command()
+@click.option('--model', '-m', help='Default model for the session')
+@click.option('--system', '-s', help='System prompt for the session')
+@click.option('--session-id', help='Session ID for persistent chat')
+@click.option('--tools', help='Comma-separated list of tools to enable')
+@click.option('--load', help='Load chat session from file')
+@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+def chat(model, system, session_id, tools, load, verbose):
+    """Start an interactive chat session."""
+    
+    # Parse tools
+    tools_list = None
+    if tools:
+        tools_list = [tool.strip() for tool in tools.split(',')]
+        tools_list = resolve_tools(tools_list)
+    
+    # Build session parameters
+    kwargs = {}
+    if model:
+        kwargs['model'] = model
+    if system:
+        kwargs['system'] = system
+    if session_id:
+        kwargs['session_id'] = session_id
+    if tools_list:
+        kwargs['tools'] = tools_list
+    
+    try:
+        # Load existing session if requested
+        if load:
+            from ai.chat import PersistentChatSession
+            session = PersistentChatSession.load(load)
+            console.print(f"[green]Loaded session from {load}[/green]")
+        else:
+            session = ai.chat(**kwargs).__enter__()
+        
+        console.print("[bold blue]AI Chat Session[/bold blue]")
+        console.print("Type /exit to quit, /save <filename> to save session, /clear to clear history")
+        console.print()
+        
+        turn_count = 0
+        
+        try:
+            while True:
+                try:
+                    user_input = click.prompt(f"You ({turn_count + 1})", type=str, prompt_suffix=": ")
+                except (EOFError, KeyboardInterrupt):
+                    break
+                
+                if not user_input.strip():
+                    continue
+                
+                # Handle chat commands
+                if user_input.startswith('/'):
+                    if user_input in ['/exit', '/quit']:
+                        break
+                    elif user_input.startswith('/save '):
+                        filename = user_input[6:].strip()
+                        if filename:
+                            session.save(filename)
+                            console.print(f"[green]Session saved to {filename}[/green]")
+                        else:
+                            console.print("[red]Please specify a filename[/red]")
+                        continue
+                    elif user_input == '/clear':
+                        session.clear()
+                        console.print("[yellow]Chat history cleared[/yellow]")
+                        turn_count = 0
+                        continue
+                    elif user_input == '/help':
+                        console.print("Commands: /exit, /quit, /save <file>, /clear, /help")
+                        continue
+                    else:
+                        console.print(f"[red]Unknown command: {user_input}[/red]")
+                        continue
+                
+                try:
+                    response = session.ask(user_input)
+                    console.print(f"[bold green]AI[/bold green]: {response}")
+                    
+                    if verbose:
+                        console.print(f"[dim]Model: {response.model}, Time: {response.time:.2f}s[/dim]")
+                    
+                    turn_count += 1
+                    
+                except Exception as e:
+                    console.print(f"[red]Error: {e}[/red]")
+                    
+        finally:
+            if hasattr(session, '__exit__'):
+                session.__exit__(None, None, None)
+            
+    except Exception as e:
+        click.echo(f"Error starting chat session: {e}", err=True)
+        sys.exit(1)
+
+
+@main.command(name='backend-status')
+def backend_status():
+    """Show the status of available backends."""
+    show_backend_status()
+
+
+@main.command(name='models-list')
+def models_list():
+    """List available models from all backends."""
+    show_models_list()
+
+
+@main.command(name='tools-list')
+def tools_list():
+    """List available tools."""
+    show_tools_list()
+
+
+@main.command()
+@click.argument('key', required=False)
+@click.argument('value', required=False)
+def config(key, value):
+    """Manage configuration settings.
+    
+    Usage:
+      ai config                  - Show all configuration
+      ai config <key>           - Show specific configuration value
+      ai config <key> <value>   - Set configuration value
     """
-    console.print(help_text)
+    from ai.config import get_config, configure, save_config
+    
+    try:
+        if key is None:
+            # Show all configuration
+            show_all_config()
+        elif value is None:
+            # Show specific key
+            show_config_key(key)
+        else:
+            # Set key-value pair
+            set_config_key(key, value)
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
 
 
+# Helper functions
 def show_backend_status():
     """Show backend status."""
     console.print("[bold blue]Backend Status:[/bold blue]")
@@ -53,9 +266,9 @@ def show_backend_status():
 
     # Check local backend
     try:
-        from .backends import LocalBackend
+        import ai.backends.local as local_module
 
-        local = LocalBackend()
+        local = local_module.LocalBackend()
         if local.is_available:
             console.print("✅ [green]Local Backend:[/green] Available")
             console.print(f"   Base URL: {local.base_url}")
@@ -69,9 +282,9 @@ def show_backend_status():
 
     # Check cloud backend
     try:
-        from .backends import CloudBackend
+        import ai.backends.cloud as cloud_module
 
-        cloud = CloudBackend()
+        cloud = cloud_module.CloudBackend()
         if cloud.is_available:
             console.print("✅ [green]Cloud Backend:[/green] Available")
             console.print(f"   Default Model: {cloud.default_model}")
@@ -105,9 +318,9 @@ def show_models_list():
     # Local models
     console.print("[bold green]Local Models (Ollama):[/bold green]")
     try:
-        from .backends import LocalBackend
+        import ai.backends.local as local_module
 
-        local = LocalBackend()
+        local = local_module.LocalBackend()
         if local.is_available:
             # Try to get models from Ollama
             import httpx
@@ -133,435 +346,197 @@ def show_models_list():
     console.print()
 
     # Cloud models
-    console.print("[bold green]Cloud Models (examples):[/bold green]")
-    console.print("  OpenRouter:")
-    console.print("    • openrouter/google/gemini-flash-1.5")
-    console.print("    • openrouter/anthropic/claude-3-haiku")
-    console.print("    • openrouter/meta-llama/llama-3-8b-instruct")
-    console.print("    • openrouter/openai/gpt-4o-mini")
-    console.print()
-    console.print("  Direct:")
-    console.print("    • gpt-3.5-turbo (OpenAI)")
-    console.print("    • claude-3-sonnet-20240229 (Anthropic)")
-    console.print("    • gemini-pro (Google)")
+    console.print("[bold green]Cloud Models:[/bold green]")
+    console.print("  • OpenAI: gpt-4o, gpt-4o-mini, gpt-3.5-turbo")
+    console.print("  • Anthropic: claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022")
+    console.print("  • Google: gemini-1.5-pro, gemini-1.5-flash")
+    console.print("  • And many more via OpenRouter...")
 
 
 def show_tools_list():
     """Show available tools."""
     console.print("[bold blue]Available Tools:[/bold blue]")
     console.print()
-
+    
     try:
-        from .tools.registry import get_registry
-        from .tools import list_tools
-
-        # Get all tools grouped by category
-        registry = get_registry()
-        all_tools = list_tools()
-
-        # Group by category
-        by_category = {}
-        for tool in all_tools:
-            category = tool.category or "general"
-            if category not in by_category:
-                by_category[category] = []
-            by_category[category].append(tool)
-
-        # Display by category
-        for category, tools in sorted(by_category.items()):
-            console.print(f"[bold green]{category.title()} Tools:[/bold green]")
-            for tool in sorted(tools, key=lambda t: t.name):
-                # Truncate description if too long
-                desc = tool.description or "No description"
-                if len(desc) > 60:
-                    desc = desc[:57] + "..."
-                console.print(f"  • [bold]{tool.name}[/bold] - {desc}")
-            console.print()
-
-        console.print(f"[dim]Total: {len(all_tools)} tools available[/dim]")
-        console.print("[dim]Use --tools flag to include tools in your requests[/dim]")
-
+        from ai.tools import list_tools, get_categories
+        
+        categories = get_categories()
+        for category in sorted(categories):
+            tools = list_tools(category=category)
+            if tools:
+                console.print(f"[bold green]{category.title()}:[/bold green]")
+                for tool_name in sorted(tools.keys()):
+                    tool = tools[tool_name]
+                    desc = getattr(tool, 'description', 'No description')
+                    console.print(f"  • {tool_name}: {desc}")
+                console.print()
     except Exception as e:
-        console.print(f"[red]Error listing tools:[/red] {e}")
-        console.print("[dim]Make sure the AI library is properly installed[/dim]")
+        console.print(f"Error listing tools: {e}")
 
 
 def resolve_tools(tool_specs: List[str]) -> List:
-    """Resolve tool specifications to actual tool objects.
-
-    Args:
-        tool_specs: List of tool specifications in format:
-            - "module:function" - Import function from module
-            - "function" - Use from global registry
-            - "/path/to/file.py:function" - Import from file
-
-    Returns:
-        List of resolved tool objects
-    """
-    resolved_tools = []
-
-    for spec in tool_specs:
-        if ":" in spec:
-            # Module:function or path:function format
-            module_path, function_name = spec.rsplit(":", 1)
-
-            try:
-                if (
-                    module_path.endswith(".py")
-                    or "/" in module_path
-                    or "\\" in module_path
-                ):
-                    # File path - load module from file
-                    import importlib.util
-
-                    spec_loader = importlib.util.spec_from_file_location(
-                        "tool_module", module_path
-                    )
-                    if spec_loader and spec_loader.loader:
-                        module = importlib.util.module_from_spec(spec_loader)
-                        spec_loader.loader.exec_module(module)
-                        if hasattr(module, function_name):
-                            resolved_tools.append(getattr(module, function_name))
-                        else:
-                            console.print(
-                                f"[yellow]Warning: Function '{function_name}' not found in {module_path}[/yellow]"
-                            )
+    """Resolve tool specifications to actual tool functions."""
+    tools = []
+    
+    try:
+        from ai.tools import get_tool, list_tools
+        
+        for spec in tool_specs:
+            if ':' in spec:
+                # Category:tool format
+                category, tool_name = spec.split(':', 1)
+                tool_list = list_tools(category=category)
+                # Find tool by name in the list
+                found_tool = None
+                for tool_def in tool_list:
+                    if tool_def.name == tool_name:
+                        found_tool = tool_def.function
+                        break
+                if found_tool:
+                    tools.append(found_tool)
                 else:
-                    # Module name - import normally
-                    import importlib
-
-                    module = importlib.import_module(module_path)
-                    if hasattr(module, function_name):
-                        resolved_tools.append(getattr(module, function_name))
-                    else:
-                        console.print(
-                            f"[yellow]Warning: Function '{function_name}' not found in module {module_path}[/yellow]"
-                        )
-            except Exception as e:
-                console.print(
-                    f"[yellow]Warning: Could not load tool '{spec}': {e}[/yellow]"
-                )
-        else:
-            # Just function name - try to get from registry
-            from .tools.registry import get_tool
-
-            tool = get_tool(spec)
-            if tool:
-                resolved_tools.append(tool)
+                    console.print(f"[yellow]Warning: Tool {tool_name} not found in category {category}[/yellow]")
             else:
-                console.print(
-                    f"[yellow]Warning: Tool '{spec}' not found in registry[/yellow]"
-                )
+                # Just tool name
+                tool_def = get_tool(spec)
+                if tool_def:
+                    tools.append(tool_def.function)
+                else:
+                    console.print(f"[yellow]Warning: Tool {spec} not found[/yellow]")
+    except Exception as e:
+        console.print(f"[red]Error resolving tools: {e}[/red]")
+    
+    return tools
 
-    return resolved_tools
+
+def is_coding_request(prompt: str) -> bool:
+    """Detect if this is a coding-related request."""
+    coding_keywords = [
+        'function', 'class', 'method', 'code', 'script', 'program',
+        'debug', 'fix', 'error', 'bug', 'implement', 'write',
+        'python', 'javascript', 'java', 'c++', 'rust', 'go',
+        'algorithm', 'data structure', 'api', 'database'
+    ]
+    
+    prompt_lower = prompt.lower()
+    return any(keyword in prompt_lower for keyword in coding_keywords)
 
 
-def parse_args():
-    """Parse command line arguments manually."""
-    args = sys.argv[1:]
+def apply_coding_optimization(kwargs):
+    """Apply optimizations for coding requests."""
+    # Lower temperature for more deterministic code
+    if 'temperature' not in kwargs:
+        kwargs['temperature'] = 0.3
+    
+    # Prefer quality for code generation
+    if 'quality' not in kwargs:
+        kwargs['quality'] = True
 
-    if not args or "--help" in args or "-h" in args:
-        return {"command": "help"}
 
-    if args[0] == "backend-status":
-        return {"command": "backend-status"}
-
-    if args[0] == "models-list":
-        return {"command": "models-list"}
-
-    if args[0] == "tools-list" or args[0] == "tools":
-        return {"command": "tools-list"}
-
-    # Parse AI query
-    result = {
-        "command": "query",
-        "prompt": None,
-        "model": None,
-        "system": None,
-        "backend": "cloud",
-        "temperature": None,
-        "max_tokens": None,
-        "stream": False,
-        "verbose": False,
-        "tools": [],
+def get_config_key_mapping():
+    """Map user-friendly config keys to internal configuration paths."""
+    return {
+        'model': 'default_model',
+        'backend': 'default_backend',
+        'timeout': 'timeout',
+        'retries': 'max_retries',
+        'ollama_url': 'ollama_base_url',
+        'openai_key': 'openai_api_key',
+        'anthropic_key': 'anthropic_api_key',
+        'google_key': 'google_api_key',
     }
 
-    i = 0
-    while i < len(args):
-        arg = args[i]
 
-        if arg.startswith("-") and arg != "-":
-            if arg in ["--model", "-m"] and i + 1 < len(args):
-                result["model"] = args[i + 1]
-                i += 2
-            elif arg in ["--system", "-s"] and i + 1 < len(args):
-                result["system"] = args[i + 1]
-                i += 2
-            elif arg in ["--backend", "-b"] and i + 1 < len(args):
-                result["backend"] = args[i + 1]
-                i += 2
-            elif arg in ["--temperature", "-t"] and i + 1 < len(args):
-                result["temperature"] = float(args[i + 1])
-                i += 2
-            elif arg == "--max-tokens" and i + 1 < len(args):
-                result["max_tokens"] = int(args[i + 1])
-                i += 2
-            elif arg == "--stream":
-                result["stream"] = True
-                i += 1
-            elif arg in ["--verbose", "-v"]:
-                result["verbose"] = True
-                i += 1
-            elif arg == "--tools" and i + 1 < len(args):
-                # Parse comma-separated tool specifications
-                tools_str = args[i + 1]
-                result["tools"] = [t.strip() for t in tools_str.split(",") if t.strip()]
-                i += 2
+def show_all_config():
+    """Display all current configuration settings."""
+    from ai.config import get_config
+    
+    config = get_config()
+    console.print("[bold blue]Current Configuration:[/bold blue]")
+    console.print()
+    
+    # Show main settings
+    key_mapping = get_config_key_mapping()
+    
+    for user_key, config_key in key_mapping.items():
+        value = getattr(config, config_key, None)
+        if value is not None:
+            # Mask sensitive values
+            if 'key' in user_key.lower():
+                masked_value = f"{str(value)[:8]}..." if len(str(value)) > 8 else "***"
+                console.print(f"  {user_key}: {masked_value}")
             else:
-                i += 1
+                console.print(f"  {user_key}: {value}")
+    
+    console.print()
+    console.print("[dim]Use 'ai config <key> <value>' to change settings[/dim]")
+
+
+def show_config_key(key):
+    """Display a specific configuration value."""
+    from ai.config import get_config
+    
+    key_mapping = get_config_key_mapping()
+    
+    if key not in key_mapping:
+        available_keys = ', '.join(key_mapping.keys())
+        console.print(f"[red]Unknown config key '{key}'[/red]")
+        console.print(f"Available keys: {available_keys}")
+        return
+    
+    config = get_config()
+    config_key = key_mapping[key]
+    value = getattr(config, config_key, None)
+    
+    if value is not None:
+        # Mask sensitive values
+        if 'key' in key.lower():
+            masked_value = f"{str(value)[:8]}..." if len(str(value)) > 8 else "***"
+            console.print(f"{key}: {masked_value}")
         else:
-            # This should be the prompt
-            if result["prompt"] is None:
-                result["prompt"] = arg
-            i += 1
-
-    return result
+            console.print(f"{key}: {value}")
+    else:
+        console.print(f"{key}: [dim]not set[/dim]")
 
 
-def main():
-    """Main CLI entry point."""
-    # Set minimal logging for clean output
-    import os
-    import logging
-    import contextlib
-
-    os.environ["LITELLM_LOG"] = "CRITICAL"
-
-    # Disable all the noisy loggers
-    logging.getLogger("httpx").setLevel(logging.CRITICAL)
-    logging.getLogger("httpcore").setLevel(logging.CRITICAL)
-    logging.getLogger("litellm").setLevel(logging.CRITICAL)
-
-    # Context manager to suppress cleanup warnings
-    @contextlib.contextmanager
-    def suppress_cleanup_warnings():
-        import warnings
-        import logging
-
-        # Temporarily suppress specific warnings
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message=".*Task was destroyed.*")
-            warnings.filterwarnings("ignore", message=".*sys.meta_path.*")
-            warnings.filterwarnings(
-                "ignore", message=".*coroutine.*was never awaited.*"
-            )
-
-            # Suppress aiohttp deletion warnings
-            logging.getLogger("aiohttp").setLevel(logging.CRITICAL)
-
-            yield
-
-    try:
-        args = parse_args()
-
-        if args["command"] == "help":
-            show_help()
+def set_config_key(key, value):
+    """Set a configuration value and persist it."""
+    from ai.config import get_config, configure, save_config
+    
+    key_mapping = get_config_key_mapping()
+    
+    if key not in key_mapping:
+        available_keys = ', '.join(key_mapping.keys())
+        console.print(f"[red]Unknown config key '{key}'[/red]")
+        console.print(f"Available keys: {available_keys}")
+        return
+    
+    config_key = key_mapping[key]
+    
+    # Type conversion for specific keys
+    if key in ['timeout', 'retries']:
+        try:
+            value = int(value)
+        except ValueError:
+            console.print(f"[red]Error: '{key}' must be a number[/red]")
             return
-
-        if args["command"] == "backend-status":
-            show_backend_status()
-            return
-
-        if args["command"] == "models-list":
-            show_models_list()
-            return
-
-        if args["command"] == "tools-list":
-            show_tools_list()
-            return
-
-        if args["command"] == "query":
-            prompt = args["prompt"]
-
-            if not prompt:
-                show_help()
-                return
-
-            # Read from stdin if prompt is "-"
-            if prompt == "-":
-                prompt = sys.stdin.read().strip()
-                if not prompt:
-                    console.print("[red]No input provided[/red]")
-                    sys.exit(1)
-
-            # Show what we're doing if verbose
-            if args["verbose"]:
-                panel_content = f"[bold]Prompt:[/bold] {prompt[:100]}{'...' if len(prompt) > 100 else ''}"
-                if args["model"]:
-                    panel_content += f"\n[bold]Model:[/bold] {args['model']}"
-                if args["system"]:
-                    panel_content += f"\n[bold]System:[/bold] {args['system'][:50]}{'...' if len(args['system']) > 50 else ''}"
-                panel_content += f"\n[bold]Backend:[/bold] {args['backend']}"
-
-                console.print(
-                    Panel(panel_content, title="AI Request", border_style="blue")
-                )
-                console.print()
-
-            # Prepare arguments
-            kwargs = {}
-            if args["model"]:
-                kwargs["model"] = args["model"]
-            elif args["backend"] == "cloud":
-                # Default to OpenRouter model if using cloud and no model specified
-                kwargs["model"] = "openrouter/google/gemini-flash-1.5"
-            if args["system"]:
-                kwargs["system"] = args["system"]
-            if args["backend"]:
-                kwargs["backend"] = args["backend"]
-            if args["temperature"] is not None:
-                kwargs["temperature"] = args["temperature"]
-            if args["max_tokens"]:
-                kwargs["max_tokens"] = args["max_tokens"]
-
-            # Resolve tools if specified
-            if args["tools"]:
-                resolved_tools = resolve_tools(args["tools"])
-                if resolved_tools:
-                    kwargs["tools"] = resolved_tools
-                    if args["verbose"]:
-                        console.print(f"[dim]Loaded {len(resolved_tools)} tools[/dim]")
-                        # Show tool execution stats if available
-                        try:
-                            from .tools.executor import get_execution_stats
-
-                            stats = get_execution_stats()
-                            if stats["total_calls"] > 0:
-                                console.print(
-                                    f"[dim]Tool execution stats: {stats['success_rate']:.1%} success rate, avg {stats['avg_execution_time']:.2f}s[/dim]"
-                                )
-                        except:
-                            pass
-
-            # Import here to avoid import errors
-            from .api import ask, stream
-
-            # Use context manager to suppress cleanup warnings
-            with suppress_cleanup_warnings():
-                if args["stream"]:
-                    # Stream response
-                    console.print("[dim]Streaming response...[/dim]")
-                    console.print()
-
-                    for chunk in stream(prompt, **kwargs):
-                        console.print(chunk, end="")
-                    console.print()  # Final newline
-                else:
-                    # Regular response
-                    if args["verbose"]:
-                        console.print("[dim]Generating response...[/dim]")
-
-                    response = ask(prompt, **kwargs)
-
-                    # Print response
-                    console.print(str(response))
-
-                    # Show metadata if verbose
-                    if args["verbose"]:
-                        console.print()
-                        metadata = []
-                        metadata.append(f"[bold]Model:[/bold] {response.model}")
-                        metadata.append(f"[bold]Backend:[/bold] {response.backend}")
-                        metadata.append(f"[bold]Time:[/bold] {response.time:.2f}s")
-                        if hasattr(response, "tokens_in") and response.tokens_in:
-                            metadata.append(
-                                f"[bold]Tokens In:[/bold] {response.tokens_in}"
-                            )
-                        if hasattr(response, "tokens_out") and response.tokens_out:
-                            metadata.append(
-                                f"[bold]Tokens Out:[/bold] {response.tokens_out}"
-                            )
-                        if hasattr(response, "cost") and response.cost:
-                            metadata.append(f"[bold]Cost:[/bold] ${response.cost:.4f}")
-
-                        # Add tool call information if available
-                        if hasattr(response, "tool_calls") and response.tool_calls:
-                            metadata.append(
-                                f"[bold]Tools Called:[/bold] {len(response.tool_calls)}"
-                            )
-                            for call in response.tool_calls:
-                                status = "✓" if call.succeeded else "✗"
-                                metadata.append(
-                                    f"  {status} {call.name}({', '.join(f'{k}={v}' for k, v in call.arguments.items())})"
-                                )
-
-                        console.print(
-                            Panel(
-                                "\n".join(metadata),
-                                title="Response Metadata",
-                                border_style="green",
-                            )
-                        )
-
-    except KeyboardInterrupt:
-        console.print("\n[yellow]Cancelled by user[/yellow]")
-        sys.exit(1)
-    except Exception as e:
-        # Import exceptions for better error handling
-        from .exceptions import (
-            APIKeyError,
-            ModelNotFoundError,
-            RateLimitError,
-            BackendNotAvailableError,
-            EmptyResponseError,
-        )
-
-        # Provide user-friendly error messages based on exception type
-        if isinstance(e, APIKeyError):
-            console.print(f"[red]❌ API Key Missing:[/red] {e}")
-            console.print(
-                f"[yellow]Set your API key in the .env file: {e.details.get('env_var', 'API_KEY')}[/yellow]"
-            )
-            sys.exit(1)
-        elif isinstance(e, ModelNotFoundError):
-            console.print(f"[red]❌ Model Not Found:[/red] {e}")
-            console.print(
-                "[yellow]Run 'ai models-list' to see available models[/yellow]"
-            )
-            sys.exit(1)
-        elif isinstance(e, RateLimitError):
-            console.print(f"[red]⏱️ Rate Limit Exceeded:[/red] {e}")
-            retry_after = e.details.get("retry_after")
-            if retry_after:
-                console.print(
-                    f"[yellow]Wait {retry_after} seconds before retrying[/yellow]"
-                )
-            else:
-                console.print("[yellow]Wait a moment before retrying[/yellow]")
-            sys.exit(1)
-        elif isinstance(e, BackendNotAvailableError):
-            console.print(f"[red]🔌 Backend Not Available:[/red] {e}")
-            console.print(
-                "[yellow]Run 'ai backend-status' to check connectivity[/yellow]"
-            )
-            sys.exit(1)
-        elif isinstance(e, EmptyResponseError):
-            console.print(f"[red]❌ Empty Response:[/red] {e}")
-            console.print(
-                "[yellow]The AI returned an empty response. Try rephrasing your question.[/yellow]"
-            )
-            sys.exit(1)
-        else:
-            # Generic error handling
-            console.print(f"[red]❌ Error:[/red] {e}")
-            if args.get("verbose"):
-                import traceback
-
-                console.print("\n[dim]Full traceback:[/dim]")
-                console.print(f"[dim]{traceback.format_exc()}[/dim]")
-            else:
-                console.print("[yellow]Use --verbose flag for more details[/yellow]")
-            sys.exit(1)
+    
+    # Validate specific values
+    if key == 'backend' and value not in ['local', 'cloud', 'auto']:
+        console.print(f"[red]Error: backend must be 'local', 'cloud', or 'auto'[/red]")
+        return
+    
+    # Apply the configuration change
+    kwargs = {config_key: value}
+    configure(**kwargs)
+    
+    # Save to persistent config file
+    current_config = get_config()
+    save_config(current_config)
+    
+    console.print(f"[green]Set {key} = {value}[/green]")
+    console.print("[dim]Configuration saved to ~/.config/ai/config.yaml[/dim]")
 
 
 if __name__ == "__main__":

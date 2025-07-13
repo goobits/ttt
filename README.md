@@ -32,8 +32,18 @@ This will:
 
 ### Configuration
 
-Edit `.env` file with your API keys:
+**Option 1: Using the config command (recommended):**
+```bash
+# Set API keys
+ai config openai_key sk-your-key-here
+ai config anthropic_key sk-ant-your-key-here
 
+# Or set up for local usage
+ai config backend local
+ai config model qwen2.5:32b
+```
+
+**Option 2: Edit `.env` file:**
 ```bash
 # OpenRouter (recommended - supports multiple models)
 OPENROUTER_API_KEY=your-openrouter-key-here
@@ -44,26 +54,119 @@ OPENROUTER_API_KEY=your-openrouter-key-here
 # GOOGLE_API_KEY=your-google-key-here
 ```
 
-### Usage
+### Common Setup Scenarios
+
+**For Qwen/Local Users:**
+```bash
+ai config backend local
+ai config model qwen2.5:32b
+ai config ollama_url http://localhost:11434
+ai "test question"  # Now uses local Qwen by default
+```
+
+**For Claude Coding:**
+```bash
+ai config model claude-3-sonnet-20240229
+ai config backend cloud
+ai config anthropic_key sk-ant-your-key-here
+ai "write a Python function" --code
+```
+
+**For Fast Responses:**
+```bash
+ai config model gpt-3.5-turbo
+ai config backend cloud  
+ai config timeout 10
+ai "quick question"
+```
+
+### Configuration Reference
 
 ```bash
-# Basic usage
+# Show all current configuration
+ai config
+
+# Show specific setting
+ai config model
+ai config backend
+ai config timeout
+
+# Set configuration values
+ai config model qwen2.5:32b           # Set default model
+ai config backend local               # Set backend (local/cloud/auto)
+ai config timeout 60                  # Set timeout in seconds
+ai config retries 5                   # Set max retry attempts
+ai config ollama_url http://localhost:11434  # Set Ollama URL
+
+# API keys (masked when displayed)
+ai config openai_key sk-...
+ai config anthropic_key sk-ant-...
+ai config google_key AI...
+```
+
+**Available Configuration Keys:**
+- `model` - Default model to use
+- `backend` - Backend selection (local/cloud/auto)
+- `timeout` - Request timeout in seconds
+- `retries` - Maximum retry attempts
+- `ollama_url` - Ollama server URL for local backend
+- `openai_key` - OpenAI API key
+- `anthropic_key` - Anthropic API key  
+- `google_key` - Google API key
+
+All configuration changes are automatically saved to `~/.config/ai/config.yaml`.
+
+## Migration from Other AI Tools
+
+**Migrating from `llm` or similar tools?** The AI library provides drop-in compatibility with enhanced features:
+
+```bash
+# If you used: llm "question"
+ai "question"                    # Same simple interface
+
+# Enhanced with new features:
+ai "question" --offline          # Force local models (Ollama)
+ai "question" --online           # Force cloud models  
+ai "question" --code             # Coding-optimized responses
+ai "question" --verbose          # Show detailed metadata
+
+# Easy configuration management (NEW):
+ai config model qwen2.5:32b     # Set default model for Qwen users
+ai config backend local          # Set default to local for privacy
+ai config                        # View all current settings
+
+# Flexible flag positioning (all equivalent):
+ai "write a function" --code
+ai --code "write a function"  
+ai "write" --code "a function"
+
+# Interactive mode (coming soon):
+# ai --chat                      # Start persistent conversation
+```
+
+### Usage Examples
+
+```bash
+# Basic usage - just like llm
 ai "What is Python?"
+
+# Coding assistance with optimization
+ai "write a Python function to sort a list" --code --verbose
+
+# Force specific backend
+ai "private question" --offline          # Uses local Ollama models
+ai "complex analysis" --online --model gpt-4
 
 # Stream responses in real-time
 ai "Tell me a story" --stream
 
-# Check system status
-ai backend-status
+# System status and discovery
+ai backend-status                        # Check what's configured
+ai models-list                          # See available models
 
-# List available models
-ai models-list
-
-# Specify model and backend
-ai "Explain quantum computing" --model gpt-4 --backend cloud
-
-# Verbose output with metadata
-ai "Debug this code" --verbose
+# Read from stdin (pipe support)
+cat script.py | ai "review this code" --code
+echo "2 + 2" | ai "what is this?" -
 ```
 
 ### Tools and Function Calling
@@ -212,8 +315,14 @@ response = ask(
 ### Basic Commands
 
 ```bash
-# Ask questions
+# Simple usage (like llm)
 ai "Your question here"
+
+# NEW: Enhanced backend control
+ai "Question" --offline                  # Force local models (Ollama)
+ai "Question" --online                   # Force cloud models
+ai "Question" --code                     # Coding-optimized responses
+ai "Question" --verbose                  # Show detailed metadata
 
 # Stream responses (real-time output)
 ai "Tell me a story" --stream
@@ -221,11 +330,8 @@ ai "Tell me a story" --stream
 # Specify model
 ai "Code question" --model openrouter/anthropic/claude-3-sonnet
 
-# Use local backend (requires Ollama)
-ai "Question" --backend local --model llama2
-
-# Verbose output with metadata
-ai "Question" --verbose
+# Local model specification
+ai "Question" --offline --model llama2
 
 # System prompts
 ai "Translate this" --system "You are a translator"
@@ -236,9 +342,10 @@ ai "Write a poem" --temperature 0.9
 # Token limits
 ai "Summarize this" --max-tokens 100
 
-# Read from stdin
+# Read from stdin (enhanced pipe support)
 echo "What is this?" | ai -
 cat file.txt | ai "Explain this code" -
+cat script.py | ai "review this code" --code
 
 # Use tools from CLI
 ai "What time is it in Tokyo?" --tools get_current_time
@@ -255,6 +362,11 @@ ai "Analyze file" --tools /path/to/tools.py:analyze
 # Built-in tools by category
 ai "Read config.json" --tools read_file
 ai "Calculate 15% of 250" --tools calculate
+
+# NEW: Flexible flag positioning (all equivalent)
+ai "write a function" --code --verbose
+ai --code "write a function" --verbose  
+ai --verbose --code "write a function"
 ```
 
 ### System Commands
@@ -266,6 +378,9 @@ ai backend-status
 # List all available models
 ai models-list
 
+# Manage configuration (see Configuration Reference above)
+ai config
+
 # Show help
 ai --help
 ```
@@ -273,9 +388,10 @@ ai --help
 ### Advanced Options
 
 ```bash
-# Backend selection
-ai "Question" --backend cloud      # Force cloud backend
-ai "Question" --backend local      # Force local backend (Ollama)
+# Simple backend selection  
+ai "Question" --offline            # Force local backend (Ollama)
+ai "Question" --online             # Force cloud backend
+ai "Question" --code               # Coding-optimized responses
 
 # Model specification
 ai "Question" --model gpt-4
@@ -295,6 +411,11 @@ ai "Question" --system "You are..." # System prompt
 ai "Question" -m gpt-4            # Model
 ai "Question" -s "System prompt"   # System
 ai "Question" -v                   # Verbose
+
+# NEW: Smart features
+ai "debug this function" --code    # Auto-detects coding context
+ai "debug this function"           # Also works (auto-detection)
+ai "Question" --verbose --online   # Combine multiple flags
 ```
 
 ## Backend Configuration
@@ -327,13 +448,119 @@ ollama pull codellama
 ollama pull mistral
 
 # Use local models
-ai "Question" --backend local --model llama2
+ai "Question" --offline --model llama2
 ```
 
 **Configuration:**
 ```bash
 # Optional: Custom Ollama URL
 OLLAMA_BASE_URL=http://localhost:11434
+```
+
+## Python Library Usage
+
+The AI library provides both synchronous and asynchronous APIs for integration into your Python applications.
+
+### Synchronous API (Recommended for most use cases)
+
+```python
+from ai import ask, stream, chat
+
+# Simple question
+response = ask("What is Python?")
+print(response)
+
+# With model selection
+response = ask("Explain async/await", model="gpt-4")
+print(f"Response: {response}")
+print(f"Model used: {response.model}")
+print(f"Time taken: {response.time}s")
+
+# Streaming responses
+for chunk in stream("Tell me a story"):
+    print(chunk, end="", flush=True)
+
+# Chat sessions
+with chat(system="You are a helpful coding assistant") as session:
+    response1 = session.ask("What is a decorator?")
+    response2 = session.ask("Show me an example")
+    print(f"Conversation history: {len(session.history)} messages")
+```
+
+### Asynchronous API (For performance-critical applications)
+
+For applications that need to handle many concurrent requests or integrate with async frameworks like FastAPI, use the async API:
+
+```python
+import asyncio
+from ai import ask_async, stream_async, achat
+
+async def main():
+    # Async ask - non-blocking
+    response = await ask_async("What is Python?")
+    print(response)
+    
+    # Async streaming
+    async for chunk in stream_async("Tell me a story"):
+        print(chunk, end="", flush=True)
+    
+    # Async chat sessions
+    async with achat(system="You are helpful") as session:
+        response = session.ask("Hello")  # Session.ask() works in async context
+        print(response)
+
+# Run async code
+asyncio.run(main())
+```
+
+### When to use Async vs Sync
+
+**Use Synchronous API when:**
+- Building simple scripts or CLI tools
+- Working with synchronous code
+- Processing requests one at a time
+- Just getting started with the library
+
+**Use Asynchronous API when:**
+- Building web applications (FastAPI, aiohttp)
+- Processing multiple requests concurrently
+- Integration with async frameworks
+- Performance is critical (can handle 10x+ more concurrent requests)
+
+### Library Features
+
+All features work with both sync and async APIs:
+
+```python
+from ai import ask, chat
+from ai.tools.builtins import web_search, calculate
+
+# Function calling with built-in tools
+response = ask(
+    "Search for Python 3.12 release date and calculate days since release",
+    tools=[web_search, calculate]
+)
+
+# Custom tools
+from ai.tools import tool
+
+@tool
+def get_user_data(user_id: int) -> dict:
+    """Get user data from database."""
+    return {"id": user_id, "name": "John Doe"}
+
+response = ask("Get user 123's information", tools=[get_user_data])
+
+# Persistent chat with save/load
+from ai.chat import PersistentChatSession
+
+session = PersistentChatSession()
+session.ask("Remember: my name is Alice")
+session.save("alice_session.json")
+
+# Later...
+session = PersistentChatSession.load("alice_session.json")
+response = session.ask("What's my name?")  # Will remember "Alice"
 ```
 
 ## API Keys Setup
@@ -379,7 +606,7 @@ agents/
 │   │   ├── registry.py    # Tool registration system
 │   │   └── execution.py   # Tool execution engine
 │   └── exceptions.py      # Custom exceptions
-├── ai_wrapper.py          # CLI entry point wrapper
+├── ai/__main__.py         # CLI entry point
 ├── setup.sh               # Installation script
 ├── pyproject.toml         # Package configuration
 └── tests/                 # Test suite
@@ -405,41 +632,48 @@ agents/
 
 ### Running Tests
 
-**Unit Tests (Mocked - No API calls):**
+**Unified Test Runner:**
 ```bash
-# Quick run - all unit tests
-./run_tests.sh
+# Run unit tests (default - free, fast)
+./test.sh
 
-# Run with options
-./run_tests.sh --coverage          # With coverage report
-./run_tests.sh --verbose           # Detailed output
-./run_tests.sh --test cloud_backend # Specific test file
-./run_tests.sh --markers "not slow" # Skip slow tests
+# Run unit tests with coverage
+./test.sh unit --coverage
 
-# Direct pytest (alternative)
-python -m pytest tests/ -m "not integration"
-python -m pytest tests/test_cloud_backend.py
-python -m pytest tests/ --cov=ai --cov-report=html
-```
+# Run specific test file
+./test.sh --test test_api
 
-**Integration Tests (Real API calls - Costs money):**
-```bash
-# Set API keys first
-export OPENROUTER_API_KEY="your-key-here"
-# or OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.
+# Run integration tests (costs money, requires API keys)
+./test.sh integration
 
-# Run integration tests (use sparingly)
-./run_integration_tests.sh
+# Run all tests (unit first, then integration)
+./test.sh all
 
-# Or run specific integration test categories
-python -m pytest tests/test_integration.py::TestRealAPIIntegration -m integration
-python -m pytest tests/test_integration.py::TestProviderSpecificIntegration -m integration
+# Skip slow tests
+./test.sh --markers "not slow"
+
+# Verbose output
+./test.sh unit --verbose
+
+# Show help
+./test.sh --help
 ```
 
 **Test Types:**
 - **Unit Tests**: Fast, mocked, no API costs - use for development
 - **Integration Tests**: Real API calls, small costs (~$0.01-0.10) - use for validation
-- **Ollama Tests**: Skipped unless Ollama is installed and running
+- **Combined**: Run unit tests first, then integration tests if unit tests pass
+
+**API Key Setup for Integration Tests:**
+```bash
+# Set one or more API keys
+export OPENROUTER_API_KEY="your-key-here"
+export OPENAI_API_KEY="your-key-here"
+export ANTHROPIC_API_KEY="your-key-here"
+
+# Then run integration tests
+./test.sh integration
+```
 
 ### Development Setup
 

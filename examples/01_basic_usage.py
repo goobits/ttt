@@ -3,7 +3,9 @@
 Basic usage examples for the AI library.
 
 This script demonstrates the core functionality of the unified AI library,
-showing how to use the ask(), stream(), and chat() functions.
+showing how to use the ask(), stream(), and basic chat() functions.
+
+This is the perfect starting point for learning the library.
 """
 
 from ai import ask, stream, chat
@@ -69,11 +71,11 @@ def streaming_examples():
     print("\n\n")
 
 
-def chat_examples():
-    """Demonstrate chat session functionality."""
-    print("=== Chat Session Examples ===\n")
+def basic_chat_examples():
+    """Demonstrate basic chat session functionality."""
+    print("=== Basic Chat Examples ===\n")
 
-    print("1. Basic conversation:")
+    print("1. Simple conversation:")
     with chat() as session:
         response1 = session.ask("Hi, I'm learning to code")
         print(f"User: Hi, I'm learning to code")
@@ -148,7 +150,7 @@ def model_selection_examples():
 
 
 def error_handling_examples():
-    """Demonstrate error handling."""
+    """Demonstrate basic error handling."""
     print("=== Error Handling Examples ===\n")
 
     # Example with non-existent model (this will fallback)
@@ -167,20 +169,25 @@ def error_handling_examples():
 
 def main():
     """Run all examples."""
-    print("AI Library Usage Examples")
+    print("AI Library - Basic Usage Examples")
     print("=" * 50)
+    print()
+    print("This example shows the core functionality: ask(), stream(), and basic chat()")
+    print("For more advanced features, see the other numbered examples.")
     print()
 
     try:
         basic_ask_examples()
         streaming_examples()
-        chat_examples()
+        basic_chat_examples()
         model_selection_examples()
         error_handling_examples()
 
-        print("=== Examples Complete ===")
-        print("\nTip: Check the model and timing information to see how")
-        print("the library automatically selects the best backend and model!")
+        print("=== Basic Examples Complete ===")
+        print("\nNext steps:")
+        print("- Try 02_tools_and_workflows.py for built-in tools")
+        print("- Try 03_chat_and_persistence.py for advanced chat features")
+        print("- Try 04_advanced_features.py for multi-modal and production features")
 
     except KeyboardInterrupt:
         print("\n\nExamples interrupted by user.")

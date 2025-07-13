@@ -30,9 +30,11 @@ class TestConfigurableTools:
             }
         }
 
-        with patch("ai.config.get_config") as mock_get_config:
+        # Patch get_config where it's imported in builtins
+        with patch("ai.tools.builtins.get_config") as mock_get_config:
             mock_config = Mock()
-            mock_config.config_data = custom_config
+            # Set up tools_config with the custom values
+            mock_config.tools_config = custom_config["tools"]
             mock_get_config.return_value = mock_config
 
             # Should use custom values
@@ -54,14 +56,15 @@ class TestConfigurableTools:
             # Mock config with 5MB limit
             custom_config = {"tools": {"max_file_size": 5 * 1024 * 1024}}  # 5MB
 
-            with patch("ai.config.get_config") as mock_get_config:
+            with patch("ai.tools.builtins.get_config") as mock_get_config:
                 mock_config = Mock()
-                mock_config.config_data = custom_config
+                mock_config.tools_config = custom_config["tools"]
                 mock_get_config.return_value = mock_config
 
                 # Should fail due to size limit
                 result = read_file(temp_path)
-                assert "Error: File too large" in result
+                # The error is formatted with emojis and recovery system
+                assert "File too large" in result
                 assert "5242880 bytes" in result  # 5MB in bytes
 
         finally:
@@ -74,9 +77,9 @@ class TestConfigurableTools:
         # Mock config with shorter timeout
         custom_config = {"tools": {"code_execution_timeout": 1}}  # 1 second
 
-        with patch("ai.config.get_config") as mock_get_config:
+        with patch("ai.tools.builtins.get_config") as mock_get_config:
             mock_config = Mock()
-            mock_config.config_data = custom_config
+            mock_config.tools_config = custom_config["tools"]
             mock_get_config.return_value = mock_config
 
             # Code that would normally take longer than 1 second
@@ -95,17 +98,16 @@ class TestToolsListCommand:
     """Test the tools-list CLI command."""
 
     def test_tools_list_command_parsing(self):
-        """Test that tools-list command is parsed correctly."""
-        from ai.cli import parse_args
-
-        with patch("sys.argv", ["ai", "tools-list"]):
-            args = parse_args()
-            assert args["command"] == "tools-list"
-
-        # Test alias
-        with patch("sys.argv", ["ai", "tools"]):
-            args = parse_args()
-            assert args["command"] == "tools-list"
+        """Test that tools-list command works correctly."""
+        from click.testing import CliRunner
+        from ai.cli import main
+        
+        runner = CliRunner()
+        
+        with patch("ai.cli.show_tools_list") as mock_show_tools:
+            result = runner.invoke(main, ["tools-list"])
+            assert result.exit_code == 0
+            mock_show_tools.assert_called_once()
 
     @patch("ai.cli.console")
     def test_show_tools_list(self, mock_console):
@@ -118,7 +120,8 @@ class TestToolsListCommand:
         mock_tool.description = "A test tool"
         mock_tool.category = "test"
 
-        with patch("ai.cli.list_tools", return_value=[mock_tool]):
+        with patch("ai.tools.list_tools", return_value={"test_tool": mock_tool}), \
+             patch("ai.tools.get_categories", return_value=["test"]):
             show_tools_list()
 
             # Should have called console.print with tool information
@@ -126,8 +129,8 @@ class TestToolsListCommand:
             print_calls = [str(call) for call in mock_console.print.call_args_list]
 
             # Check that tool info was displayed
-            assert any("test_tool" in call for call in print_calls)
-            assert any("Test Tools:" in call for call in print_calls)
+            assert any("test_tool" in str(call) for call in print_calls)
+            assert any("test:" in str(call).lower() for call in print_calls)
 
 
 if __name__ == "__main__":

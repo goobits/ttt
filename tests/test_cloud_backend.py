@@ -273,7 +273,7 @@ class TestCloudBackendModels:
         assert len(models) > 0
         assert "gpt-4" in models
         assert "gpt-3.5-turbo" in models
-        assert "claude-3-opus-20240229" in models
+        assert "claude-3-opus" in models  # Use model name, not provider name
         assert "gemini-pro" in models
 
     @pytest.mark.asyncio

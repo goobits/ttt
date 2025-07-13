@@ -7,6 +7,7 @@ import os
 from ..models import AIResponse, ImageInput
 from ..utils import get_logger
 from .base import BaseBackend
+from ..config import model_registry  # Import the central registry
 from ..exceptions import (
     BackendNotAvailableError,
     BackendConnectionError,
@@ -113,6 +114,11 @@ class CloudBackend(BaseBackend):
     def supports_streaming(self) -> bool:
         """Check if backend supports streaming."""
         return True
+    
+    @property
+    def supports_messages(self) -> bool:
+        """Check if backend supports message history format."""
+        return True
 
     async def ask(
         self,
@@ -143,38 +149,42 @@ class CloudBackend(BaseBackend):
         used_model = model or self.default_model
 
         # Build messages
-        messages = []
-        if system:
-            messages.append({"role": "system", "content": system})
-
-        # Handle multi-modal content
-        if isinstance(prompt, str):
-            messages.append({"role": "user", "content": prompt})
+        # Check if we received pre-built messages from chat session
+        if 'messages' in kwargs and kwargs['messages']:
+            messages = kwargs['messages']
         else:
-            # Build content array for multi-modal input
-            content = []
-            for item in prompt:
-                if isinstance(item, str):
-                    content.append({"type": "text", "text": item})
-                elif isinstance(item, ImageInput):
-                    # Format image for the provider
-                    if item.is_url:
-                        content.append(
-                            {"type": "image_url", "image_url": {"url": item.source}}
-                        )
-                    else:
-                        # Base64 encode for non-URL images
-                        base64_data = item.to_base64()
-                        mime_type = item.get_mime_type()
-                        content.append(
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:{mime_type};base64,{base64_data}"
-                                },
-                            }
-                        )
-            messages.append({"role": "user", "content": content})
+            messages = []
+            if system:
+                messages.append({"role": "system", "content": system})
+
+            # Handle multi-modal content
+            if isinstance(prompt, str):
+                messages.append({"role": "user", "content": prompt})
+            else:
+                # Build content array for multi-modal input
+                content = []
+                for item in prompt:
+                    if isinstance(item, str):
+                        content.append({"type": "text", "text": item})
+                    elif isinstance(item, ImageInput):
+                        # Format image for the provider
+                        if item.is_url:
+                            content.append(
+                                {"type": "image_url", "image_url": {"url": item.source}}
+                            )
+                        else:
+                            # Base64 encode for non-URL images
+                            base64_data = item.to_base64()
+                            mime_type = item.get_mime_type()
+                            content.append(
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:{mime_type};base64,{base64_data}"
+                                    },
+                                }
+                            )
+                messages.append({"role": "user", "content": content})
 
         # Build parameters
         params = {
@@ -206,8 +216,10 @@ class CloudBackend(BaseBackend):
                 params["tools"] = tool_definitions
                 params["tool_choice"] = "auto"  # Let the model decide when to use tools
 
-        # Add any additional parameters
-        params.update(kwargs)
+        # Add any additional parameters, filtering out None values
+        # Also remove 'messages' from kwargs since we build it ourselves
+        filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None and k != 'messages'}
+        params.update(filtered_kwargs)
 
         try:
             logger.debug(f"Sending request to {used_model}")
@@ -226,7 +238,7 @@ class CloudBackend(BaseBackend):
             message = response.choices[0].message
             if hasattr(message, "tool_calls") and message.tool_calls:
                 # Import tool execution here to avoid circular imports
-                from ..tools import execute_multiple_async
+                from ..tools import execute_tools
 
                 # Build tool calls data
                 tool_calls_data = []
@@ -253,11 +265,8 @@ class CloudBackend(BaseBackend):
 
                 # Execute tool calls
                 if tool_calls_data and tools:
-                    # Create tool definition map
-                    tool_def_dict = {td.name: td for td in resolved_tools}
-                    tool_result = await execute_multiple_async(
-                        tool_calls_data, tool_def_dict
-                    )
+                    # The new executor doesn't need tool definitions map
+                    tool_result = await execute_tools(tool_calls_data, parallel=True)
 
                     # Update content with tool results if content is empty
                     if not content:
@@ -439,8 +448,10 @@ class CloudBackend(BaseBackend):
                 params["tools"] = tool_definitions
                 params["tool_choice"] = "auto"
 
-        # Add any additional parameters
-        params.update(kwargs)
+        # Add any additional parameters, filtering out None values
+        # Also remove 'messages' from kwargs since we build it ourselves
+        filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None and k != 'messages'}
+        params.update(filtered_kwargs)
 
         try:
             logger.debug(f"Starting stream request to {used_model}")
@@ -491,54 +502,27 @@ class CloudBackend(BaseBackend):
 
     async def models(self) -> List[str]:
         """
-        Get list of available models from configured providers.
+        Get list of available models from the central model registry.
+        This backend supports all non-local models.
 
         Returns:
             List of model names available on cloud providers
         """
-        available_models = []
-
-        # Add OpenAI models if configured
-        if os.getenv("OPENAI_API_KEY"):
-            available_models.extend(
-                [
-                    "gpt-4",
-                    "gpt-4-turbo-preview",
-                    "gpt-4-vision-preview",
-                    "gpt-3.5-turbo",
-                    "gpt-3.5-turbo-16k",
-                ]
-            )
-
-        # Add Anthropic models if configured
-        if os.getenv("ANTHROPIC_API_KEY"):
-            available_models.extend(
-                [
-                    "claude-3-opus-20240229",
-                    "claude-3-sonnet-20240229",
-                    "claude-3-haiku-20240307",
-                ]
-            )
-
-        # Add Google models if configured
-        if os.getenv("GOOGLE_API_KEY"):
-            available_models.extend(
-                [
-                    "gemini-pro",
-                    "gemini-pro-vision",
-                    "gemini-1.5-pro",
-                    "gemini-1.5-pro-vision",
-                ]
-            )
-
-        logger.debug(f"Found {len(available_models)} cloud models")
-        return available_models
+        # Get all model definitions from the registry
+        all_model_info = model_registry.models.values()
+        
+        # Filter for models that are NOT from the 'local' provider
+        cloud_models = [
+            model.name for model in all_model_info if model.provider != "local"
+        ]
+        logger.debug(f"Found {len(cloud_models)} cloud models in registry")
+        return sorted(cloud_models)
 
     async def list_models(
         self, detailed: bool = False
     ) -> List[Union[str, Dict[str, Any]]]:
         """
-        List available models, optionally with detailed information.
+        List available models from the registry, optionally with details.
 
         Args:
             detailed: Whether to return detailed model information
@@ -546,62 +530,31 @@ class CloudBackend(BaseBackend):
         Returns:
             List of model names or detailed model information
         """
-        # Return all supported models regardless of API key configuration
-        all_models = [
-            # OpenAI models
-            "gpt-4",
-            "gpt-4-turbo-preview",
-            "gpt-4-vision-preview",
-            "gpt-3.5-turbo",
-            "gpt-3.5-turbo-16k",
-            # Anthropic models
-            "claude-3-opus-20240229",
-            "claude-3-sonnet-20240229",
-            "claude-3-haiku-20240307",
-            # Google models
-            "gemini-pro",
-            "gemini-pro-vision",
-            "gemini-1.5-pro",
-            "gemini-1.5-pro-vision",
+        # Get all non-local models from the registry
+        all_model_info = [
+            model for model in model_registry.models.values() if model.provider != "local"
         ]
 
         if not detailed:
-            return all_models
+            return sorted([model.name for model in all_model_info])
 
-        # Return detailed information - for now just basic info
+        # Return detailed information directly from the model info objects
         detailed_models = []
-        for model in all_models:
+        for model in sorted(all_model_info, key=lambda m: m.name):
             detailed_models.append(
                 {
-                    "name": model,
-                    "provider": self._get_provider_for_model(model),
-                    "capabilities": self._get_capabilities_for_model(model),
+                    "name": model.name,
+                    "provider": model.provider,
+                    "capabilities": model.capabilities,
+                    "speed": model.speed,
+                    "quality": model.quality,
+                    "context_length": model.context_length,
                 }
             )
-
         return detailed_models
 
-    def _get_provider_for_model(self, model: str) -> str:
-        """Get the provider for a given model."""
-        if model.startswith("gpt-"):
-            return "openai"
-        elif model.startswith("claude-"):
-            return "anthropic"
-        elif model.startswith("gemini-"):
-            return "google"
-        return "unknown"
-
-    def _get_capabilities_for_model(self, model: str) -> List[str]:
-        """Get capabilities for a given model."""
-        capabilities = ["text", "chat"]
-
-        if "vision" in model or "gpt-4" in model:
-            capabilities.append("vision")
-
-        if "claude" in model or "gpt-4" in model:
-            capabilities.append("reasoning")
-
-        return capabilities
+    # Removed _get_provider_for_model and _get_capabilities_for_model
+    # This logic is now handled by the ModelInfo dataclass in the registry
 
     async def status(self, test_connection: bool = False) -> Dict[str, Any]:
         """

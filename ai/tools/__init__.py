@@ -18,7 +18,7 @@ Example usage:
     response = ask("What's the weather in NYC?", tools=[get_weather])
 """
 
-from typing import Callable, Optional, Union, List
+from typing import Callable, Optional, Union, List, Dict, Any
 from functools import wraps
 
 from .base import (
@@ -40,13 +40,12 @@ from .registry import (
     clear_registry,
     get_registry,
 )
-from .execution import (
+from .executor import (
     ToolExecutor,
-    execute_tool_call,
-    execute_tool_call_async,
-    execute_multiple,
-    execute_multiple_async,
-    get_executor,
+    ExecutionConfig,
+    execute_tool,
+    execute_tools,
+    get_execution_stats,
 )
 
 
@@ -127,6 +126,8 @@ def get_tool_definition(func: Callable) -> Optional[ToolDefinition]:
     return getattr(func, "_tool_definition", None)
 
 
+
+
 # Export all public classes and functions
 __all__ = [
     # Decorator
@@ -152,9 +153,8 @@ __all__ = [
     "get_registry",
     # Execution functions
     "ToolExecutor",
-    "execute_tool_call",
-    "execute_tool_call_async",
-    "execute_multiple",
-    "execute_multiple_async",
-    "get_executor",
+    "ExecutionConfig",
+    "execute_tool",
+    "execute_tools",
+    "get_execution_stats",
 ]
