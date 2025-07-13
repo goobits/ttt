@@ -230,6 +230,34 @@ def tools_list():
     show_tools_list()
 
 
+@main.command()
+@click.argument('key', required=False)
+@click.argument('value', required=False)
+def config(key, value):
+    """Manage configuration settings.
+    
+    Usage:
+      ai config                  - Show all configuration
+      ai config <key>           - Show specific configuration value
+      ai config <key> <value>   - Set configuration value
+    """
+    from ai.config import get_config, configure, save_config
+    
+    try:
+        if key is None:
+            # Show all configuration
+            show_all_config()
+        elif value is None:
+            # Show specific key
+            show_config_key(key)
+        else:
+            # Set key-value pair
+            set_config_key(key, value)
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+
 # Helper functions
 def show_backend_status():
     """Show backend status."""
@@ -404,6 +432,111 @@ def apply_coding_optimization(kwargs):
     # Prefer quality for code generation
     if 'quality' not in kwargs:
         kwargs['quality'] = True
+
+
+def get_config_key_mapping():
+    """Map user-friendly config keys to internal configuration paths."""
+    return {
+        'model': 'default_model',
+        'backend': 'default_backend',
+        'timeout': 'timeout',
+        'retries': 'max_retries',
+        'ollama_url': 'ollama_base_url',
+        'openai_key': 'openai_api_key',
+        'anthropic_key': 'anthropic_api_key',
+        'google_key': 'google_api_key',
+    }
+
+
+def show_all_config():
+    """Display all current configuration settings."""
+    from ai.config import get_config
+    
+    config = get_config()
+    console.print("[bold blue]Current Configuration:[/bold blue]")
+    console.print()
+    
+    # Show main settings
+    key_mapping = get_config_key_mapping()
+    
+    for user_key, config_key in key_mapping.items():
+        value = getattr(config, config_key, None)
+        if value is not None:
+            # Mask sensitive values
+            if 'key' in user_key.lower():
+                masked_value = f"{str(value)[:8]}..." if len(str(value)) > 8 else "***"
+                console.print(f"  {user_key}: {masked_value}")
+            else:
+                console.print(f"  {user_key}: {value}")
+    
+    console.print()
+    console.print("[dim]Use 'ai config <key> <value>' to change settings[/dim]")
+
+
+def show_config_key(key):
+    """Display a specific configuration value."""
+    from ai.config import get_config
+    
+    key_mapping = get_config_key_mapping()
+    
+    if key not in key_mapping:
+        available_keys = ', '.join(key_mapping.keys())
+        console.print(f"[red]Unknown config key '{key}'[/red]")
+        console.print(f"Available keys: {available_keys}")
+        return
+    
+    config = get_config()
+    config_key = key_mapping[key]
+    value = getattr(config, config_key, None)
+    
+    if value is not None:
+        # Mask sensitive values
+        if 'key' in key.lower():
+            masked_value = f"{str(value)[:8]}..." if len(str(value)) > 8 else "***"
+            console.print(f"{key}: {masked_value}")
+        else:
+            console.print(f"{key}: {value}")
+    else:
+        console.print(f"{key}: [dim]not set[/dim]")
+
+
+def set_config_key(key, value):
+    """Set a configuration value and persist it."""
+    from ai.config import get_config, configure, save_config
+    
+    key_mapping = get_config_key_mapping()
+    
+    if key not in key_mapping:
+        available_keys = ', '.join(key_mapping.keys())
+        console.print(f"[red]Unknown config key '{key}'[/red]")
+        console.print(f"Available keys: {available_keys}")
+        return
+    
+    config_key = key_mapping[key]
+    
+    # Type conversion for specific keys
+    if key in ['timeout', 'retries']:
+        try:
+            value = int(value)
+        except ValueError:
+            console.print(f"[red]Error: '{key}' must be a number[/red]")
+            return
+    
+    # Validate specific values
+    if key == 'backend' and value not in ['local', 'cloud', 'auto']:
+        console.print(f"[red]Error: backend must be 'local', 'cloud', or 'auto'[/red]")
+        return
+    
+    # Apply the configuration change
+    kwargs = {config_key: value}
+    configure(**kwargs)
+    
+    # Save to persistent config file
+    current_config = get_config()
+    save_config(current_config)
+    
+    console.print(f"[green]Set {key} = {value}[/green]")
+    console.print("[dim]Configuration saved to ~/.config/ai/config.yaml[/dim]")
 
 
 if __name__ == "__main__":
