@@ -58,6 +58,11 @@ ai "question" --online           # Force cloud models
 ai "question" --code             # Coding-optimized responses
 ai "question" --verbose          # Show detailed metadata
 
+# Easy configuration management (NEW):
+ai config model qwen2.5:32b     # Set default model for Qwen users
+ai config backend local          # Set default to local for privacy
+ai config                        # View all current settings
+
 # Flexible flag positioning (all equivalent):
 ai "write a function" --code
 ai --code "write a function"  
@@ -292,6 +297,42 @@ ai --code "write a function" --verbose
 ai --verbose --code "write a function"
 ```
 
+### Configuration Management
+
+```bash
+# Show all current configuration
+ai config
+
+# Show specific setting
+ai config model
+ai config backend
+ai config timeout
+
+# Set configuration values
+ai config model qwen2.5:32b           # Set default model
+ai config backend local               # Set backend (local/cloud/auto)
+ai config timeout 60                  # Set timeout in seconds
+ai config retries 5                   # Set max retry attempts
+ai config ollama_url http://localhost:11434  # Set Ollama URL
+
+# API keys (masked when displayed)
+ai config openai_key sk-...
+ai config anthropic_key sk-ant-...
+ai config google_key AI...
+```
+
+**Available Configuration Keys:**
+- `model` - Default model to use
+- `backend` - Backend selection (local/cloud/auto)
+- `timeout` - Request timeout in seconds
+- `retries` - Maximum retry attempts
+- `ollama_url` - Ollama server URL for local backend
+- `openai_key` - OpenAI API key
+- `anthropic_key` - Anthropic API key  
+- `google_key` - Google API key
+
+All configuration changes are automatically saved to `~/.config/ai/config.yaml`.
+
 ### System Commands
 
 ```bash
@@ -300,6 +341,11 @@ ai backend-status
 
 # List all available models
 ai models-list
+
+# Manage configuration settings
+ai config                             # Show all settings
+ai config <key>                       # Show specific setting
+ai config <key> <value>               # Set configuration
 
 # Show help
 ai --help
