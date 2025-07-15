@@ -72,19 +72,19 @@ class TestAsk:
         mock_backend.ask.assert_called_once()
 
     @patch("ai.api.router")
-    def test_ask_with_preferences(self, mock_router):
-        """Test ask with speed/quality preferences."""
+    def test_ask_with_model_override(self, mock_router):
+        """Test ask with explicit model override."""
         mock_backend = MagicMock()
-        mock_backend.ask = AsyncMock(return_value=AIResponse("Fast response"))
-        mock_router.smart_route.return_value = (mock_backend, "fast-model")
+        mock_backend.ask = AsyncMock(return_value=AIResponse("Model response"))
+        mock_router.smart_route.return_value = (mock_backend, "specified-model")
 
-        response = ask("Quick question", fast=True)
+        response = ask("Test question", model="specified-model")
 
-        assert str(response) == "Fast response"
+        assert str(response) == "Model response"
 
-        # Check that preferences were passed to router
+        # Check that model was passed to router
         call_args = mock_router.smart_route.call_args
-        assert call_args[1]["prefer_speed"] is True
+        assert call_args[1]["model"] == "specified-model"
 
     @patch("ai.api.router")
     def test_ask_with_system_prompt(self, mock_router):

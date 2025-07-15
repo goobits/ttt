@@ -50,8 +50,8 @@ def ask(
         >>> response = ask("Fix this code", system="You are a code reviewer")
         >>> print(f"Model: {response.model}, Time: {response.time}s")
 
-        >>> response = ask("Quick question", fast=True)
-        >>> response = ask("Complex analysis", quality=True)
+        >>> response = ask("Quick question", model="gpt-3.5-turbo")
+        >>> response = ask("Complex analysis", model="gpt-4")
 
         >>> # Multi-modal with images
         >>> response = ask([

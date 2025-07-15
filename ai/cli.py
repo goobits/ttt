@@ -30,10 +30,9 @@ import ai
 @click.option('--offline', is_flag=True, help='Force local backend')
 @click.option('--online', is_flag=True, help='Force cloud backend')
 @click.option('--code', is_flag=True, help='Optimize for code-related tasks')
-@click.option('--fast', is_flag=True, help='Fast mode (backwards compatibility)')
 @click.pass_context
 def main(ctx, version, model, system, temperature, max_tokens, 
-         tools, stream, verbose, offline, online, code, fast):
+         tools, stream, verbose, offline, online, code):
     """AI Library - Unified AI Interface for local and cloud models."""
     if version:
         click.echo(f"AI Library v{getattr(ai, '__version__', '0.4.0')}")
@@ -44,7 +43,7 @@ def main(ctx, version, model, system, temperature, max_tokens,
         if not sys.stdin.isatty():
             # Reading from pipe - always try to read
             ask_command(None, model, system, temperature, max_tokens, 
-                       tools, stream, verbose, offline, online, code, fast)
+                       tools, stream, verbose, offline, online, code)
         else:
             # Show help menu when no subcommand and no stdin
             click.echo(ctx.get_help())
@@ -62,16 +61,15 @@ def main(ctx, version, model, system, temperature, max_tokens,
 @click.option('--offline', is_flag=True, help='Force local backend')
 @click.option('--online', is_flag=True, help='Force cloud backend')
 @click.option('--code', is_flag=True, help='Optimize for code-related tasks')
-@click.option('--fast', is_flag=True, help='Fast mode (backwards compatibility)')
 def ask(prompt, model, system, temperature, max_tokens, 
-        tools, stream, verbose, offline, online, code, fast):
+        tools, stream, verbose, offline, online, code):
     """Ask the AI a question and get a response."""
     ask_command(prompt, model, system, temperature, max_tokens, 
-               tools, stream, verbose, offline, online, code, fast)
+               tools, stream, verbose, offline, online, code)
 
 
 def ask_command(prompt, model, system, temperature, max_tokens, 
-                tools, stream, verbose, offline, online, code, fast=False):
+                tools, stream, verbose, offline, online, code):
     """Internal function to handle AI questions."""
     
     # Handle missing prompt in interactive mode first
@@ -122,8 +120,6 @@ def ask_command(prompt, model, system, temperature, max_tokens,
         kwargs['tools'] = tools_list
     if backend:
         kwargs['backend'] = backend
-    if fast:
-        kwargs['fast'] = fast
     
     # Apply coding optimizations only if explicitly requested
     if code:
@@ -512,9 +508,6 @@ def apply_coding_optimization(kwargs):
     # Lower temperature for more deterministic code
     if 'temperature' not in kwargs:
         kwargs['temperature'] = 0.3
-    
-    # Enable quality mode for coding
-    kwargs['quality'] = True
 
 
 def get_config_key_mapping():

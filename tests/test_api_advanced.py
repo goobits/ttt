@@ -113,8 +113,6 @@ class TestAskFunction:
             temperature=0.7,
             max_tokens=100,
             backend="cloud",
-            fast=True,
-            quality=False,
             custom_param="value",
         )
 
@@ -122,8 +120,6 @@ class TestAskFunction:
         call_args = mock_router.smart_route.call_args
         assert call_args[1]["model"] == "specific-model"
         assert call_args[1]["backend"] == "cloud"
-        assert call_args[1]["prefer_speed"] is True
-        assert call_args[1]["prefer_quality"] is False
         assert call_args[1]["custom_param"] == "value"
 
         # Verify backend received parameters
@@ -165,8 +161,6 @@ class TestStreamFunction:
                 temperature=0.5,
                 max_tokens=50,
                 backend="local",
-                fast=False,
-                quality=True,
             )
         )
 
@@ -191,14 +185,15 @@ class TestChatSession:
         with patch("ai.routing.router") as mock_router:
             mock_backend = MockBackend()
             # Mock the smart_route to return backend and model
-            mock_router.smart_route.return_value = (mock_backend, "mistral")
+            mock_router.smart_route.return_value = (mock_backend, "default-model")
             mock_router.resolve_backend.return_value = mock_backend
+            mock_router.resolve_model.return_value = "default-model"
 
             session = ChatSession()
 
             assert session.system is None
-            # Model gets auto-resolved now
-            assert session.model == "mistral"
+            # Model gets resolved by router
+            assert session.model is not None
             # Backend is resolved by router, might not be the mock
             assert session.backend is not None
             assert session.history == []

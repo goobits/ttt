@@ -89,18 +89,18 @@ class TestCLICommands:
             call_kwargs = mock_ask.call_args[1]
             assert call_kwargs['backend'] == 'cloud'
 
-    def test_backward_compatibility(self):
-        """Test backward compatibility with existing flags."""
+    def test_ask_with_backend_override(self):
+        """Test ask command with backend override."""
         with patch('ai.ask') as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ['ask', 'Test', '--fast'])
+            result = self.runner.invoke(main, ['ask', 'Test', '--offline'])
             
             assert result.exit_code == 0
             call_kwargs = mock_ask.call_args[1]
-            assert call_kwargs['fast'] is True
+            assert call_kwargs['backend'] == 'local'
 
     def test_ask_with_streaming(self):
         """Test ask command with streaming."""
@@ -181,8 +181,8 @@ class TestHelperFunctions:
         kwargs = {}
         apply_coding_optimization(kwargs)
         
+        # Should only set temperature for code optimization
         assert kwargs['temperature'] == 0.3
-        assert kwargs['quality'] is True
 
 
 
