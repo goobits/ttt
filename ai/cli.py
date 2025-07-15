@@ -20,6 +20,37 @@ import ai
 
 @click.group(invoke_without_command=True)
 @click.option('--version', is_flag=True, help='Show version information')
+@click.option('--model', '-m', help='Specific model to use')
+@click.option('--system', '-s', help='System prompt to set context')
+@click.option('--temperature', '-t', type=float, help='Sampling temperature (0-1)')
+@click.option('--max-tokens', type=int, help='Maximum tokens to generate')
+@click.option('--tools', help='Comma-separated list of tools to enable')
+@click.option('--stream', is_flag=True, help='Stream the response')
+@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--offline', is_flag=True, help='Force local backend')
+@click.option('--online', is_flag=True, help='Force cloud backend')
+@click.option('--code', is_flag=True, help='Optimize for code-related tasks')
+@click.option('--fast', is_flag=True, help='Fast mode (backwards compatibility)')
+@click.pass_context
+def main(ctx, version, model, system, temperature, max_tokens, 
+         tools, stream, verbose, offline, online, code, fast):
+    """AI Library - Unified AI Interface for local and cloud models."""
+    if version:
+        click.echo(f"AI Library v{getattr(ai, '__version__', '0.4.0')}")
+        return
+    
+    if ctx.invoked_subcommand is None:
+        # Check if we have stdin or explicit prompt via arguments
+        if not sys.stdin.isatty():
+            # Reading from pipe - always try to read
+            ask_command(None, model, system, temperature, max_tokens, 
+                       tools, stream, verbose, offline, online, code, fast)
+        else:
+            # Show help menu when no subcommand and no stdin
+            click.echo(ctx.get_help())
+
+
+@main.command()
 @click.argument('prompt', required=False)
 @click.option('--model', '-m', help='Specific model to use')
 @click.option('--system', '-s', help='System prompt to set context')
@@ -31,50 +62,38 @@ import ai
 @click.option('--offline', is_flag=True, help='Force local backend')
 @click.option('--online', is_flag=True, help='Force cloud backend')
 @click.option('--code', is_flag=True, help='Optimize for code-related tasks')
-@click.pass_context
-def main(ctx, version, prompt, model, system, temperature, max_tokens, 
-         tools, stream, verbose, offline, online, code):
-    """AI Library - Unified AI Interface for local and cloud models."""
-    if version:
-        click.echo(f"AI Library v{getattr(ai, '__version__', '0.4.0')}")
-        return
-    
-    if ctx.invoked_subcommand is None:
-        # Check if we have stdin or a prompt argument
-        if prompt is not None:
-            # Direct prompt provided
-            ask_command(prompt, model, system, temperature, max_tokens, 
-                       tools, stream, verbose, offline, online, code)
-        elif not sys.stdin.isatty():
-            # Reading from pipe - always try to read
-            ask_command(None, model, system, temperature, max_tokens, 
-                       tools, stream, verbose, offline, online, code)
-        else:
-            # Show help menu
-            click.echo(ctx.get_help())
+@click.option('--fast', is_flag=True, help='Fast mode (backwards compatibility)')
+def ask(prompt, model, system, temperature, max_tokens, 
+        tools, stream, verbose, offline, online, code, fast):
+    """Ask the AI a question and get a response."""
+    ask_command(prompt, model, system, temperature, max_tokens, 
+               tools, stream, verbose, offline, online, code, fast)
 
 
 def ask_command(prompt, model, system, temperature, max_tokens, 
-                tools, stream, verbose, offline, online, code):
-    """Ask the AI a question and get a response."""
+                tools, stream, verbose, offline, online, code, fast=False):
+    """Internal function to handle AI questions."""
+    
+    # Handle missing prompt in interactive mode first
+    if prompt is None and sys.stdin.isatty():
+        click.echo("Error: Missing argument 'prompt'", err=True)
+        sys.exit(1)
     
     # Handle stdin input
-    if prompt == '-' or prompt is None:
-        if not sys.stdin.isatty():
-            # Reading from pipe
-            try:
-                prompt = sys.stdin.read().strip()
-            except EOFError:
-                prompt = ""
-        else:
-            # Interactive mode, prompt is required
-            if prompt is None:
-                click.echo("Error: No prompt provided", err=True)
-                sys.exit(1)
+    if prompt == '-' or (prompt is None and not sys.stdin.isatty()):
+        # Reading from pipe
+        try:
+            prompt = sys.stdin.read().strip()
+        except EOFError:
+            prompt = ""
         
         if not prompt:
-            # If we got here from the main function without a prompt, show help
-            return
+            # Handle empty input
+            click.echo("Error: No input provided", err=True)
+            sys.exit(1)
+    elif prompt is None:
+        # If we got here from the main function without a prompt, show help
+        return
     
     # Handle backend selection
     backend = None
@@ -103,6 +122,8 @@ def ask_command(prompt, model, system, temperature, max_tokens,
         kwargs['tools'] = tools_list
     if backend:
         kwargs['backend'] = backend
+    if fast:
+        kwargs['fast'] = fast
     
     # Apply coding optimizations only if explicitly requested
     if code:
@@ -170,7 +191,19 @@ def chat(model, system, session_id, tools, load, verbose):
             session = ai.chat(**kwargs).__enter__()
         
         console.print("[bold blue]AI Chat Session[/bold blue]")
-        console.print("Type /exit to quit, /save <filename> to save session, /clear to clear history")
+        
+        # Get chat help message from config
+        try:
+            from ai.config import load_project_defaults
+            project_defaults = load_project_defaults()
+            help_message = project_defaults.get("chat", {}).get("commands", {}).get(
+                "help_message", 
+                "Type /exit to quit, /save <filename> to save session, /clear to clear history"
+            )
+        except Exception:
+            help_message = "Type /exit to quit, /save <filename> to save session, /clear to clear history"
+            
+        console.print(help_message)
         console.print()
         
         turn_count = 0
@@ -365,9 +398,42 @@ def show_models_list():
 
     # Cloud models
     console.print("[bold green]Cloud Models:[/bold green]")
-    console.print("  • OpenAI: gpt-4o, gpt-4o-mini, gpt-3.5-turbo")
-    console.print("  • Anthropic: claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022")
-    console.print("  • Google: gemini-1.5-pro, gemini-1.5-flash")
+    
+    # Try to get models from config
+    try:
+        from ai.config_loader import get_project_config
+        config = get_project_config()
+        available_models = config.get("models", {}).get("available", {})
+        
+        # Group by provider
+        providers = {}
+        for model_name, model_info in available_models.items():
+            if isinstance(model_info, dict):
+                provider = model_info.get("provider", "unknown")
+                if provider not in ["local", "unknown"]:
+                    if provider not in providers:
+                        providers[provider] = []
+                    providers[provider].append(model_name)
+        
+        # Display models by provider
+        for provider, models in sorted(providers.items()):
+            if models:
+                console.print(f"  • {provider.title()}: {', '.join(sorted(models[:3]))}")
+                if len(models) > 3:
+                    console.print(f"    and {len(models) - 3} more...")
+                    
+        if not providers:
+            # Fallback to hardcoded if no config
+            console.print("  • OpenAI: gpt-4o, gpt-4o-mini, gpt-3.5-turbo")
+            console.print("  • Anthropic: claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022")
+            console.print("  • Google: gemini-1.5-pro, gemini-1.5-flash")
+            
+    except Exception:
+        # Fallback to hardcoded if error
+        console.print("  • OpenAI: gpt-4o, gpt-4o-mini, gpt-3.5-turbo")
+        console.print("  • Anthropic: claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022")
+        console.print("  • Google: gemini-1.5-pro, gemini-1.5-flash")
+        
     console.print("  • And many more via OpenRouter...")
 
 
@@ -446,6 +512,9 @@ def apply_coding_optimization(kwargs):
     # Lower temperature for more deterministic code
     if 'temperature' not in kwargs:
         kwargs['temperature'] = 0.3
+    
+    # Enable quality mode for coding
+    kwargs['quality'] = True
 
 
 def get_config_key_mapping():
@@ -459,6 +528,7 @@ def get_config_key_mapping():
         'openai_key': 'openai_api_key',
         'anthropic_key': 'anthropic_api_key',
         'google_key': 'google_api_key',
+        'openrouter_key': 'openrouter_api_key',
     }
 
 

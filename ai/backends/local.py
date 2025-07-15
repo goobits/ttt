@@ -36,12 +36,18 @@ class LocalBackend(BaseBackend):
             config: Configuration dictionary containing base_url and other settings
         """
         super().__init__(config)
+        # Get local-specific config
+        local_config = self.backend_config.get("local", {})
+        
         # Use backend_config from base class which handles merging
-        self.base_url = self.backend_config.get(
-            "base_url",
-            self.backend_config.get("ollama_base_url", "http://localhost:11434"),
+        from ..config_loader import get_config_value
+        self.base_url = local_config.get("base_url") or self.backend_config.get(
+            "ollama_base_url"
+        ) or get_config_value("backends.local.base_url", "http://localhost:11434")
+        
+        self.default_model = local_config.get("default_model") or get_config_value(
+            "backends.local.default_model", "llama2"
         )
-        self.default_model = self.backend_config.get("default_model", "llama2")
 
     @property
     def name(self) -> str:

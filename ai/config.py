@@ -17,6 +17,60 @@ logger = get_logger(__name__)
 _config: Optional[ConfigModel] = None
 
 
+def load_project_defaults() -> Dict[str, Any]:
+    """
+    Load default configuration from the project's config.yaml file.
+    
+    Returns:
+        Dictionary containing default configuration values
+    """
+    # Try to find the project config.yaml
+    config_paths = [
+        Path(__file__).parent.parent / "config.yaml",  # Relative to ai package
+        Path.cwd() / "config.yaml",  # Current working directory
+    ]
+    
+    for config_path in config_paths:
+        if config_path.exists():
+            try:
+                with open(config_path) as f:
+                    defaults = yaml.safe_load(f)
+                    logger.debug(f"Loaded project defaults from {config_path}")
+                    return defaults
+            except Exception as e:
+                logger.warning(f"Failed to load project defaults from {config_path}: {e}")
+    
+    # Fallback to minimal defaults if config.yaml not found
+    logger.warning("Project config.yaml not found, using minimal defaults")
+    return {
+        "models": {"default": "openrouter/google/gemini-flash-1.5", "available": {}},
+        "backends": {
+            "default": "cloud",
+            "cloud": {"timeout": 30, "max_retries": 3, "retry_delay": 1.0},
+            "local": {
+                "base_url": "http://localhost:11434",
+                "timeout": 60,
+                "default_model": "llama2",
+            },
+        },
+        "tools": {
+            "max_file_size": 10 * 1024 * 1024,  # 10MB
+            "code_execution_timeout": 30,
+            "web_request_timeout": 10,
+            "math_max_iterations": 1000,
+        },
+        "chat": {
+            "default_system_prompt": None,
+            "max_history_length": 100,
+            "auto_save": True,
+        },
+        "logging": {
+            "level": "INFO",
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        },
+    }
+
+
 def get_config() -> ConfigModel:
     """
     Get the global configuration, loading it if necessary.
@@ -47,34 +101,8 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
     # Load .env file if it exists
     load_dotenv()
 
-    # Start with defaults
-    defaults = {
-        "models": {"default": "openrouter/google/gemini-flash-1.5", "available": {}},
-        "backends": {
-            "default": "cloud",
-            "cloud": {"timeout": 30, "max_retries": 3, "retry_delay": 1.0},
-            "local": {
-                "base_url": "http://localhost:11434",
-                "timeout": 60,
-                "default_model": "llama2",
-            },
-        },
-        "tools": {
-            "max_file_size": 10 * 1024 * 1024,  # 10MB
-            "code_execution_timeout": 30,
-            "web_request_timeout": 10,
-            "math_max_iterations": 1000,
-        },
-        "chat": {
-            "default_system_prompt": None,
-            "max_history_length": 100,
-            "auto_save": True,
-        },
-        "logging": {
-            "level": "INFO",
-            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        },
-    }
+    # Load defaults from project config.yaml
+    defaults = load_project_defaults()
     config_data = {}
     models_data = []
 
@@ -109,18 +137,20 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
 
     # Override with environment variables
     import os
-
-    env_mappings = {
+    
+    # Get environment variable mappings from defaults
+    env_mappings = defaults.get("env_mappings", {
         "openai_api_key": "OPENAI_API_KEY",
         "anthropic_api_key": "ANTHROPIC_API_KEY",
         "google_api_key": "GOOGLE_API_KEY",
+        "openrouter_api_key": "OPENROUTER_API_KEY",
         "ollama_base_url": "OLLAMA_BASE_URL",
         "default_backend": "AI_DEFAULT_BACKEND",
         "default_model": "AI_DEFAULT_MODEL",
         "timeout": "AI_TIMEOUT",
         "max_retries": "AI_MAX_RETRIES",
         "enable_fallbacks": "AI_ENABLE_FALLBACKS",
-    }
+    })
 
     for config_key, env_key in env_mappings.items():
         env_value = os.getenv(env_key)
@@ -141,8 +171,38 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
             else:
                 config_data[config_key] = env_value
 
-    # Create ConfigModel with resolved configuration
-    config = ConfigModel(**config_data)
+    # Merge defaults with loaded config data
+    merged_config = {}
+    
+    # Deep merge defaults and config_data
+    def deep_merge(base, override):
+        """Deep merge two dictionaries."""
+        result = base.copy()
+        for key, value in override.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = deep_merge(result[key], value)
+            else:
+                result[key] = value
+        return result
+    
+    merged_config = deep_merge(defaults, config_data)
+    
+    # Populate specific config sections if they exist in defaults
+    if 'backends' in defaults:
+        merged_config['backend_config'] = defaults['backends']
+    if 'tools' in defaults:
+        merged_config['tools_config'] = defaults['tools']
+    if 'chat' in defaults:
+        merged_config['chat_config'] = defaults['chat']
+    if 'models' in defaults and 'aliases' in defaults['models']:
+        merged_config['model_aliases'] = defaults['models']['aliases']
+    if 'backends' in defaults and 'enable_fallbacks' in defaults['backends']:
+        merged_config['enable_fallbacks'] = defaults['backends']['enable_fallbacks']
+    if 'backends' in defaults and 'fallback_order' in defaults['backends']:
+        merged_config['fallback_order'] = defaults['backends']['fallback_order']
+    
+    # Create ConfigModel with merged configuration
+    config = ConfigModel(**merged_config)
 
     # Load custom models into registry
     if models_data:
@@ -164,16 +224,31 @@ def find_config_file() -> Optional[Path]:
     Returns:
         Path to config file if found, None otherwise
     """
-    search_paths = [
-        Path.cwd() / "ai.yaml",
-        Path.cwd() / "ai.yml",
-        Path.cwd() / ".ai.yaml",
-        Path.cwd() / ".ai.yml",
-        Path.home() / ".config" / "ai" / "config.yaml",
-        Path.home() / ".config" / "ai" / "config.yml",
-        Path.home() / ".ai.yaml",
-        Path.home() / ".ai.yml",
-    ]
+    # Get search paths from project defaults if available
+    project_defaults = load_project_defaults()
+    path_configs = project_defaults.get("paths", {}).get("config_search", [])
+    
+    # Convert paths and expand home directory
+    search_paths = []
+    for path_str in path_configs:
+        if path_str.startswith("~/"):
+            path_str = str(Path.home() / path_str[2:])
+        elif path_str.startswith("./"):
+            path_str = str(Path.cwd() / path_str[2:])
+        search_paths.append(Path(path_str))
+    
+    # Fallback to hardcoded paths if config not available
+    if not search_paths:
+        search_paths = [
+            Path.cwd() / "ai.yaml",
+            Path.cwd() / "ai.yml",
+            Path.cwd() / ".ai.yaml",
+            Path.cwd() / ".ai.yml",
+            Path.home() / ".config" / "ai" / "config.yaml",
+            Path.home() / ".config" / "ai" / "config.yml",
+            Path.home() / ".ai.yaml",
+            Path.home() / ".ai.yml",
+        ]
 
     for path in search_paths:
         if path.exists():
@@ -197,13 +272,23 @@ def save_config(
     if config_file:
         config_path = Path(config_file)
     else:
-        # Default to user config directory
-        config_path = Path.home() / ".config" / "ai" / "config.yaml"
+        # Get default save path from project config
+        project_defaults = load_project_defaults()
+        default_save_path = project_defaults.get("paths", {}).get(
+            "default_config_save", "~/.config/ai/config.yaml"
+        )
+        
+        # Expand home directory
+        if default_save_path.startswith("~/"):
+            config_path = Path.home() / default_save_path[2:]
+        else:
+            config_path = Path(default_save_path)
+            
         config_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Convert config to dict, excluding sensitive data
     config_dict = config.model_dump(
-        exclude={"openai_api_key", "anthropic_api_key", "google_api_key"}
+        exclude={"openai_api_key", "anthropic_api_key", "google_api_key", "openrouter_api_key"}
     )
 
     try:
@@ -219,6 +304,7 @@ def configure(
     openai_api_key: Optional[str] = None,
     anthropic_api_key: Optional[str] = None,
     google_api_key: Optional[str] = None,
+    openrouter_api_key: Optional[str] = None,
     ollama_base_url: Optional[str] = None,
     default_backend: Optional[str] = None,
     default_model: Optional[str] = None,
@@ -236,6 +322,7 @@ def configure(
         openai_api_key: OpenAI API key
         anthropic_api_key: Anthropic API key
         google_api_key: Google API key
+        openrouter_api_key: OpenRouter API key
         ollama_base_url: Ollama base URL
         default_backend: Default backend to use
         default_model: Default model to use
@@ -257,6 +344,8 @@ def configure(
         updates["anthropic_api_key"] = anthropic_api_key
     if google_api_key is not None:
         updates["google_api_key"] = google_api_key
+    if openrouter_api_key is not None:
+        updates["openrouter_api_key"] = openrouter_api_key
     if ollama_base_url is not None:
         updates["ollama_base_url"] = ollama_base_url
     if default_backend is not None:
@@ -290,153 +379,58 @@ class ModelRegistry:
         self._load_default_models()
 
     def _load_default_models(self) -> None:
-        """Load default model configurations."""
-        # OpenAI models
-        self.add_model(
-            ModelInfo(
-                name="gpt-4",
-                provider="openai",
-                provider_name="gpt-4",
-                aliases=["best", "quality"],
-                speed="slow",
-                quality="high",
-                capabilities=["text", "reasoning"],
-                context_length=8192,
+        """Load default model configurations from config."""
+        # Load project defaults
+        project_defaults = load_project_defaults()
+        model_configs = project_defaults.get("models", {}).get("available", {})
+        
+        # Load each model from config
+        for model_name, model_config in model_configs.items():
+            try:
+                model_info = ModelInfo(
+                    name=model_name,
+                    provider=model_config.get("provider", ""),
+                    provider_name=model_config.get("provider_name", model_name),
+                    aliases=model_config.get("aliases", []),
+                    speed=model_config.get("speed", "medium"),
+                    quality=model_config.get("quality", "medium"),
+                    capabilities=model_config.get("capabilities", []),
+                    context_length=model_config.get("context_length"),
+                    cost_per_token=model_config.get("cost_per_token")
+                )
+                self.add_model(model_info)
+                logger.debug(f"Loaded model from config: {model_name}")
+            except Exception as e:
+                logger.warning(f"Failed to load model {model_name} from config: {e}")
+        
+        # If no models loaded from config, use minimal hardcoded defaults
+        if not self.models:
+            logger.warning("No models loaded from config, using minimal defaults")
+            # Minimal fallback models
+            self.add_model(
+                ModelInfo(
+                    name="gpt-3.5-turbo",
+                    provider="openai",
+                    provider_name="gpt-3.5-turbo",
+                    aliases=["fast", "cheap"],
+                    speed="fast",
+                    quality="medium",
+                    capabilities=["text", "chat"],
+                    context_length=4096,
+                )
             )
-        )
-
-        self.add_model(
-            ModelInfo(
-                name="gpt-3.5-turbo",
-                provider="openai",
-                provider_name="gpt-3.5-turbo",
-                aliases=["fast", "cheap"],
-                speed="fast",
-                quality="medium",
-                capabilities=["text", "chat"],
-                context_length=4096,
+            self.add_model(
+                ModelInfo(
+                    name="llama2",
+                    provider="local",
+                    provider_name="llama2",
+                    aliases=["local", "private"],
+                    speed="medium",
+                    quality="medium",
+                    capabilities=["text", "chat"],
+                    context_length=4096,
+                )
             )
-        )
-
-        self.add_model(
-            ModelInfo(
-                name="gpt-4-vision-preview",
-                provider="openai",
-                provider_name="gpt-4-vision-preview",
-                aliases=["vision", "gpt-vision"],
-                speed="slow",
-                quality="high",
-                capabilities=["text", "reasoning", "vision"],
-                context_length=128000,
-            )
-        )
-
-        # Anthropic models
-        self.add_model(
-            ModelInfo(
-                name="claude-3-opus",
-                provider="anthropic",
-                provider_name="claude-3-opus-20240229",
-                aliases=["claude-best", "opus"],
-                speed="slow",
-                quality="high",
-                capabilities=["text", "reasoning", "code", "vision"],
-                context_length=200000,
-            )
-        )
-
-        self.add_model(
-            ModelInfo(
-                name="claude-3-sonnet",
-                provider="anthropic",
-                provider_name="claude-3-sonnet-20240229",
-                aliases=["coding", "analysis", "claude"],
-                speed="medium",
-                quality="high",
-                capabilities=["text", "reasoning", "code"],
-                context_length=200000,
-            )
-        )
-
-        self.add_model(
-            ModelInfo(
-                name="claude-3-haiku",
-                provider="anthropic",
-                provider_name="claude-3-haiku-20240307",
-                aliases=["claude-fast", "haiku"],
-                speed="fast",
-                quality="medium",
-                capabilities=["text", "chat"],
-                context_length=200000,
-            )
-        )
-
-        # Google models
-        self.add_model(
-            ModelInfo(
-                name="gemini-pro",
-                provider="google",
-                provider_name="gemini-pro",
-                aliases=["gemini", "google"],
-                speed="medium",
-                quality="high",
-                capabilities=["text", "reasoning"],
-                context_length=30720,
-            )
-        )
-
-        self.add_model(
-            ModelInfo(
-                name="gemini-pro-vision",
-                provider="google",
-                provider_name="gemini-pro-vision",
-                aliases=["gemini-vision"],
-                speed="medium",
-                quality="high",
-                capabilities=["text", "reasoning", "vision"],
-                context_length=30720,
-            )
-        )
-
-        # Local models (common ones)
-        self.add_model(
-            ModelInfo(
-                name="llama2",
-                provider="local",
-                provider_name="llama2",
-                aliases=["local", "private"],
-                speed="medium",
-                quality="medium",
-                capabilities=["text", "chat"],
-                context_length=4096,
-            )
-        )
-
-        self.add_model(
-            ModelInfo(
-                name="mistral",
-                provider="local",
-                provider_name="mistral",
-                aliases=["mistral-local"],
-                speed="fast",
-                quality="medium",
-                capabilities=["text", "chat"],
-                context_length=8192,
-            )
-        )
-
-        self.add_model(
-            ModelInfo(
-                name="codellama",
-                provider="local",
-                provider_name="codellama",
-                aliases=["local-code"],
-                speed="medium",
-                quality="medium",
-                capabilities=["code", "text"],
-                context_length=4096,
-            )
-        )
 
     def add_model(self, model: ModelInfo) -> None:
         """Add a model to the registry."""

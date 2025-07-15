@@ -16,11 +16,20 @@ from .registry import get_tool, list_tools, register_tool
 class ExecutionConfig:
     """Configuration for tool execution."""
 
-    max_retries: int = 3
-    timeout_seconds: float = 30.0
+    max_retries: int = None
+    timeout_seconds: float = None
     enable_fallbacks: bool = True
     enable_input_sanitization: bool = True
     log_level: str = "INFO"
+    
+    def __post_init__(self):
+        """Load defaults from config if not set."""
+        from ..config_loader import get_config_value
+        
+        if self.max_retries is None:
+            self.max_retries = get_config_value("tools.executor.max_retries", 3)
+        if self.timeout_seconds is None:
+            self.timeout_seconds = get_config_value("tools.executor.timeout_seconds", 30.0)
 
 
 class ToolExecutor:

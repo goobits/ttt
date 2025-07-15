@@ -139,57 +139,32 @@ class ConfigModel(BaseModel):
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
     google_api_key: Optional[str] = None
+    openrouter_api_key: Optional[str] = None
 
     # Ollama Configuration
-    ollama_base_url: str = "http://localhost:11434"
+    ollama_base_url: Optional[str] = None
 
     # Default Settings
-    default_backend: str = "cloud"
+    default_backend: Optional[str] = None
     default_model: Optional[str] = None
-    timeout: int = 30
-    max_retries: int = 3
+    timeout: Optional[int] = None
+    max_retries: Optional[int] = None
 
     # Tool Configuration
-    tools_config: Dict[str, Any] = Field(
-        default_factory=lambda: {
-            "max_file_size": 10 * 1024 * 1024,  # 10MB
-            "code_execution_timeout": 30,
-            "web_request_timeout": 10,
-            "math_max_iterations": 1000,
-        }
-    )
+    tools_config: Dict[str, Any] = Field(default_factory=dict)
 
     # Backend Configuration
-    backend_config: Dict[str, Any] = Field(
-        default_factory=lambda: {
-            "cloud": {"timeout": 30, "max_retries": 3, "retry_delay": 1.0},
-            "local": {
-                "base_url": "http://localhost:11434",
-                "timeout": 60,
-                "default_model": "llama2",
-            },
-        }
-    )
+    backend_config: Dict[str, Any] = Field(default_factory=dict)
 
     # Chat Configuration
-    chat_config: Dict[str, Any] = Field(
-        default_factory=lambda: {"max_history_length": 100, "auto_save": True}
-    )
+    chat_config: Dict[str, Any] = Field(default_factory=dict)
 
-    # Model Aliases
-    model_aliases: Dict[str, str] = Field(
-        default_factory=lambda: {
-            "fast": "gpt-3.5-turbo",
-            "best": "gpt-4",
-            "cheap": "gpt-3.5-turbo",
-            "coding": "google/gemini-1.5-pro",
-            "local": "llama2",
-        }
-    )
+    # Model Aliases  
+    model_aliases: Dict[str, str] = Field(default_factory=dict)
 
     # Fallback Configuration
     enable_fallbacks: bool = True
-    fallback_order: list[str] = Field(default_factory=lambda: ["cloud", "local"])
+    fallback_order: List[str] = Field(default_factory=lambda: ["cloud", "local"])
 
     model_config = ConfigDict(case_sensitive=False)
 
@@ -254,14 +229,30 @@ class ImageInput:
         if self.is_path:
             path = Path(self.source)
             ext = path.suffix.lower()
-            mime_map = {
-                ".jpg": "image/jpeg",
-                ".jpeg": "image/jpeg",
-                ".png": "image/png",
-                ".gif": "image/gif",
-                ".webp": "image/webp",
-                ".bmp": "image/bmp",
-            }
+            
+            # Try to get mime types from config
+            try:
+                from .config import load_project_defaults
+                project_defaults = load_project_defaults()
+                mime_map = project_defaults.get("files", {}).get("mime_types", {
+                    ".jpg": "image/jpeg",
+                    ".jpeg": "image/jpeg",
+                    ".png": "image/png",
+                    ".gif": "image/gif",
+                    ".webp": "image/webp",
+                    ".bmp": "image/bmp",
+                })
+            except Exception:
+                # Fallback to hardcoded if config loading fails
+                mime_map = {
+                    ".jpg": "image/jpeg",
+                    ".jpeg": "image/jpeg",
+                    ".png": "image/png",
+                    ".gif": "image/gif",
+                    ".webp": "image/webp",
+                    ".bmp": "image/bmp",
+                }
+                
             return mime_map.get(ext, "image/jpeg")
 
         return "image/jpeg"  # Default

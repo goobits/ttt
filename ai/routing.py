@@ -171,7 +171,10 @@ class Router:
                 # Use backend-specific default
                 if backend and hasattr(backend, "default_model"):
                     return backend.default_model
-                return "gpt-3.5-turbo"  # Fallback default
+                
+                # Get fallback from config
+                from .config_loader import get_config_value
+                return get_config_value("models.default", "gpt-3.5-turbo")
 
         # Try to resolve alias
         resolved = model_registry.resolve_model_name(model)
@@ -232,11 +235,17 @@ class Router:
                 return selected_backend, selected_model
             
             # If not in registry, detect cloud models by naming patterns
-            cloud_model_patterns = [
-                "openrouter/", "anthropic/", "openai/", "google/", 
-                "gpt-", "claude-", "gemini-", "mistral/", "meta/",
-                "cohere/", "replicate/", "huggingface/"
-            ]
+            # Get patterns from config
+            from .config import load_project_defaults
+            project_defaults = load_project_defaults()
+            cloud_model_patterns = project_defaults.get("routing", {}).get(
+                "cloud_model_patterns", 
+                [
+                    "openrouter/", "anthropic/", "openai/", "google/", 
+                    "gpt-", "claude-", "gemini-", "mistral/", "meta/",
+                    "cohere/", "replicate/", "huggingface/"
+                ]
+            )
             
             is_cloud_model = any(model.startswith(pattern) for pattern in cloud_model_patterns)
             

@@ -38,9 +38,7 @@ from .recovery import ErrorRecoverySystem, RetryConfig, InputSanitizer
 
 
 # Initialize recovery system
-recovery_system = ErrorRecoverySystem(
-    RetryConfig(max_attempts=3, base_delay=1.0, max_delay=30.0)
-)
+recovery_system = ErrorRecoverySystem(RetryConfig())
 
 
 # Get configuration settings
@@ -336,7 +334,18 @@ def run_python(code: str, timeout: int = None) -> str:
         if not code or not code.strip():
             raise ValueError("Code cannot be empty")
 
-        timeout = min(max(1, timeout), 30)
+        # Get timeout bounds from config
+        try:
+            from ..config import get_config
+            config = get_config()
+            timeout_bounds = config.model_dump().get("tools", {}).get("timeout_bounds", {})
+            min_timeout = timeout_bounds.get("min", 1)
+            max_timeout = timeout_bounds.get("max", 30)
+        except Exception:
+            min_timeout = 1
+            max_timeout = 30
+            
+        timeout = min(max(min_timeout, timeout), max_timeout)
 
         # Create temporary file for code
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
@@ -449,7 +458,18 @@ def http_request(
         if parsed.scheme not in ("http", "https"):
             return "Error: Only HTTP/HTTPS protocols are supported"
 
-        timeout = min(max(1, timeout), 30)
+        # Get timeout bounds from config
+        try:
+            from ..config import get_config
+            config = get_config()
+            timeout_bounds = config.model_dump().get("tools", {}).get("timeout_bounds", {})
+            min_timeout = timeout_bounds.get("min", 1)
+            max_timeout = timeout_bounds.get("max", 30)
+        except Exception:
+            min_timeout = 1
+            max_timeout = 30
+            
+        timeout = min(max(min_timeout, timeout), max_timeout)
 
         # Prepare request
         if headers is None:
@@ -703,12 +723,24 @@ def list_directory(
                 results.append(f"[DIR]  {relative}/")
             else:
                 size = item.stat().st_size
-                if size < 1024:
+                
+                # Get size format thresholds from config
+                try:
+                    from ..config import get_config
+                    config = get_config()
+                    size_config = config.model_dump().get("files", {}).get("size_format", {})
+                    kb_threshold = size_config.get("kb_threshold", 1024)
+                    mb_threshold = size_config.get("mb_threshold", 1048576)
+                except Exception:
+                    kb_threshold = 1024
+                    mb_threshold = 1048576
+                
+                if size < kb_threshold:
                     size_str = f"{size}B"
-                elif size < 1024 * 1024:
-                    size_str = f"{size/1024:.1f}KB"
+                elif size < mb_threshold:
+                    size_str = f"{size/kb_threshold:.1f}KB"
                 else:
-                    size_str = f"{size/(1024*1024):.1f}MB"
+                    size_str = f"{size/mb_threshold:.1f}MB"
 
                 results.append(f"[FILE] {relative} ({size_str})")
 

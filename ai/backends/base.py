@@ -32,9 +32,10 @@ class BaseBackend(ABC):
         self.backend_config = {**self.config, **backend_specific}
 
         # Common configuration attributes
-        self.timeout = self.backend_config.get("timeout", 30)
-        self.max_retries = self.backend_config.get("max_retries", 3)
-        self.default_model = self.backend_config.get("default_model")
+        from ..config_loader import get_config_value
+        self.timeout = self.backend_config.get("timeout") or get_config_value("timeout", 30)
+        self.max_retries = self.backend_config.get("max_retries") or get_config_value("max_retries", 3)
+        self.default_model = self.backend_config.get("default_model") or get_config_value("models.default")
 
     @abstractmethod
     async def ask(

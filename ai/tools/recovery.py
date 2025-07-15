@@ -48,11 +48,22 @@ class ErrorPattern:
 class RetryConfig:
     """Configuration for retry behavior."""
 
-    max_attempts: int = 3
-    base_delay: float = 1.0
-    max_delay: float = 60.0
+    max_attempts: int = None
+    base_delay: float = None
+    max_delay: float = None
     exponential_base: float = 2.0
     jitter: bool = True
+    
+    def __post_init__(self):
+        """Load defaults from config if not set."""
+        from ..config_loader import get_config_value
+        
+        if self.max_attempts is None:
+            self.max_attempts = get_config_value("tools.retry.max_attempts", 3)
+        if self.base_delay is None:
+            self.base_delay = get_config_value("tools.retry.base_delay", 1.0)
+        if self.max_delay is None:
+            self.max_delay = get_config_value("tools.retry.max_delay", 60.0)
 
 
 @dataclass
@@ -435,7 +446,9 @@ class ErrorRecoverySystem:
 
         # Special handling for rate limits
         if error_pattern.error_type == ErrorType.RATE_LIMIT_ERROR:
-            base_delay = max(base_delay, 5.0)  # Minimum 5 seconds for rate limits
+            from ..config_loader import get_config_value
+            min_rate_limit_delay = get_config_value("tools.retry.rate_limit_min_delay", 5.0)
+            base_delay = max(base_delay, min_rate_limit_delay)
 
         # Exponential backoff
         delay = base_delay * (self.retry_config.exponential_base**attempt)

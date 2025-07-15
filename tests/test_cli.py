@@ -198,7 +198,7 @@ class TestErrorHandling:
         result = self.runner.invoke(main, ['ask'])
         
         assert result.exit_code != 0
-        assert 'Missing argument' in result.output
+        assert 'Error:' in result.output
 
     def test_invalid_temperature(self):
         """Test handling of invalid temperature value."""

@@ -51,20 +51,28 @@ class CloudBackend(BaseBackend):
                 "LiteLLM is required for cloud backend. Install with: pip install litellm",
             )
 
+        # Get cloud-specific config
+        cloud_config = self.backend_config.get("cloud", {})
+        
         # Default models for different providers
-        self.default_models = {
-            "openai": "gpt-3.5-turbo",
-            "anthropic": "claude-3-sonnet-20240229",
-            "google": "gemini-pro",
-            "openrouter": "openrouter/google/gemini-flash-1.5",
-        }
+        from ..config_loader import get_config_value
+        self.default_models = cloud_config.get("default_models") or get_config_value(
+            "backends.cloud.default_models", {
+                "openai": "gpt-3.5-turbo",
+                "anthropic": "claude-3-sonnet-20240229",
+                "google": "gemini-pro",
+                "openrouter": "openrouter/google/gemini-flash-1.5",
+            }
+        )
 
         # Get default model from backend_config (handles merging)
-        self.default_model = self.backend_config.get("default_model", "gpt-3.5-turbo")
+        self.default_model = self.backend_config.get("default_model") or get_config_value(
+            "models.default", "gpt-3.5-turbo"
+        )
 
         # Get provider order preference
-        self.provider_order = self.backend_config.get(
-            "provider_order", ["openai", "anthropic", "google"]
+        self.provider_order = cloud_config.get("provider_order") or get_config_value(
+            "backends.cloud.provider_order", ["openai", "anthropic", "google"]
         )
 
         # Configure API keys from environment
