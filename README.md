@@ -1,4 +1,4 @@
-# 🤖 GOOBITS TTS
+# 🤖 GOOBITS TTT
 
 Professional, unified command-line interface and Python library for interacting with multiple AI providers including OpenRouter, OpenAI, Anthropic, and Google, with optional local model support via Ollama.
 
@@ -21,7 +21,7 @@ Professional, unified command-line interface and Python library for interacting 
 
 ## 🏗️ Architecture
 
-Goobits TTS implements a **CLI → Backend → Provider** abstraction pattern where a unified interface coordinates multiple AI providers through pluggable backend systems:
+Goobits TTT implements a **CLI → Backend → Provider** abstraction pattern where a unified interface coordinates multiple AI providers through pluggable backend systems:
 
 ```
 CLI Interface / Python API
