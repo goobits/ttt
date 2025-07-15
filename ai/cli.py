@@ -20,7 +20,6 @@ import ai
 
 
 @click.group(invoke_without_command=True)
-@click.argument('prompt', required=False)
 @click.option('--version', is_flag=True, help='Show version information')
 @click.option('--model', '-m', help='Specific model to use')
 @click.option('--system', '-s', help='System prompt to set context')
@@ -33,7 +32,7 @@ import ai
 @click.option('--online', is_flag=True, help='Force cloud backend')
 @click.option('--code', is_flag=True, help='Optimize for code-related tasks')
 @click.pass_context
-def main(ctx, prompt, version, model, system, temperature, max_tokens, 
+def main(ctx, version, model, system, temperature, max_tokens, 
          tools, stream, verbose, offline, online, code):
     """AI Library - Unified AI Interface for local and cloud models."""
     if version:
@@ -41,21 +40,8 @@ def main(ctx, prompt, version, model, system, temperature, max_tokens,
         return
     
     if ctx.invoked_subcommand is None:
-        # If we have a prompt argument, treat as ask command
-        if prompt:
-            # Check if prompt is actually a command name
-            command_names = ['ask', 'chat', 'backend-status', 'models-list', 'tools-list', 'config']
-            if prompt in command_names:
-                # This is a command name, invoke it
-                ctx.invoke(ctx.command.get_command(ctx, prompt))
-            else:
-                # This is a prompt, handle as ask command
-                ask_command(prompt, model, system, temperature, max_tokens, 
-                           tools, stream, verbose, offline, online, code)
-        # If no prompt, show help (stdin input handled by ask subcommand)
-        else:
-            click.echo(ctx.get_help())
-            return
+        click.echo(ctx.get_help())
+        return
 
 
 @main.command()
@@ -272,19 +258,19 @@ def chat(model, system, session_id, tools, load, verbose):
         sys.exit(1)
 
 
-@main.command(name='backend-status')
+@main.command(name='status')
 def backend_status():
     """Show the status of available backends."""
     show_backend_status()
 
 
-@main.command(name='models-list')
+@main.command(name='models')
 def models_list():
     """List available models from all backends."""
     show_models_list()
 
 
-@main.command(name='tools-list')
+@main.command(name='tools')
 def tools_list():
     """List available tools."""
     show_tools_list()
@@ -459,10 +445,8 @@ def show_tools_list():
             tools = list_tools(category=category)
             if tools:
                 console.print(f"[bold green]{category.title()}:[/bold green]")
-                for tool_name in sorted(tools.keys()):
-                    tool = tools[tool_name]
-                    desc = getattr(tool, 'description', 'No description')
-                    console.print(f"  • {tool_name}: {desc}")
+                for tool in sorted(tools, key=lambda t: t.name):
+                    console.print(f"  • {tool.name}: {tool.description}")
                 console.print()
     except Exception as e:
         console.print(f"Error listing tools: {e}")

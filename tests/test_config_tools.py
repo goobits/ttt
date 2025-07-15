@@ -95,17 +95,17 @@ print("This should timeout")
 
 
 class TestToolsListCommand:
-    """Test the tools-list CLI command."""
+    """Test the tools CLI command."""
 
     def test_tools_list_command_parsing(self):
-        """Test that tools-list command works correctly."""
+        """Test that tools command works correctly."""
         from click.testing import CliRunner
         from ai.cli import main
         
         runner = CliRunner()
         
         with patch("ai.cli.show_tools_list") as mock_show_tools:
-            result = runner.invoke(main, ["tools-list"])
+            result = runner.invoke(main, ["tools"])
             assert result.exit_code == 0
             mock_show_tools.assert_called_once()
 

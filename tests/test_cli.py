@@ -128,25 +128,25 @@ class TestCLICommands:
             mock_chat_context.assert_called_once()
 
     def test_backend_status_command(self):
-        """Test backend-status command."""
+        """Test status command."""
         with patch('ai.cli.show_backend_status') as mock_status:
-            result = self.runner.invoke(main, ['backend-status'])
+            result = self.runner.invoke(main, ['status'])
             
             assert result.exit_code == 0
             mock_status.assert_called_once()
 
     def test_models_list_command(self):
-        """Test models-list command."""
+        """Test models command."""
         with patch('ai.cli.show_models_list') as mock_models:
-            result = self.runner.invoke(main, ['models-list'])
+            result = self.runner.invoke(main, ['models'])
             
             assert result.exit_code == 0
             mock_models.assert_called_once()
 
     def test_tools_list_command(self):
-        """Test tools-list command."""
+        """Test tools command."""
         with patch('ai.cli.show_tools_list') as mock_tools:
-            result = self.runner.invoke(main, ['tools-list'])
+            result = self.runner.invoke(main, ['tools'])
             
             assert result.exit_code == 0
             mock_tools.assert_called_once()

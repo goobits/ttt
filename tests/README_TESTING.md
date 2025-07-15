@@ -20,7 +20,7 @@ The testing suite is built on pytest with the following key components:
 
 ### 3. **CLI Testing** (`test_modern_cli.py`)
 - **Click CliRunner**: Uses Click's built-in testing utilities for reliable CLI testing
-- **Command Testing**: Tests all CLI commands (ask, chat, backend-status, etc.)
+- **Command Testing**: Tests all CLI commands (ask, chat, status, models, tools, etc.)
 - **Argument Parsing**: Verifies proper parsing of flags and options
 - **Help Output**: Tests help text generation and error handling
 

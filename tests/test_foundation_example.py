@@ -94,7 +94,7 @@ class TestLocalBackendFoundation:
             mock_client_class.return_value.__aexit__ = AsyncMock(return_value=None)
 
             # Make the request
-            response = await backend.ask("Hello, AI!")
+            response = await backend.ask("Hello, AI!", model="test-model")
 
             # Verify response
             assert str(response) == "Hello, world!"
@@ -135,7 +135,7 @@ class TestLocalBackendFoundation:
             # Should raise our custom exception
             from ai.exceptions import ModelNotFoundError
             with pytest.raises(ModelNotFoundError) as exc_info:
-                await backend.ask("Test prompt")
+                await backend.ask("Test prompt", model="test-model")
 
             assert exc_info.value.details["model"] == "test-model"
             assert exc_info.value.details["backend"] == "local"
@@ -154,9 +154,9 @@ class TestCLIFoundation:
         self.runner = CliRunner()
 
     def test_backend_status_command(self):
-        """Test backend-status command invocation."""
+        """Test status command invocation."""
         with patch('ai.cli.show_backend_status') as mock_status:
-            result = self.runner.invoke(main, ["backend-status"])
+            result = self.runner.invoke(main, ["status"])
             
             assert result.exit_code == 0
             mock_status.assert_called_once()
@@ -194,7 +194,7 @@ class TestCLIFoundation:
         assert "AI Library - Unified AI Interface" in result.stdout
         assert "ask" in result.stdout
         assert "chat" in result.stdout
-        assert "backend-status" in result.stdout
+        assert "status" in result.stdout
 
     def test_invalid_command_handling(self):
         """Test handling of invalid commands."""

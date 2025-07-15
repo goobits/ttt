@@ -14,7 +14,7 @@ from ai.api import ask, stream
 
 
 class TestModelsCommands:
-    """Test the models-list command."""
+    """Test the models command."""
 
     @patch("ai.backends.local.LocalBackend")
     @patch("httpx.get")
@@ -96,7 +96,7 @@ class TestModelsCommands:
 
 
 class TestBackendCommands:
-    """Test the backend-status command."""
+    """Test the status command."""
 
     @patch.dict(os.environ, {}, clear=True)
     @patch("ai.backends.local.LocalBackend")
@@ -169,16 +169,16 @@ class TestMainCommand:
         assert "AI Library - Unified AI Interface" in result.output
 
     def test_backend_status_command(self):
-        """Test backend-status command."""
+        """Test status command."""
         with patch("ai.cli.show_backend_status") as mock_status:
-            result = self.runner.invoke(main, ["backend-status"])
+            result = self.runner.invoke(main, ["status"])
             assert result.exit_code == 0
             mock_status.assert_called_once()
 
     def test_models_list_command(self):
-        """Test models-list command."""
+        """Test models command."""
         with patch("ai.cli.show_models_list") as mock_models:
-            result = self.runner.invoke(main, ["models-list"])
+            result = self.runner.invoke(main, ["models"])
             assert result.exit_code == 0
             mock_models.assert_called_once()
 
