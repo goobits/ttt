@@ -34,7 +34,7 @@ def basic_ask_examples():
 
     # Speed preference
     print("3. Prefer speed:")
-    response = ask("What's 2+2?", fast=True)
+    response = ask("What's 2+2?", model="gpt-3.5-turbo")
     print(f"Quick answer: {response}")
     print(f"Model: {response.model} (optimized for speed)")
     print()
@@ -43,7 +43,7 @@ def basic_ask_examples():
     print("4. Prefer quality:")
     response = ask(
         "Analyze the philosophical implications of artificial intelligence",
-        quality=True,
+        model="gpt-4",
     )
     print(f"Detailed response: {response[:100]}...")
     print(f"Model: {response.model} (optimized for quality)")
@@ -65,7 +65,7 @@ def streaming_examples():
     print("2. Streaming with preferences:")
     print("AI (fast mode): ", end="", flush=True)
 
-    for chunk in stream("Explain machine learning in simple terms", fast=True):
+    for chunk in stream("Explain machine learning in simple terms", model="gpt-3.5-turbo"):
         print(chunk, end="", flush=True)
 
     print("\n\n")
@@ -136,11 +136,11 @@ def model_selection_examples():
     code_response = ask("Write a Python function to calculate fibonacci numbers")
     print(f"Code query model: {code_response.model}")
 
-    # Math query (should prefer fast models)
+    # Math query
     math_response = ask("What's 15% of 250?")
     print(f"Math query model: {math_response.model}")
 
-    # Complex analysis (should prefer quality models)
+    # Complex analysis
     analysis_response = ask(
         "Provide a comprehensive analysis of renewable energy trends"
     )
