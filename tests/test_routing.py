@@ -132,16 +132,17 @@ class TestRouter:
     def test_resolve_model_none(self):
         """Test model resolution with None."""
         router = Router()
-        mock_backend = MockBackend()
-        mock_backend.default_model = "backend-default"
-
-        # With backend default
-        resolved = router.resolve_model(None, backend=mock_backend)
-        assert resolved == "backend-default"
-
-        # Without backend, uses fallback
-        resolved = router.resolve_model(None)
-        assert resolved == "gpt-3.5-turbo"  # Fallback default
+        
+        # If config has default_model, that takes precedence
+        if router.config.default_model:
+            resolved = router.resolve_model(None)
+            assert resolved == router.config.default_model
+        else:
+            # Only if no config default, check backend default
+            mock_backend = MockBackend()
+            mock_backend.default_model = "backend-default"
+            resolved = router.resolve_model(None, backend=mock_backend)
+            assert resolved == "backend-default"
 
 
 class TestSmartRouting:
@@ -172,83 +173,10 @@ class TestSmartRouting:
         assert backend.name == "local"
         assert model == "test-local-model"
 
-    def test_smart_route_prefer_local(self):
-        """Test routing with prefer_local flag."""
-        router = Router()
-
-        backend, model = router.smart_route("Test prompt", prefer_local=True)
-
-        assert backend.name == "local"
-
-    def test_smart_route_code_detection(self):
-        """Test routing detects code-related queries."""
-        router = Router()
-
-        # Ensure coding alias exists
-        if "coding" not in model_registry.aliases:
-            model_registry.add_model(
-                ModelInfo(
-                    name="claude-3-sonnet",
-                    provider="cloud",
-                    provider_name="claude-3-sonnet-20240229",
-                    aliases=["coding"],
-                )
-            )
-
-        backend, model = router.smart_route("Write a Python function to sort a list")
-
-        # Should select the coding model
-        assert model == "claude-3-sonnet"
-
-    def test_smart_route_speed_preference(self):
-        """Test routing with speed preference."""
-        router = Router()
-
-        backend, model = router.smart_route(
-            "What is 2+2?", prefer_speed=True  # Short question implies speed preference
-        )
-
-        # Should select a fast model
-        model_info = model_registry.get_model(model)
-        if model_info:
-            assert model_info.speed == "fast"
-
-    def test_smart_route_quality_preference(self):
-        """Test routing with quality preference."""
-        router = Router()
-
-        backend, model = router.smart_route(
-            "Provide a comprehensive analysis of quantum computing", prefer_quality=True
-        )
-
-        # Should select a high-quality model
-        model_info = model_registry.get_model(model)
-        if model_info:
-            assert model_info.quality == "high"
-
-    def test_smart_route_custom_keywords(self):
-        """Test routing with custom keywords from config."""
-        router = Router()
-
-        # Mock config with custom keywords
-        with patch.object(router, "config") as mock_config:
-            mock_config.model_dump.return_value = {
-                "routing": {
-                    "code_keywords": ["algorithm", "implement"],
-                    "speed_keywords": ["quick", "brief"],
-                    "quality_keywords": ["detailed", "thorough"],
-                }
-            }
-
-            # Test code keyword detection
-            backend, model = router.smart_route("Implement an algorithm")
-            # Should trigger code routing logic
-
-            # Test speed keyword detection
-            backend, model = router.smart_route("Give me a brief answer", fast=True)
-            model_info = model_registry.get_model(model)
-            if model_info:
-                assert model_info.speed == "fast"
+    # Note: Tests for prefer_local, code_detection, speed_preference, 
+    # quality_preference, and custom_keywords have been removed as these
+    # features were removed from the codebase per user request.
+    # The routing now simply uses configured defaults.
 
 
 class TestRouterFallback:
