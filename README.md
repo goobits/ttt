@@ -1,120 +1,113 @@
-# AI Library - Unified AI Interface
+# 🤖 GOOBITS TTS
 
-A professional, unified command-line interface for interacting with multiple AI providers including OpenRouter, OpenAI, Anthropic, and Google, with optional local model support via Ollama.
+Professional, unified command-line interface and Python library for interacting with multiple AI providers including OpenRouter, OpenAI, Anthropic, and Google, with optional local model support via Ollama.
 
-## Features
+## 🔗 Related Projects
 
-- **🎯 Simple CLI**: Just `ai "your question"` - works instantly
-- **🔧 Function Calling**: AI can call your Python functions and tools
-- **🌐 Multi-Provider**: Supports OpenRouter, OpenAI, Anthropic, Google APIs
-- **🤖 Local Support**: Optional Ollama integration for local models
-- **⚡ Fast Setup**: One-command installation with automatic configuration
-- **🛡️ Robust Error Handling**: Comprehensive error messages with helpful suggestions
-- **🧹 Clean Output**: Minimal logging for production use
-- **📊 Status Monitoring**: Backend health checks and model listing
-- **⚡ Streaming Support**: Real-time response streaming
-- **🎨 Rich Terminal UI**: Beautiful formatted output with color support
+- **[Goobits](https://github.com/goobits/goobits)** - Interactive metaball workspace
+- **[FractalCode](https://github.com/goobits/fractalcode)** - Multi-agent AI development workflows
+- **[AgentFlow](https://github.com/goobits/agentflow)** - Conversational AI workflow engine
 
-## Quick Start
+## 📋 Table of Contents
 
-### Installation
+- [Architecture](#️-architecture)
+- [Quick Start](#-quick-start)
+- [Command Reference](#-command-reference)
+- [Function Calling & Tools](#-function-calling--tools)
+- [Python Library Usage](#-python-library-usage)
+- [Backend Configuration](#-backend-configuration)
+- [Configuration Management](#️-configuration-management)
+- [Tech Stack](#️-tech-stack)
+
+## 🏗️ Architecture
+
+Goobits TTS implements a **CLI → Backend → Provider** abstraction pattern where a unified interface coordinates multiple AI providers through pluggable backend systems:
+
+```
+CLI Interface / Python API
+         ↓
+    ┌─────────────────────────────────────┐
+    │  Backend Abstraction Layer          │
+    │  • Cloud provider routing          │
+    │  • Local model support (Ollama)    │  
+    │  • Error handling and retries      │
+    │  • Response streaming              │
+    └─────────────┬───────────────────────┘
+                  ▼ Routes to providers
+    ┌─────────────────────────────────────┐
+    │  AI Providers (Multi-Provider)      │
+    │  • OpenRouter (100+ models)        │
+    │  • OpenAI, Anthropic, Google       │
+    │  • Function calling capabilities   │
+    │  • Local Ollama integration        │
+    └─────────────────────────────────────┘
+```
+
+## ✨ Key Features
+
+- **🎯 Simple CLI** - Just `ai "your question"` - works instantly
+- **🔧 Function Calling** - AI can call your Python functions and tools
+- **🌐 Multi-Provider** - OpenRouter, OpenAI, Anthropic, Google APIs
+- **🤖 Local Support** - Optional Ollama integration for privacy
+- **⚡ Fast Setup** - One-command installation with automatic configuration
+- **🛡️ Robust Error Handling** - Comprehensive error messages with helpful suggestions
+- **📊 Status Monitoring** - Backend health checks and model listing
+- **🎨 Rich Terminal UI** - Beautiful formatted output with color support
+
+## 🚀 Quick Start
 
 ```bash
+# Install in one command
 ./setup.sh install
-```
 
-This will:
-- Create a Python virtual environment
-- Install all dependencies
-- Set up shell integration
-- Create global `ai` command
-- Generate environment template
-
-### Configuration
-
-**Option 1: Using the config command (recommended):**
-```bash
-# Set API keys
+# Set up API key (choose one)
 ai config openai_key sk-your-key-here
-ai config anthropic_key sk-ant-your-key-here
+ai config openrouter_key sk-or-v1-your-key-here
 
-# Or set up for local usage
+# Start using immediately
+ai "What is Python?"
+ai "Write a function to sort a list" --code
+
+# Use local models (privacy-focused)
 ai config backend local
 ai config model qwen2.5:32b
+ai "private question" --offline
+
+# Use built-in tools
+ai "What time is it in Tokyo?" --tools get_current_time
+ai "Search for Python tutorials" --tools web_search
 ```
 
-**Option 2: Edit `.env` file:**
-```bash
-# OpenRouter (recommended - supports multiple models)
-OPENROUTER_API_KEY=your-openrouter-key-here
+## ⚙️ Configuration Management
 
-# Direct provider keys (optional)
-# OPENAI_API_KEY=your-openai-key-here
-# ANTHROPIC_API_KEY=your-anthropic-key-here
-# GOOGLE_API_KEY=your-google-key-here
-```
-
-### Common Setup Scenarios
-
-**For Qwen/Local Users:**
-```bash
-ai config backend local
-ai config model qwen2.5:32b
-ai config ollama_url http://localhost:11434
-ai "test question"  # Now uses local Qwen by default
-```
-
-**For Claude Coding:**
-```bash
-ai config model claude-3-sonnet-20240229
-ai config backend cloud
-ai config anthropic_key sk-ant-your-key-here
-ai "write a Python function" --code
-```
-
-**For Fast Responses:**
-```bash
-ai config model gpt-3.5-turbo
-ai config backend cloud  
-ai config timeout 10
-ai "quick question"
-```
-
-### Configuration Reference
+### Quick Configuration
 
 ```bash
-# Show all current configuration
+# View all settings
 ai config
 
-# Show specific setting
-ai config model
-ai config backend
-ai config timeout
+# Set API keys (masked when displayed)
+ai config openai_key sk-your-key-here
+ai config anthropic_key sk-ant-your-key-here
+ai config openrouter_key sk-or-v1-your-key-here
 
-# Set configuration values
-ai config model qwen2.5:32b           # Set default model
-ai config backend local               # Set backend (local/cloud/auto)
-ai config timeout 60                  # Set timeout in seconds
-ai config retries 5                   # Set max retry attempts
-ai config ollama_url http://localhost:11434  # Set Ollama URL
-
-# API keys (masked when displayed)
-ai config openai_key sk-...
-ai config anthropic_key sk-ant-...
-ai config google_key AI...
+# Configure behavior
+ai config model gpt-4                     # Default model
+ai config backend local                   # Backend (local/cloud/auto)
+ai config timeout 60                      # Request timeout
+ai config retries 3                       # Max retry attempts
 ```
 
-**Available Configuration Keys:**
-- `model` - Default model to use
-- `backend` - Backend selection (local/cloud/auto)
-- `timeout` - Request timeout in seconds
-- `retries` - Maximum retry attempts
-- `ollama_url` - Ollama server URL for local backend
-- `openai_key` - OpenAI API key
-- `anthropic_key` - Anthropic API key  
-- `google_key` - Google API key
+### Common Configurations
 
-All configuration changes are automatically saved to `~/.config/ai/config.yaml`.
+| Use Case | Configuration |
+|----------|---------------|
+| **Privacy-First** | `ai config backend local && ai config model qwen2.5:32b` |
+| **Fast Responses** | `ai config model gpt-3.5-turbo && ai config timeout 10` |
+| **Coding Assistant** | `ai config model claude-3-sonnet && ai config backend cloud` |
+| **Cost-Effective** | `ai config openrouter_key sk-or-... && ai config model google/gemini-flash` |
+
+All settings saved to `~/.config/ai/config.yaml`
 
 ## Migration from Other AI Tools
 
