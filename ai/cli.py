@@ -20,41 +20,61 @@ import ai
 
 @click.group(invoke_without_command=True)
 @click.option('--version', is_flag=True, help='Show version information')
-@click.pass_context
-def main(ctx, version):
-    """AI Library - Unified AI Interface for local and cloud models."""
-    if version:
-        click.echo(f"AI Library v{getattr(ai, '__version__', '0.4.0')}")
-        return
-    
-    if ctx.invoked_subcommand is None:
-        click.echo(ctx.get_help())
-
-
-@main.command()
-@click.argument('prompt', required=True)
+@click.argument('prompt', required=False)
 @click.option('--model', '-m', help='Specific model to use')
 @click.option('--system', '-s', help='System prompt to set context')
 @click.option('--temperature', '-t', type=float, help='Sampling temperature (0-1)')
 @click.option('--max-tokens', type=int, help='Maximum tokens to generate')
-@click.option('--fast', is_flag=True, help='Prefer speed over quality')
-@click.option('--quality', is_flag=True, help='Prefer quality over speed')
 @click.option('--tools', help='Comma-separated list of tools to enable')
 @click.option('--stream', is_flag=True, help='Stream the response')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 @click.option('--offline', is_flag=True, help='Force local backend')
 @click.option('--online', is_flag=True, help='Force cloud backend')
 @click.option('--code', is_flag=True, help='Optimize for code-related tasks')
-def ask(prompt, model, system, temperature, max_tokens, fast, quality, 
-        tools, stream, verbose, offline, online, code):
+@click.pass_context
+def main(ctx, version, prompt, model, system, temperature, max_tokens, 
+         tools, stream, verbose, offline, online, code):
+    """AI Library - Unified AI Interface for local and cloud models."""
+    if version:
+        click.echo(f"AI Library v{getattr(ai, '__version__', '0.4.0')}")
+        return
+    
+    if ctx.invoked_subcommand is None:
+        # Check if we have stdin or a prompt argument
+        if prompt is not None:
+            # Direct prompt provided
+            ask_command(prompt, model, system, temperature, max_tokens, 
+                       tools, stream, verbose, offline, online, code)
+        elif not sys.stdin.isatty():
+            # Reading from pipe - always try to read
+            ask_command(None, model, system, temperature, max_tokens, 
+                       tools, stream, verbose, offline, online, code)
+        else:
+            # Show help menu
+            click.echo(ctx.get_help())
+
+
+def ask_command(prompt, model, system, temperature, max_tokens, 
+                tools, stream, verbose, offline, online, code):
     """Ask the AI a question and get a response."""
     
     # Handle stdin input
-    if prompt == '-':
-        prompt = sys.stdin.read().strip()
+    if prompt == '-' or prompt is None:
+        if not sys.stdin.isatty():
+            # Reading from pipe
+            try:
+                prompt = sys.stdin.read().strip()
+            except EOFError:
+                prompt = ""
+        else:
+            # Interactive mode, prompt is required
+            if prompt is None:
+                click.echo("Error: No prompt provided", err=True)
+                sys.exit(1)
+        
         if not prompt:
-            click.echo("Error: No input provided via stdin", err=True)
-            sys.exit(1)
+            # If we got here from the main function without a prompt, show help
+            return
     
     # Handle backend selection
     backend = None
@@ -79,17 +99,13 @@ def ask(prompt, model, system, temperature, max_tokens, fast, quality,
         kwargs['temperature'] = temperature
     if max_tokens:
         kwargs['max_tokens'] = max_tokens
-    if fast:
-        kwargs['fast'] = True
-    if quality:
-        kwargs['quality'] = True
     if tools_list:
         kwargs['tools'] = tools_list
     if backend:
         kwargs['backend'] = backend
     
-    # Apply coding optimizations
-    if code or is_coding_request(prompt):
+    # Apply coding optimizations only if explicitly requested
+    if code:
         apply_coding_optimization(kwargs)
     
     try:
@@ -113,6 +129,8 @@ def ask(prompt, model, system, temperature, max_tokens, fast, quality,
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
+
+
 
 
 @main.command()
@@ -428,10 +446,6 @@ def apply_coding_optimization(kwargs):
     # Lower temperature for more deterministic code
     if 'temperature' not in kwargs:
         kwargs['temperature'] = 0.3
-    
-    # Prefer quality for code generation
-    if 'quality' not in kwargs:
-        kwargs['quality'] = True
 
 
 def get_config_key_mapping():

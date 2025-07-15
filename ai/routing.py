@@ -184,8 +184,6 @@ class Router:
         *,
         model: Optional[str] = None,
         backend: Optional[Union[str, BaseBackend]] = None,
-        prefer_speed: bool = False,
-        prefer_quality: bool = False,
         prefer_local: bool = False,
         **kwargs,
     ) -> tuple[BaseBackend, str]:
@@ -260,143 +258,16 @@ class Router:
             )
             return selected_backend, selected_model
 
-        # Analyze prompt for hints
-        prompt_text = (
-            prompt
-            if isinstance(prompt, str)
-            else " ".join(item for item in prompt if isinstance(item, str))
-        )
-        prompt_lower = prompt_text.lower()
 
-        # Get routing keywords from config
-        config_data = self.config.model_dump()
-        routing_config = config_data.get("routing", {})
 
-        code_keywords = routing_config.get(
-            "code_keywords",
-            [
-                "code",
-                "function",
-                "class",
-                "bug",
-                "debug",
-                "programming",
-                "python",
-                "javascript",
-                "java",
-                "c++",
-                "rust",
-                "go",
-            ],
-        )
-
-        speed_keywords = routing_config.get(
-            "speed_keywords", ["what is", "who is", "when", "where", "quick", "simple"]
-        )
-
-        quality_keywords = routing_config.get(
-            "quality_keywords",
-            [
-                "analyze",
-                "explain in detail",
-                "comprehensive",
-                "thorough",
-                "compare",
-                "contrast",
-                "evaluate",
-            ],
-        )
-
-        # Code-related queries
-        if any(keyword in prompt_lower for keyword in code_keywords):
-            # Prefer coding models
-            if "coding" in model_registry.aliases:
-                coding_model = model_registry.aliases["coding"]
-                model_info = model_registry.get_model(coding_model)
-                if model_info:
-                    if model_info.provider == "local":
-                        selected_backend = self.get_backend("local")
-                    else:
-                        selected_backend = self.get_backend("cloud")
-                    return selected_backend, coding_model
-
-        # Quick questions (prefer speed)
-        if (
-            any(keyword in prompt_lower for keyword in speed_keywords)
-            or len(prompt) < 50
-        ):
-            prefer_speed = True
-
-        # Complex analysis (prefer quality)
-        if (
-            any(keyword in prompt_lower for keyword in quality_keywords)
-            or len(prompt) > 200
-        ):
-            prefer_quality = True
-
-        # Select backend and model based on preferences
-        if prefer_speed:
-            selected_model = self._select_model_by_preference(None, True, False)
-        elif prefer_quality:
-            selected_model = self._select_model_by_preference(None, False, True)
-        else:
-            selected_model = self._select_model_by_preference(None, False, False)
-
-        # Determine backend from selected model
-        model_info = model_registry.get_model(selected_model)
-        if model_info and model_info.provider == "local":
-            selected_backend = self.get_backend("local")
-        else:
-            selected_backend = self.get_backend("cloud")
+        # Use auto-selection to respect configured default_backend
+        selected_backend = self._auto_select_backend()
+        
+        # Use configured default model
+        selected_model = self.resolve_model(model, selected_backend)
 
         return selected_backend, selected_model
 
-    def _select_model_by_preference(
-        self,
-        provider: Optional[str] = None,
-        prefer_speed: bool = False,
-        prefer_quality: bool = False,
-    ) -> str:
-        """Select model based on preferences."""
-        candidates = []
-
-        for name, model_info in model_registry.models.items():
-            if provider and model_info.provider != provider:
-                continue
-            candidates.append((name, model_info))
-
-        if not candidates:
-            return "gpt-3.5-turbo"  # Fallback
-
-        # Score models based on preferences
-        scored_models = []
-        for name, model_info in candidates:
-            score = 0
-
-            if prefer_speed:
-                if model_info.speed == "fast":
-                    score += 3
-                elif model_info.speed == "medium":
-                    score += 1
-
-            if prefer_quality:
-                if model_info.quality == "high":
-                    score += 3
-                elif model_info.quality == "medium":
-                    score += 1
-
-            # Default preference for balanced models
-            if not prefer_speed and not prefer_quality:
-                if model_info.quality == "medium" and model_info.speed == "medium":
-                    score += 2
-
-            scored_models.append((score, name))
-
-        # Return highest scoring model
-        scored_models.sort(reverse=True)
-        selected = scored_models[0][1]
-        logger.debug(f"Selected model by preference: {selected}")
-        return selected
 
     async def route_with_fallback(
         self,

@@ -37,8 +37,6 @@ def ask(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
-    fast: bool = False,
-    quality: bool = False,
     tools: Optional[List] = None,
     **kwargs,
 ) -> AIResponse:
@@ -81,8 +79,6 @@ def ask(
         temperature: Sampling temperature 0-1 (optional)
         max_tokens: Maximum tokens to generate (optional)
         backend: Backend to use, "local", "cloud", "auto", or Backend instance (optional)
-        fast: Prefer speed over quality (optional)
-        quality: Prefer quality over speed (optional)
         tools: List of functions/tools the AI can call (optional)
         **kwargs: Additional backend-specific parameters
 
@@ -95,8 +91,6 @@ def ask(
         prompt,
         model=model,
         backend=backend,
-        prefer_speed=fast,
-        prefer_quality=quality,
         **kwargs,
     )
 
@@ -122,8 +116,6 @@ def stream(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
-    fast: bool = False,
-    quality: bool = False,
     tools: Optional[List] = None,
     **kwargs,
 ) -> Iterator[str]:
@@ -148,8 +140,6 @@ def stream(
         temperature: Sampling temperature 0-1 (optional)
         max_tokens: Maximum tokens to generate (optional)
         backend: Backend to use, "local", "cloud", "auto", or Backend instance (optional)
-        fast: Prefer speed over quality (optional)
-        quality: Prefer quality over speed (optional)
         tools: List of functions/tools the AI can call (optional)
         **kwargs: Additional backend-specific parameters
 
@@ -161,8 +151,6 @@ def stream(
         prompt,
         model=model,
         backend=backend,
-        prefer_speed=fast,
-        prefer_quality=quality,
         **kwargs,
     )
 
@@ -271,8 +259,6 @@ async def ask_async(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
-    fast: bool = False,
-    quality: bool = False,
     tools: Optional[List] = None,
     **kwargs,
 ) -> AIResponse:
@@ -286,8 +272,6 @@ async def ask_async(
         temperature: Sampling temperature 0-1 (optional)
         max_tokens: Maximum tokens to generate (optional)
         backend: Backend to use, "local", "cloud", "auto", or Backend instance (optional)
-        fast: Prefer speed over quality (optional)
-        quality: Prefer quality over speed (optional)
         tools: List of functions/tools the AI can call (optional)
         **kwargs: Additional backend-specific parameters
         
@@ -299,8 +283,6 @@ async def ask_async(
         prompt,
         model=model,
         backend=backend,
-        prefer_speed=fast,
-        prefer_quality=quality,
         **kwargs,
     )
 
@@ -323,8 +305,6 @@ async def stream_async(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
-    fast: bool = False,
-    quality: bool = False,
     tools: Optional[List] = None,
     **kwargs,
 ) -> AsyncIterator[str]:
@@ -338,8 +318,6 @@ async def stream_async(
         temperature: Sampling temperature 0-1 (optional)
         max_tokens: Maximum tokens to generate (optional)
         backend: Backend to use, "local", "cloud", "auto", or Backend instance (optional)
-        fast: Prefer speed over quality (optional)
-        quality: Prefer quality over speed (optional)
         tools: List of functions/tools the AI can call (optional)
         **kwargs: Additional backend-specific parameters
         
@@ -351,8 +329,6 @@ async def stream_async(
         prompt,
         model=model,
         backend=backend,
-        prefer_speed=fast,
-        prefer_quality=quality,
         **kwargs,
     )
 

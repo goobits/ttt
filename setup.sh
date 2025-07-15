@@ -73,8 +73,18 @@ install_ai() {
     print_status "Installing AI library..."
     source "$VENV_DIR/bin/activate"
     
-    # Install the library in development mode
-    pip install -e .
+    # Install dependencies from pyproject.toml
+    if command_exists poetry; then
+        print_status "Using Poetry for dependency management..."
+        poetry install
+    else
+        print_status "Installing dependencies manually..."
+        # Install core dependencies
+        pip install pydantic "litellm>=1.0.0" "rich>=13.0.0" "click>=8.0.0" "python-dotenv>=1.0.0" "pyyaml>=6.0" "bleach>=6.0.0" "validators>=0.22.0" "httpx"
+        
+        # Install the library in development mode
+        pip install -e .
+    fi
     
     print_success "AI library installed"
 }
@@ -186,7 +196,9 @@ install() {
     echo "3. ${GREEN}Test installation${NC}: ${YELLOW}ai 'What is 2+2?'${NC}"
     echo
     echo -e "${BLUE}COMMANDS AVAILABLE:${NC}"
+    echo "  ${YELLOW}ai${NC}                               # Show help menu"
     echo "  ${YELLOW}ai${NC} 'Your question here'           # Basic usage"
+    echo "  ${YELLOW}echo 'text' | ai${NC}                 # Pipe text to AI"
     echo "  ${YELLOW}ai${NC} backend-status                 # Check system status"
     echo "  ${YELLOW}ai${NC} models-list                    # List available models"
     echo "  ${YELLOW}ai${NC} --help                         # Show all options"
@@ -194,17 +206,33 @@ install() {
     echo -e "${BLUE}EXAMPLE USAGE:${NC}"
     echo "  ${YELLOW}ai${NC} 'Explain quantum computing'"
     echo "  ${YELLOW}ai${NC} 'Write Python code' --model claude-3-sonnet"
+    echo "  ${YELLOW}echo 'Hello world' | ai${NC}          # NEW: Direct pipe support"
+    echo "  ${YELLOW}cat file.txt | ai 'Review this'${NC}  # Pipe with additional prompt"
+    echo "  ${YELLOW}git diff | ai 'Explain changes'${NC}  # Pipe git output"
     echo "  ${YELLOW}ai${NC} 'Question' --verbose           # Show metadata"
     echo
     echo -e "${GREEN}FEATURES:${NC}"
     echo "  ✅ Unified interface for multiple AI providers"
     echo "  ✅ OpenRouter integration (100+ models)"
+    echo "  ✅ Direct pipe support (no dash needed!)"
     echo "  ✅ Clean output with minimal logging"
     echo "  ✅ Global command available from any directory"
     echo "  ✅ Professional error handling and diagnostics"
     echo
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${GREEN}Ready for professional AI assistance!${NC}"
+    
+    echo
+    echo -e "${BLUE}TROUBLESHOOTING:${NC}"
+    echo "If you see 'model not found' errors:"
+    echo "  ${YELLOW}ai config backend cloud${NC}         # Switch to cloud backend"
+    echo "  ${YELLOW}ai config openai_key sk-...${NC}     # Add your API key"
+    echo "  ${YELLOW}ai backend-status${NC}               # Check configuration"
+    echo
+    echo "For local models (requires Ollama):"
+    echo "  ${YELLOW}curl https://ollama.ai/install.sh | sh${NC}"
+    echo "  ${YELLOW}ollama pull mistral${NC}             # Pull a model"
+    echo "  ${YELLOW}ai config model mistral${NC}         # Set default model"
     
     # Offer to test in current session
     echo

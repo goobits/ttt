@@ -54,12 +54,17 @@ CLI Interface / Python API
 - **🛡️ Robust Error Handling** - Comprehensive error messages with helpful suggestions
 - **📊 Status Monitoring** - Backend health checks and model listing
 - **🎨 Rich Terminal UI** - Beautiful formatted output with color support
+- **🔄 Direct Pipe Support** - `echo "text" | ai` - no dash needed!
+- **📋 Smart Help** - `ai` shows help, `ai "question"` executes
 
 ## 🚀 Quick Start
 
 ```bash
 # Install in one command
 ./setup.sh install
+
+# Restart terminal or reload shell
+source ~/.bashrc
 
 # Set up API key (choose one)
 ai config openai_key sk-your-key-here
@@ -68,6 +73,10 @@ ai config openrouter_key sk-or-v1-your-key-here
 # Start using immediately
 ai "What is Python?"
 ai "Write a function to sort a list" --code
+
+# Pipe text directly to AI
+echo "Explain this code" | ai
+cat file.txt | ai "Review this code"
 
 # Use local models (privacy-focused)
 ai config backend local
@@ -104,7 +113,7 @@ ai config retries 3                       # Max retry attempts
 | Use Case | Configuration |
 |----------|---------------|
 | **Privacy-First** | `ai config backend local && ai config model qwen2.5:32b` |
-| **Fast Responses** | `ai config model gpt-3.5-turbo && ai config timeout 10` |
+| **Fast Responses** | `ai config model gpt-3.5-turbo` |
 | **Coding Assistant** | `ai config model claude-3-sonnet && ai config backend cloud` |
 | **Cost-Effective** | `ai config openrouter_key sk-or-... && ai config model google/gemini-flash` |
 
@@ -144,6 +153,14 @@ ai "write" --code "a function"
 # Basic usage - just like llm
 ai "What is Python?"
 
+# Show help menu
+ai
+
+# Pipe text directly (NEW!)
+echo "Hello world" | ai
+cat script.py | ai "Review this code"
+git diff | ai "Explain these changes"
+
 # Coding assistance with optimization
 ai "write a Python function to sort a list" --code --verbose
 
@@ -158,9 +175,8 @@ ai "Tell me a story" --stream
 ai backend-status                        # Check what's configured
 ai models-list                          # See available models
 
-# Read from stdin (pipe support)
-cat script.py | ai "review this code" --code
-echo "2 + 2" | ai "what is this?" -
+# Traditional stdin support (also works)
+echo "2 + 2" | ai -
 ```
 
 ### Tools and Function Calling
@@ -312,7 +328,15 @@ response = ask(
 # Simple usage (like llm)
 ai "Your question here"
 
-# NEW: Enhanced backend control
+# Show help menu
+ai
+
+# NEW: Direct pipe support (no dash needed!)
+echo "Hello world" | ai
+cat file.txt | ai
+git diff | ai
+
+# Enhanced backend control
 ai "Question" --offline                  # Force local models (Ollama)
 ai "Question" --online                   # Force cloud models
 ai "Question" --code                     # Coding-optimized responses
@@ -336,9 +360,10 @@ ai "Write a poem" --temperature 0.9
 # Token limits
 ai "Summarize this" --max-tokens 100
 
-# Read from stdin (enhanced pipe support)
-echo "What is this?" | ai -
-cat file.txt | ai "Explain this code" -
+# Enhanced pipe support (multiple ways)
+echo "What is this?" | ai               # NEW: Direct pipe
+echo "What is this?" | ai -             # Traditional stdin
+cat file.txt | ai "Explain this code"   # Pipe with additional prompt
 cat script.py | ai "review this code" --code
 
 # Use tools from CLI
@@ -357,7 +382,7 @@ ai "Analyze file" --tools /path/to/tools.py:analyze
 ai "Read config.json" --tools read_file
 ai "Calculate 15% of 250" --tools calculate
 
-# NEW: Flexible flag positioning (all equivalent)
+# Flexible flag positioning (all equivalent)
 ai "write a function" --code --verbose
 ai --code "write a function" --verbose  
 ai --verbose --code "write a function"
