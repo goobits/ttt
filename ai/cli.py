@@ -3,6 +3,7 @@
 
 import sys
 import os
+import io
 from typing import Optional, List
 import click
 from rich.console import Console
@@ -19,6 +20,7 @@ import ai
 
 
 @click.group(invoke_without_command=True)
+@click.argument('prompt', required=False)
 @click.option('--version', is_flag=True, help='Show version information')
 @click.option('--model', '-m', help='Specific model to use')
 @click.option('--system', '-s', help='System prompt to set context')
@@ -31,7 +33,7 @@ import ai
 @click.option('--online', is_flag=True, help='Force cloud backend')
 @click.option('--code', is_flag=True, help='Optimize for code-related tasks')
 @click.pass_context
-def main(ctx, version, model, system, temperature, max_tokens, 
+def main(ctx, prompt, version, model, system, temperature, max_tokens, 
          tools, stream, verbose, offline, online, code):
     """AI Library - Unified AI Interface for local and cloud models."""
     if version:
@@ -39,14 +41,18 @@ def main(ctx, version, model, system, temperature, max_tokens,
         return
     
     if ctx.invoked_subcommand is None:
-        # Check if we have stdin or explicit prompt via arguments
-        if not sys.stdin.isatty():
-            # Reading from pipe - always try to read
-            ask_command(None, model, system, temperature, max_tokens, 
+        # If we have a prompt argument, treat as ask command
+        if prompt:
+            ask_command(prompt, model, system, temperature, max_tokens, 
                        tools, stream, verbose, offline, online, code)
+        # If no prompt, check if stdin has data
+        elif not sys.stdin.isatty():
+            ask_command(None, model, system, temperature, max_tokens, 
+                       tools, stream, verbose, offline, online, code, allow_empty=True)
         else:
-            # Show help menu when no subcommand and no stdin
+            # Show help menu when no subcommand, no prompt, and no stdin
             click.echo(ctx.get_help())
+            return
 
 
 @main.command()
@@ -65,17 +71,21 @@ def ask(prompt, model, system, temperature, max_tokens,
         tools, stream, verbose, offline, online, code):
     """Ask the AI a question and get a response."""
     ask_command(prompt, model, system, temperature, max_tokens, 
-               tools, stream, verbose, offline, online, code)
+               tools, stream, verbose, offline, online, code, allow_empty=False)
 
 
 def ask_command(prompt, model, system, temperature, max_tokens, 
-                tools, stream, verbose, offline, online, code):
+                tools, stream, verbose, offline, online, code, allow_empty=False):
     """Internal function to handle AI questions."""
     
     # Handle missing prompt in interactive mode first
-    if prompt is None and sys.stdin.isatty():
+    if prompt is None and sys.stdin.isatty() and not allow_empty:
         click.echo("Error: Missing argument 'prompt'", err=True)
         sys.exit(1)
+        
+    # If allow_empty is True and no prompt and no stdin, just return
+    if allow_empty and prompt is None and sys.stdin.isatty():
+        return
     
     # Handle stdin input
     if prompt == '-' or (prompt is None and not sys.stdin.isatty()):
