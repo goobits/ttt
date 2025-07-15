@@ -4,9 +4,10 @@ Professional, unified command-line interface and Python library for interacting 
 
 ## 🔗 Related Projects
 
-- **[Goobits](https://github.com/goobits/goobits)** - Interactive metaball workspace
-- **[FractalCode](https://github.com/goobits/fractalcode)** - Multi-agent AI development workflows
-- **[AgentFlow](https://github.com/goobits/agentflow)** - Conversational AI workflow engine
+- **[Goobits TTS](https://github.com/goobits/tts)** - Text-to-Speech engine
+- **[Goobits STT](https://github.com/goobits/stt)** - Speech-to-Text engine (this project)
+- **[Goobits TTT](https://github.com/goobits/ttt)** - Text-to-Text processing
+- **[Matilda](https://github.com/goobits/matilda)** - AI assistant
 
 ## 📋 Table of Contents
 
