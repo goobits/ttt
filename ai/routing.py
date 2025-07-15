@@ -184,7 +184,6 @@ class Router:
         *,
         model: Optional[str] = None,
         backend: Optional[Union[str, BaseBackend]] = None,
-        prefer_local: bool = False,
         **kwargs,
     ) -> tuple[BaseBackend, str]:
         """
@@ -194,9 +193,6 @@ class Router:
             prompt: The user prompt - can be a string or list of content (text/images)
             model: Specific model requested
             backend: Specific backend requested
-            prefer_speed: Prefer faster models
-            prefer_quality: Prefer higher quality models
-            prefer_local: Prefer local models for privacy
             **kwargs: Additional parameters
 
         Returns:
@@ -250,13 +246,6 @@ class Router:
                 selected_model = self.resolve_model(model, selected_backend)
                 return selected_backend, selected_model
 
-        # Smart selection based on preferences
-        if prefer_local and not has_images:  # Can't use local with images
-            selected_backend = self.get_backend("local")
-            selected_model = self._select_model_by_preference(
-                "local", prefer_speed, prefer_quality
-            )
-            return selected_backend, selected_model
 
 
 

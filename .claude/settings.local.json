@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(mkdir:*)",
+      "Bash(python3:*)",
+      "Bash(python:*)",
+      "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(mv:*)",
+      "Bash(ls:*)",
+      "Bash(rg:*)",
+      "Bash(awk:*)",
+      "Bash(pytest:*)",
+      "Bash(pipx install:*)",
+      "Bash(npm run test:unit:*)",
+      "Bash(true)"
+    ],
+    "deny": []
+  }
+}
