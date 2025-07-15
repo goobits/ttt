@@ -43,14 +43,17 @@ def main(ctx, prompt, version, model, system, temperature, max_tokens,
     if ctx.invoked_subcommand is None:
         # If we have a prompt argument, treat as ask command
         if prompt:
-            ask_command(prompt, model, system, temperature, max_tokens, 
-                       tools, stream, verbose, offline, online, code)
-        # If no prompt, check if stdin has data
-        elif not sys.stdin.isatty():
-            ask_command(None, model, system, temperature, max_tokens, 
-                       tools, stream, verbose, offline, online, code, allow_empty=True)
+            # Check if prompt is actually a command name
+            command_names = ['ask', 'chat', 'backend-status', 'models-list', 'tools-list', 'config']
+            if prompt in command_names:
+                # This is a command name, invoke it
+                ctx.invoke(ctx.command.get_command(ctx, prompt))
+            else:
+                # This is a prompt, handle as ask command
+                ask_command(prompt, model, system, temperature, max_tokens, 
+                           tools, stream, verbose, offline, online, code)
+        # If no prompt, show help (stdin input handled by ask subcommand)
         else:
-            # Show help menu when no subcommand, no prompt, and no stdin
             click.echo(ctx.get_help())
             return
 
