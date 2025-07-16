@@ -54,6 +54,21 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Clean shell RC file of AI Library entries
+clean_shell_rc() {
+    if [[ -f "$SHELL_RC" ]]; then
+        grep -v "# AI Library Integration" "$SHELL_RC" > "${SHELL_RC}.tmp" || true
+        grep -v "function ai()" "${SHELL_RC}.tmp" > "${SHELL_RC}.tmp2" || true
+        grep -v "$VENV_DIR/bin" "${SHELL_RC}.tmp2" > "$SHELL_RC" || true
+        rm -f "${SHELL_RC}.tmp" "${SHELL_RC}.tmp2"
+    fi
+}
+
+# Check for active API keys
+has_active_api_keys() {
+    [[ -f "$API_KEY_FILE" ]] && grep -q "^[^#]*API_KEY=" "$API_KEY_FILE" 2>/dev/null
+}
+
 # Create virtual environment
 create_venv() {
     print_status "Creating Python virtual environment..."
@@ -100,12 +115,7 @@ setup_shell() {
     local ai_comment="# AI Library Integration"
     
     # Remove existing entries
-    if [[ -f "$SHELL_RC" ]]; then
-        grep -v "# AI Library Integration" "$SHELL_RC" > "${SHELL_RC}.tmp" || true
-        grep -v "function ai()" "${SHELL_RC}.tmp" > "${SHELL_RC}.tmp2" || true
-        grep -v "$VENV_DIR/bin" "${SHELL_RC}.tmp2" > "$SHELL_RC" || true
-        rm -f "${SHELL_RC}.tmp" "${SHELL_RC}.tmp2"
-    fi
+    clean_shell_rc
     
     # Add new entries
     echo "" >> "$SHELL_RC"
@@ -157,7 +167,14 @@ setup_env() {
 EOF
         print_warning "Created $API_KEY_FILE - please edit it with your API keys"
     else
-        print_status "Environment file already exists at $API_KEY_FILE"
+        print_success "Environment file already exists at $API_KEY_FILE - preserving existing API keys"
+        
+        # Check if any API keys are actually set
+        if has_active_api_keys; then
+            print_success "Found existing API keys in $API_KEY_FILE"
+        else
+            print_warning "No active API keys found in $API_KEY_FILE (all lines are commented)"
+        fi
     fi
     
     # Add env file sourcing to shell
@@ -176,8 +193,23 @@ install() {
     # Check if already installed
     if [[ -d "$VENV_DIR" ]]; then
         print_warning "AI library appears to be already installed"
-        echo "Run '$0 uninstall' to remove the existing installation first"
-        exit 1
+        
+        # Check for existing .env file with keys
+        if has_active_api_keys; then
+            print_warning "Existing .env file with ACTIVE API KEYS detected!"
+            print_success "Your API keys are safe - install will preserve them"
+        fi
+        
+        echo -n "Continue with reinstall? [y/N]: "
+        read -r response
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+            print_status "Installation cancelled"
+            exit 0
+        fi
+        
+        # Only remove venv, not config files
+        rm -rf "$VENV_DIR"
+        print_status "Removed old virtual environment"
     fi
     
     create_venv
@@ -257,20 +289,29 @@ uninstall() {
     detect_shell
     if [[ -f "$SHELL_RC" ]]; then
         print_status "Removing shell integration..."
-        grep -v "# AI Library Integration" "$SHELL_RC" > "${SHELL_RC}.tmp" || true
-        grep -v "function ai()" "${SHELL_RC}.tmp" > "${SHELL_RC}.tmp2" || true
-        grep -v "$AI_DIR" "${SHELL_RC}.tmp2" > "$SHELL_RC" || true
-        rm -f "${SHELL_RC}.tmp" "${SHELL_RC}.tmp2"
+        clean_shell_rc
         print_success "Removed shell integration"
     fi
     
     # Ask about .env file
     if [[ -f "$API_KEY_FILE" ]]; then
-        echo -n "Remove API key file ($API_KEY_FILE)? [y/N]: "
+        # Check if there are active API keys
+        if has_active_api_keys; then
+            print_warning "Found active API keys in $API_KEY_FILE"
+            echo -n "Remove API key file with ACTIVE KEYS? [y/N]: "
+        else
+            echo -n "Remove API key file ($API_KEY_FILE)? [y/N]: "
+        fi
+        
         read -r response
         if [[ "$response" =~ ^[Yy]$ ]]; then
+            # Create backup first
+            backup_file="${API_KEY_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
+            cp "$API_KEY_FILE" "$backup_file"
+            print_status "Created backup at $backup_file"
+            
             rm -f "$API_KEY_FILE"
-            print_success "Removed API key file"
+            print_success "Removed API key file (backup saved)"
         else
             print_status "Kept API key file"
         fi
