@@ -11,9 +11,11 @@ def local_backend():
     """Create a LocalBackend instance for testing."""
     return LocalBackend(
         {
-            "base_url": "http://localhost:11434",
-            "default_model": "test-model",
             "timeout": 30,
+            "local": {
+                "base_url": "http://localhost:11434",
+                "default_model": "test-model",
+            }
         }
     )
 

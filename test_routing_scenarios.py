@@ -16,14 +16,14 @@ def test_routing_scenarios():
     backend, model = router.smart_route("Hello world")
     print(f"   Backend: {backend.name}, Model: {model}")
     
-    # Test 2: Prefer speed
-    print("\n2. Prefer speed:")
-    backend, model = router.smart_route("Hello world", prefer_speed=True)
+    # Test 2: Specific model (fast)
+    print("\n2. Specific model (fast):")
+    backend, model = router.smart_route("Hello world", model="gpt-3.5-turbo")
     print(f"   Backend: {backend.name}, Model: {model}")
     
-    # Test 3: Prefer quality
-    print("\n3. Prefer quality:")
-    backend, model = router.smart_route("Hello world", prefer_quality=True)
+    # Test 3: Specific model (quality)
+    print("\n3. Specific model (quality):")
+    backend, model = router.smart_route("Hello world", model="gpt-4")
     print(f"   Backend: {backend.name}, Model: {model}")
     
     # Test 4: Explicit cloud backend

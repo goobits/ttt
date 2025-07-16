@@ -20,6 +20,7 @@ Example usage:
 
 from typing import Callable, Optional, Union, List, Dict, Any
 from functools import wraps
+import asyncio
 
 from .base import (
     ToolDefinition,
@@ -97,16 +98,29 @@ def tool(
         f._tool_definition = tool_def
         f._is_tool = True
 
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            # Function still works normally
-            return f(*args, **kwargs)
-
-        # Preserve tool metadata on wrapper
-        wrapper._tool_definition = tool_def
-        wrapper._is_tool = True
-
-        return wrapper
+        # Create appropriate wrapper based on function type
+        if asyncio.iscoroutinefunction(f):
+            @wraps(f)
+            async def async_wrapper(*args, **kwargs):
+                # Async function still works normally
+                return await f(*args, **kwargs)
+            
+            # Preserve tool metadata on wrapper
+            async_wrapper._tool_definition = tool_def
+            async_wrapper._is_tool = True
+            
+            return async_wrapper
+        else:
+            @wraps(f)
+            def wrapper(*args, **kwargs):
+                # Function still works normally
+                return f(*args, **kwargs)
+            
+            # Preserve tool metadata on wrapper
+            wrapper._tool_definition = tool_def
+            wrapper._is_tool = True
+            
+            return wrapper
 
     if func is None:
         # Called with parameters: @tool(name="...", ...)

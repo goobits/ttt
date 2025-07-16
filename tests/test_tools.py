@@ -117,8 +117,8 @@ class TestToolExecution:
             # Clean up
             try:
                 unregister_tool("add_numbers")
-            except:
-                pass
+            except Exception:
+                pass  # Tool might not be registered
 
     @pytest.mark.asyncio
     async def test_execute_single_async_error(self):
@@ -152,8 +152,8 @@ class TestToolExecution:
             # Clean up
             try:
                 unregister_tool("divide_numbers")
-            except:
-                pass
+            except Exception:
+                pass  # Tool might not be registered
 
     @pytest.mark.asyncio
     async def test_execute_multiple_async(self):
@@ -191,8 +191,8 @@ class TestToolExecution:
             try:
                 unregister_tool("multiply")
                 unregister_tool("format_result")
-            except:
-                pass
+            except Exception:
+                pass  # Tool might not be registered
 
 
 class TestToolRegistry:
@@ -335,8 +335,8 @@ class TestToolIntegration:
         try:
             unregister_tool("get_weather")
             unregister_tool("test_calculate")
-        except:
-            pass
+        except Exception:
+            pass  # Tools might not be registered
 
     def test_api_function_with_tools(self):
         """Test the main ask() function with tools."""
@@ -375,7 +375,6 @@ class TestToolIntegration:
 class TestToolErrorHandling:
     """Test tool system error handling."""
 
-    @pytest.mark.skip(reason="Timeout handling for dynamic tools needs investigation")
     @pytest.mark.asyncio
     async def test_tool_timeout_handling(self):
         """Test tool execution timeout with async functions."""
@@ -412,8 +411,8 @@ class TestToolErrorHandling:
             # Clean up
             try:
                 unregister_tool("async_slow_tool")
-            except:
-                pass
+            except Exception:
+                pass  # Tool might not be registered
 
     @pytest.mark.asyncio
     async def test_invalid_tool_arguments(self):
@@ -442,8 +441,8 @@ class TestToolErrorHandling:
             # Clean up
             try:
                 unregister_tool("strict_tool")
-            except:
-                pass
+            except Exception:
+                pass  # Tool might not be registered
 
     def test_malformed_tool_definition(self):
         """Test handling of malformed tool definitions."""

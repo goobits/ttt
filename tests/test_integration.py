@@ -15,6 +15,7 @@ import pytest
 import os
 from ai import ask, stream, chat
 from ai.backends.cloud import CloudBackend
+from ai.exceptions import APIKeyError, ModelNotFoundError, RateLimitError
 
 
 def skip_if_no_api_keys():
@@ -56,7 +57,9 @@ class TestRealAPIIntegration:
         response = delayed_ask(
             "What is 2+2? Reply with just the number.", model=model, backend="cloud"
         )
-        assert "4" in str(response)
+        # The response should contain exactly "4" - allowing for some whitespace
+        response_text = str(response).strip()
+        assert response_text == "4" or response_text == "4." or response_text == "Four"
         assert response.succeeded
         assert response.model
         assert response.backend == "cloud"
@@ -78,7 +81,9 @@ class TestRealAPIIntegration:
 
         full_response = "".join(chunks)
         assert len(chunks) > 1  # Should be multiple chunks
-        assert any(char.isdigit() for char in full_response)
+        # Should contain numbers 1, 2, 3 from the counting request
+        import re
+        assert re.search(r'[123]', full_response)
 
     def test_chat_session_integration(self, delayed_chat):
         """Test persistent chat session."""
@@ -93,10 +98,15 @@ class TestRealAPIIntegration:
             model = "gpt-3.5-turbo"  # Default fallback
         with delayed_chat(model=model) as session:
             response1 = session.ask("My name is Alice. What's 5+5?")
-            assert "10" in str(response1)
+            # Check that the math result is present (using word boundaries to avoid false positives)
+            import re
+            response_text = str(response1)
+            assert re.search(r'\b(10|ten)\b', response_text, re.IGNORECASE)
 
             response2 = session.ask("What did I say my name was?")
-            assert "Alice" in str(response2)
+            # Verify the model remembered the name from context
+            response2_lower = str(response2).lower()
+            assert "alice" in response2_lower and ("name" in response2_lower or "you" in response2_lower)
 
     def test_model_fallback_integration(self, delayed_ask):
         """Test that fallback works with real APIs."""
@@ -166,9 +176,12 @@ class TestProviderSpecificIntegration:
                 # Some models might not be available, that's fine
                 if response.succeeded:
                     assert len(str(response)) > 0
-            except Exception:
-                # Skip unavailable models
-                pass
+            except (APIKeyError, ModelNotFoundError, RateLimitError):
+                # Skip models that aren't available due to missing keys or rate limits
+                continue
+            except Exception as e:
+                # Log unexpected errors instead of silently ignoring
+                pytest.fail(f"Unexpected error testing {model}: {type(e).__name__}: {e}")
 
 
 @pytest.mark.integration

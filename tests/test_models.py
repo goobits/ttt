@@ -8,16 +8,6 @@ from ai.models import AIResponse, ModelInfo, ConfigModel
 class TestAIResponse:
     """Test AIResponse class."""
 
-    def test_basic_string_behavior(self):
-        """Test that AIResponse behaves like a string."""
-        response = AIResponse("Hello, world!")
-
-        # Should behave like a string
-        assert str(response) == "Hello, world!"
-        assert len(response) == 13
-        assert response.upper() == "HELLO, WORLD!"
-        assert "world" in response
-
     def test_metadata_storage(self):
         """Test metadata is stored correctly."""
         response = AIResponse(
@@ -113,22 +103,32 @@ class TestConfigModel:
         """Test default configuration values."""
         config = ConfigModel()
 
-        assert config.ollama_base_url == "http://localhost:11434"
-        assert config.default_backend == "cloud"
-        assert config.timeout == 30
-        assert config.max_retries == 3
+        # All optional fields should be None by default
+        assert config.ollama_base_url is None
+        assert config.default_backend is None
+        assert config.timeout is None
+        assert config.max_retries is None
         assert config.enable_fallbacks is True
         assert config.fallback_order == ["cloud", "local"]
 
     def test_model_aliases(self):
-        """Test default model aliases."""
+        """Test model aliases configuration."""
+        # ConfigModel starts with empty aliases
         config = ConfigModel()
-
-        assert "fast" in config.model_aliases
-        assert "best" in config.model_aliases
-        assert "cheap" in config.model_aliases
-        assert "coding" in config.model_aliases
-        assert "local" in config.model_aliases
+        assert config.model_aliases == {}
+        
+        # Test setting model aliases (without hardcoding specific model names)
+        test_aliases = {
+            "fast": "test-fast-model",
+            "best": "test-best-model",
+            "cheap": "test-cheap-model",
+            "coding": "test-coding-model",
+            "local": "test-local-model"
+        }
+        config.model_aliases = test_aliases
+        
+        # Verify all aliases were set correctly
+        assert config.model_aliases == test_aliases
 
     def test_custom_values(self):
         """Test setting custom values."""

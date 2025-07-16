@@ -249,8 +249,8 @@ class TestCLIToolSupport:
             # Clean up
             try:
                 unregister_tool("my_function")
-            except:
-                pass
+            except Exception:
+                pass  # Tool might not be registered
 
     def test_resolve_tools_handles_errors(self):
         """Test tool resolution handles errors gracefully."""

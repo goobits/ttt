@@ -1,4 +1,4 @@
-# 🤖 GOOBITS TTT
+# 🤖 Goobits TTT
 
 Professional, unified command-line interface and Python library for interacting with multiple AI providers including OpenRouter, OpenAI, Anthropic, and Google, with optional local model support via Ollama.
 

@@ -15,8 +15,6 @@ def ask(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
-    fast: bool = False,
-    quality: bool = False,
     **kwargs
 ) -> AIResponse
 ```
@@ -30,8 +28,6 @@ Send a single prompt and get a complete response.
 - `temperature` (float, optional): Sampling temperature (0-1)
 - `max_tokens` (int, optional): Maximum tokens to generate
 - `backend` (str | BaseBackend, optional): Backend to use ("local", "cloud", "auto", or Backend instance)
-- `fast` (bool): Prefer speed over quality
-- `quality` (bool): Prefer quality over speed
 - `**kwargs`: Additional backend-specific parameters
 
 **Returns:**
@@ -56,8 +52,6 @@ def stream(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
-    fast: bool = False,
-    quality: bool = False,
     **kwargs
 ) -> Iterator[str]
 ```

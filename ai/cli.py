@@ -19,6 +19,28 @@ console = Console()
 import ai
 
 
+def setup_logging_level(verbose=False, debug=False):
+    """Setup logging level based on verbosity flags."""
+    import logging
+    
+    if debug:
+        level = logging.DEBUG
+    elif verbose:
+        level = logging.INFO
+    else:
+        level = logging.WARNING
+    
+    # Set root logger level
+    logging.getLogger().setLevel(level)
+    
+    # Suppress third-party library logging unless debug mode
+    if not debug:
+        logging.getLogger('litellm').setLevel(logging.WARNING)
+        logging.getLogger('httpx').setLevel(logging.WARNING)
+        logging.getLogger('httpcore').setLevel(logging.WARNING)
+        logging.getLogger('urllib3').setLevel(logging.WARNING)
+
+
 @click.group(invoke_without_command=True)
 @click.option('--version', is_flag=True, help='Show version information')
 @click.option('--model', '-m', help='Specific model to use')
@@ -28,20 +50,35 @@ import ai
 @click.option('--tools', help='Comma-separated list of tools to enable')
 @click.option('--stream', is_flag=True, help='Stream the response')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--debug', is_flag=True, help='Enable debug logging')
 @click.option('--offline', is_flag=True, help='Force local backend')
 @click.option('--online', is_flag=True, help='Force cloud backend')
 @click.option('--code', is_flag=True, help='Optimize for code-related tasks')
+@click.option('--json', 'json_output', is_flag=True, help='Output in JSON format')
+@click.argument('prompt', required=False)
 @click.pass_context
 def main(ctx, version, model, system, temperature, max_tokens, 
-         tools, stream, verbose, offline, online, code):
+         tools, stream, verbose, debug, offline, online, code, json_output, prompt):
     """AI Library - Unified AI Interface for local and cloud models."""
+    
+    # Setup logging based on verbosity
+    setup_logging_level(verbose, debug)
+    
     if version:
         click.echo(f"AI Library v{getattr(ai, '__version__', '0.4.0')}")
         return
     
+    # If no subcommand and we have a prompt, default to 'ask'
     if ctx.invoked_subcommand is None:
-        click.echo(ctx.get_help())
-        return
+        if prompt or not sys.stdin.isatty():
+            # Default to ask command
+            ask_command(prompt, model, system, temperature, max_tokens, 
+                       tools, stream, verbose, offline, online, code, json_output, allow_empty=True)
+            return
+        else:
+            # Show help when no args provided
+            click.echo(ctx.get_help())
+            return
 
 
 @main.command()
@@ -53,18 +90,21 @@ def main(ctx, version, model, system, temperature, max_tokens,
 @click.option('--tools', help='Comma-separated list of tools to enable')
 @click.option('--stream', is_flag=True, help='Stream the response')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--debug', is_flag=True, help='Enable debug logging')
 @click.option('--offline', is_flag=True, help='Force local backend')
 @click.option('--online', is_flag=True, help='Force cloud backend')
 @click.option('--code', is_flag=True, help='Optimize for code-related tasks')
+@click.option('--json', 'json_output', is_flag=True, help='Output in JSON format')
 def ask(prompt, model, system, temperature, max_tokens, 
-        tools, stream, verbose, offline, online, code):
+        tools, stream, verbose, debug, offline, online, code, json_output):
     """Ask the AI a question and get a response."""
+    setup_logging_level(verbose, debug)
     ask_command(prompt, model, system, temperature, max_tokens, 
-               tools, stream, verbose, offline, online, code, allow_empty=False)
+               tools, stream, verbose, offline, online, code, json_output, allow_empty=False)
 
 
 def ask_command(prompt, model, system, temperature, max_tokens, 
-                tools, stream, verbose, offline, online, code, allow_empty=False):
+                tools, stream, verbose, offline, online, code, json_output, allow_empty=False):
     """Internal function to handle AI questions."""
     
     # Handle missing prompt in interactive mode first
@@ -80,14 +120,49 @@ def ask_command(prompt, model, system, temperature, max_tokens,
     if prompt == '-' or (prompt is None and not sys.stdin.isatty()):
         # Reading from pipe
         try:
-            prompt = sys.stdin.read().strip()
+            input_text = sys.stdin.read().strip()
         except EOFError:
-            prompt = ""
+            input_text = ""
         
-        if not prompt:
+        if not input_text:
             # Handle empty input
             click.echo("Error: No input provided", err=True)
             sys.exit(1)
+            
+        # Try to parse as JSON first
+        try:
+            import json
+            json_input = json.loads(input_text)
+            
+            # Extract prompt from various possible fields
+            prompt = (json_input.get('prompt') or 
+                     json_input.get('query') or 
+                     json_input.get('message') or 
+                     json_input.get('text') or 
+                     json_input.get('content'))
+            
+            if not prompt:
+                # If no recognized prompt field, treat entire JSON as prompt
+                prompt = input_text
+            else:
+                # Extract other parameters from JSON if not already set
+                if not model and json_input.get('model'):
+                    model = json_input.get('model')
+                if not system and json_input.get('system'):
+                    system = json_input.get('system')
+                if temperature is None and json_input.get('temperature') is not None:
+                    temperature = json_input.get('temperature')
+                if not max_tokens and json_input.get('max_tokens'):
+                    max_tokens = json_input.get('max_tokens')
+                if not tools and json_input.get('tools'):
+                    tools = json_input.get('tools')
+                if not stream and json_input.get('stream'):
+                    stream = json_input.get('stream')
+                    
+        except json.JSONDecodeError:
+            # Not valid JSON, treat as plain text
+            prompt = input_text
+            
     elif prompt is None:
         # If we got here from the main function without a prompt, show help
         return
@@ -127,23 +202,52 @@ def ask_command(prompt, model, system, temperature, max_tokens,
     try:
         if stream:
             # Stream response
-            for chunk in ai.stream(prompt, **kwargs):
-                click.echo(chunk, nl=False)
-            click.echo()  # Final newline
+            if json_output:
+                # For streaming with JSON, we need to collect chunks
+                chunks = []
+                for chunk in ai.stream(prompt, **kwargs):
+                    chunks.append(chunk)
+                import json
+                output = {"content": "".join(chunks), "streaming": True}
+                click.echo(json.dumps(output))
+            else:
+                for chunk in ai.stream(prompt, **kwargs):
+                    click.echo(chunk, nl=False)
+                click.echo()  # Final newline
         else:
             # Regular response
             response = ai.ask(prompt, **kwargs)
-            click.echo(str(response))
             
-            if verbose:
-                click.echo(f"\nModel: {response.model}", err=True)
-                click.echo(f"Backend: {response.backend}", err=True)
-                click.echo(f"Time: {response.time:.2f}s", err=True)
+            if json_output:
+                import json
+                output = {
+                    "content": str(response),
+                    "model": response.model,
+                    "backend": response.backend,
+                    "time": response.time,
+                    "streaming": False
+                }
                 if hasattr(response, 'tokens_in') and response.tokens_in:
-                    click.echo(f"Tokens: {response.tokens_in} in, {response.tokens_out} out", err=True)
+                    output["tokens_in"] = response.tokens_in
+                    output["tokens_out"] = response.tokens_out
+                click.echo(json.dumps(output))
+            else:
+                click.echo(str(response))
+                
+                if verbose:
+                    click.echo(f"\nModel: {response.model}", err=True)
+                    click.echo(f"Backend: {response.backend}", err=True)
+                    click.echo(f"Time: {response.time:.2f}s", err=True)
+                    if hasattr(response, 'tokens_in') and response.tokens_in:
+                        click.echo(f"Tokens: {response.tokens_in} in, {response.tokens_out} out", err=True)
                     
     except Exception as e:
-        click.echo(f"Error: {e}", err=True)
+        if json_output:
+            import json
+            error_output = {"error": str(e)}
+            click.echo(json.dumps(error_output))
+        else:
+            click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
 

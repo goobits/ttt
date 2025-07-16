@@ -368,7 +368,7 @@ routing:
     - if: {contains: [code, python]}
       prefer_model: claude-3-sonnet
     - if: {length_gt: 200}
-      prefer_quality: true
+      prefer_model: gpt-4
 ```
 
 ### Testing Custom Backends

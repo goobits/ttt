@@ -90,8 +90,12 @@ print("This should timeout")
 """
 
             result = run_python(code)
-            # Should timeout or show error
-            assert any(keyword in result.lower() for keyword in ["timeout", "error"])
+            # Should timeout or show execution error
+            result_lower = result.lower()
+            assert ("timed out" in result_lower or 
+                    "timeout" in result_lower or 
+                    "execution error" in result_lower or
+                    "process terminated" in result_lower)
 
 
 class TestToolsListCommand:
@@ -120,7 +124,7 @@ class TestToolsListCommand:
         mock_tool.description = "A test tool"
         mock_tool.category = "test"
 
-        with patch("ai.tools.list_tools", return_value={"test_tool": mock_tool}), \
+        with patch("ai.tools.list_tools", return_value=[mock_tool]), \
              patch("ai.tools.get_categories", return_value=["test"]):
             show_tools_list()
 
