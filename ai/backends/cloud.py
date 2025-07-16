@@ -347,6 +347,7 @@ class CloudBackend(BaseBackend):
                     "openai": "OPENAI_API_KEY",
                     "anthropic": "ANTHROPIC_API_KEY",
                     "google": "GOOGLE_API_KEY",
+                    "openrouter": "OPENROUTER_API_KEY",
                 }
                 raise APIKeyError(provider, env_vars.get(provider))
             elif "rate limit" in error_msg.lower():
@@ -489,6 +490,7 @@ class CloudBackend(BaseBackend):
                     "openai": "OPENAI_API_KEY",
                     "anthropic": "ANTHROPIC_API_KEY",
                     "google": "GOOGLE_API_KEY",
+                    "openrouter": "OPENROUTER_API_KEY",
                 }
                 raise APIKeyError(provider, env_vars.get(provider))
             elif "rate limit" in error_msg.lower():
@@ -649,11 +651,16 @@ class CloudBackend(BaseBackend):
 
     def _get_provider_from_model(self, model: str) -> str:
         """Determine the provider from the model name."""
-        if model.startswith("gpt-"):
+        # Handle OpenRouter model format
+        if model.startswith("openrouter/"):
+            # For OpenRouter, we use OPENROUTER_API_KEY
+            return "openrouter"
+        # Handle direct provider models
+        elif model.startswith("gpt-") or "gpt-" in model:
             return "openai"
-        elif model.startswith("claude-"):
+        elif model.startswith("claude-") or "claude-" in model:
             return "anthropic"
-        elif model.startswith("gemini-"):
+        elif model.startswith("gemini-") or "gemini-" in model:
             return "google"
         else:
             return "unknown"

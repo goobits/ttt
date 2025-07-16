@@ -11,10 +11,6 @@
 		"timezone": "America/Los_Angeles"
 	},
 	"pip_packages": ["black", "pytest", "flake8"],
-	"aliases": {
-		"ai": "python3 -m ai",
-		"test": "./test.sh"
-	},
 	"terminal": {
 		"emoji": "🤖",
 		"username": "ttt-dev",
