@@ -172,8 +172,8 @@ ai "complex analysis" --online --model gpt-4
 ai "Tell me a story" --stream
 
 # System status and discovery
-ai backend-status                        # Check what's configured
-ai models-list                          # See available models
+ai status                               # Check what's configured
+ai models                               # See available models
 
 # Traditional stdin support (also works)
 echo "2 + 2" | ai -
@@ -392,10 +392,13 @@ ai --verbose --code "write a function"
 
 ```bash
 # Check backend status and connectivity
-ai backend-status
+ai status
 
 # List all available models
-ai models-list
+ai models
+
+# List available tools
+ai tools
 
 # Manage configuration (see Configuration Reference above)
 ai config
@@ -416,6 +419,11 @@ ai "Question" --code               # Coding-optimized responses
 ai "Question" --model gpt-4
 ai "Question" --model openrouter/google/gemini-flash-1.5
 ai "Question" --model anthropic/claude-3-haiku
+
+# Model aliases (fast, best, cheap, coding, local)
+ai "Question" --model fast              # Uses gpt-3.5-turbo
+ai "Question" --model best              # Uses gpt-4
+ai "Question" --model coding            # Uses google/gemini-1.5-pro
 
 # Response formatting
 ai "Question" --stream             # Stream response tokens
@@ -450,8 +458,8 @@ The cloud backend uses LiteLLM to provide unified access to multiple AI provider
 - **Google**: Gemini models
 
 **Default Models:**
-- Primary: `gpt-3.5-turbo`
-- OpenRouter default: `google/gemini-flash-1.5`
+- Primary: `openrouter/google/gemini-flash-1.5`
+- Model aliases: `fast` (gpt-3.5-turbo), `best` (gpt-4), `cheap` (gpt-3.5-turbo), `coding` (google/gemini-1.5-pro), `local` (llama2)
 
 ### Local Backend (Optional)
 
