@@ -165,9 +165,9 @@ class TestProviderSpecificIntegration:
     def test_openrouter_variety(self, delayed_ask):
         """Test multiple models through OpenRouter."""
         models_to_test = [
-            "openai/gpt-3.5-turbo",
-            "anthropic/claude-3-haiku",
-            "meta-llama/llama-2-7b-chat",
+            "gpt-3.5-turbo",  # Will be routed through OpenRouter automatically
+            "claude-3-haiku",  # Will be routed through OpenRouter automatically
+            "google/gemini-flash-1.5",  # OpenRouter format
         ]
 
         for model in models_to_test:
