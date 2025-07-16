@@ -81,7 +81,7 @@ cat file.txt | ai "Review this code"
 # Use local models (privacy-focused)
 ai config backend local
 ai config model qwen2.5:32b
-ai "private question" --offline
+ai "private question"
 
 # Use built-in tools
 ai "What time is it in Tokyo?" --tools get_current_time
@@ -128,8 +128,6 @@ All settings saved to `~/.config/ai/config.yaml`
 ai "question"                    # Same simple interface
 
 # Enhanced with new features:
-ai "question" --offline          # Force local models (Ollama)
-ai "question" --online           # Force cloud models  
 ai "question" --code             # Coding-optimized responses
 ai "question" --verbose          # Show detailed metadata
 
@@ -164,9 +162,9 @@ git diff | ai "Explain these changes"
 # Coding assistance with optimization
 ai "write a Python function to sort a list" --code --verbose
 
-# Force specific backend
-ai "private question" --offline          # Uses local Ollama models
-ai "complex analysis" --online --model gpt-4
+# Specify models directly
+ai "private question" --model qwen2.5:32b  # Uses local model automatically
+ai "complex analysis" --model gpt-4        # Uses cloud model automatically
 
 # Stream responses in real-time
 ai "Tell me a story" --stream
@@ -336,9 +334,7 @@ echo "Hello world" | ai
 cat file.txt | ai
 git diff | ai
 
-# Enhanced backend control
-ai "Question" --offline                  # Force local models (Ollama)
-ai "Question" --online                   # Force cloud models
+# Enhanced features
 ai "Question" --code                     # Coding-optimized responses
 ai "Question" --verbose                  # Show detailed metadata
 
@@ -348,8 +344,8 @@ ai "Tell me a story" --stream
 # Specify model
 ai "Code question" --model openrouter/anthropic/claude-3-sonnet
 
-# Local model specification
-ai "Question" --offline --model llama2
+# Local model specification (automatic routing)
+ai "Question" --model llama2
 
 # System prompts
 ai "Translate this" --system "You are a translator"
@@ -410,9 +406,7 @@ ai --help
 ### Advanced Options
 
 ```bash
-# Simple backend selection  
-ai "Question" --offline            # Force local backend (Ollama)
-ai "Question" --online             # Force cloud backend
+# Enhanced features
 ai "Question" --code               # Coding-optimized responses
 
 # Model specification
@@ -442,7 +436,7 @@ ai "Question" -v                   # Verbose
 # NEW: Smart features
 ai "debug this function" --code    # Auto-detects coding context
 ai "debug this function"           # Also works (auto-detection)
-ai "Question" --verbose --online   # Combine multiple flags
+ai "Question" --verbose --model gpt-4  # Combine multiple flags
 ```
 
 ## Backend Configuration
@@ -474,8 +468,8 @@ ollama pull llama2
 ollama pull codellama
 ollama pull mistral
 
-# Use local models
-ai "Question" --offline --model llama2
+# Use local models (automatic routing)
+ai "Question" --model llama2
 ```
 
 **Configuration:**

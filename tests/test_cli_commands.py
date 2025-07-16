@@ -224,11 +224,8 @@ class TestMainCommand:
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ["ask", "Question", "--offline"])
+            result = self.runner.invoke(main, ["ask", "Question"])
             assert result.exit_code == 0
-            
-            call_kwargs = mock_ask.call_args[1]
-            assert call_kwargs["backend"] == "local"
 
     def test_main_query(self):
         """Test main function with query."""

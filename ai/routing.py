@@ -33,6 +33,9 @@ class Router:
     def __init__(self):
         self.config = get_config()
         self._backends: Dict[str, BaseBackend] = {}
+        self._local_models_cache: Optional[List[str]] = None
+        self._cache_timestamp: Optional[float] = None
+        self._cache_ttl = 30  # Cache for 30 seconds
 
     def get_backend(self, backend_name: str) -> BaseBackend:
         """Get or create a backend instance."""
@@ -150,6 +153,52 @@ class Router:
             error_msg += " For local models: pip install ai[local]"
         raise BackendNotAvailableError("auto", error_msg)
 
+    def _is_local_model(self, model: str, local_backend) -> bool:
+        """
+        Check if a model is available locally with caching.
+        
+        Args:
+            model: Model name to check
+            local_backend: Local backend instance
+            
+        Returns:
+            True if model is available locally
+        """
+        import time
+        current_time = time.time()
+        
+        # Check if cache is still valid
+        if (self._local_models_cache is not None and 
+            self._cache_timestamp is not None and 
+            current_time - self._cache_timestamp < self._cache_ttl):
+            return model in self._local_models_cache
+        
+        # Cache is stale or missing, refresh it
+        try:
+            import httpx
+            from .utils import run_async
+            
+            async def fetch_local_models():
+                try:
+                    async with httpx.AsyncClient(timeout=3) as client:
+                        response = await client.get(f"{local_backend.base_url}/api/tags")
+                        if response.status_code == 200:
+                            data = response.json()
+                            return [m['name'] for m in data.get('models', [])]
+                        return []
+                except Exception:
+                    return []
+            
+            available_models = run_async(fetch_local_models())
+            self._local_models_cache = available_models
+            self._cache_timestamp = current_time
+            
+            return model in available_models
+            
+        except Exception as e:
+            logger.debug(f"Failed to fetch local models: {e}")
+            return False
+
     def resolve_model(
         self, model: Optional[str] = None, backend: Optional[BaseBackend] = None
     ) -> str:
@@ -254,9 +303,17 @@ class Router:
                 selected_backend = self.get_backend("cloud")
                 selected_model = self.resolve_model(model, selected_backend)
                 return selected_backend, selected_model
-
-
-
+            
+            # If not a cloud model and local backend is available, check if it's a local model
+            if HAS_LOCAL_BACKEND:
+                try:
+                    local_backend = self.get_backend("local")
+                    if local_backend.is_available and self._is_local_model(model, local_backend):
+                        logger.debug(f"Detected local model: {model}")
+                        selected_model = self.resolve_model(model, local_backend)
+                        return local_backend, selected_model
+                except Exception as e:
+                    logger.debug(f"Failed to check local backend for model {model}: {e}")
 
         # Use auto-selection to respect configured default_backend
         selected_backend = self._auto_select_backend()

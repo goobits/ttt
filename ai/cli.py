@@ -54,13 +54,11 @@ def setup_logging_level(verbose=False, debug=False):
 @click.option('--stream', is_flag=True, help='Stream the response')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 @click.option('--debug', is_flag=True, help='Enable debug logging')
-@click.option('--offline', is_flag=True, help='Force local backend')
-@click.option('--online', is_flag=True, help='Force cloud backend')
 @click.option('--code', is_flag=True, help='Optimize for code-related tasks')
 @click.option('--json', 'json_output', is_flag=True, help='Output in JSON format')
 @click.pass_context
 def main(ctx, version, model, system, temperature, max_tokens, 
-         tools, stream, verbose, debug, offline, online, code, json_output):
+         tools, stream, verbose, debug, code, json_output):
     """AI Library - Unified AI Interface for local and cloud models."""
     
     # Setup logging based on verbosity
@@ -75,7 +73,7 @@ def main(ctx, version, model, system, temperature, max_tokens,
         if not sys.stdin.isatty():
             # Handle piped input - default to ask command
             ask_command(None, model, system, temperature, max_tokens, 
-                       tools, stream, verbose, offline, online, code, json_output, allow_empty=True)
+                       tools, stream, verbose, code, json_output, allow_empty=True)
             return
         else:
             # Show help when no args provided and no stdin
@@ -93,20 +91,18 @@ def main(ctx, version, model, system, temperature, max_tokens,
 @click.option('--stream', is_flag=True, help='Stream the response')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 @click.option('--debug', is_flag=True, help='Enable debug logging')
-@click.option('--offline', is_flag=True, help='Force local backend')
-@click.option('--online', is_flag=True, help='Force cloud backend')
 @click.option('--code', is_flag=True, help='Optimize for code-related tasks')
 @click.option('--json', 'json_output', is_flag=True, help='Output in JSON format')
 def ask(prompt, model, system, temperature, max_tokens, 
-        tools, stream, verbose, debug, offline, online, code, json_output):
+        tools, stream, verbose, debug, code, json_output):
     """Ask the AI a question and get a response."""
     setup_logging_level(verbose, debug)
     ask_command(prompt, model, system, temperature, max_tokens, 
-               tools, stream, verbose, offline, online, code, json_output, allow_empty=False)
+               tools, stream, verbose, code, json_output, allow_empty=False)
 
 
 def ask_command(prompt, model, system, temperature, max_tokens, 
-                tools, stream, verbose, offline, online, code, json_output, allow_empty=False):
+                tools, stream, verbose, code, json_output, allow_empty=False):
     """Internal function to handle AI questions."""
     
     # Handle missing prompt in interactive mode first
@@ -169,12 +165,6 @@ def ask_command(prompt, model, system, temperature, max_tokens,
         # If we got here from the main function without a prompt, show help
         return
     
-    # Handle backend selection
-    backend = None
-    if offline:
-        backend = 'local'
-    elif online:
-        backend = 'cloud'
     
     # Parse tools
     tools_list = None
@@ -194,8 +184,6 @@ def ask_command(prompt, model, system, temperature, max_tokens,
         kwargs['max_tokens'] = max_tokens
     if tools_list:
         kwargs['tools'] = tools_list
-    if backend:
-        kwargs['backend'] = backend
     
     # Apply coding optimizations only if explicitly requested
     if code:

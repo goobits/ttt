@@ -126,21 +126,6 @@ class TestCLIAskCommand:
             call_kwargs = mock_ask.call_args[1]
             assert call_kwargs.get("max_tokens") == 100
 
-    def test_ask_with_backend(self):
-        """Test ask with specific backend."""
-        with patch('ai.ask') as mock_ask:
-            mock_response = Mock()
-            mock_response.__str__ = Mock(return_value="Response")
-            mock_ask.return_value = mock_response
-
-            result = self.runner.invoke(main, ['ask', 'Question', '--offline'])
-            
-            assert result.exit_code == 0
-            mock_ask.assert_called_once()
-            # Check that the --offline flag was processed correctly
-            call_kwargs = mock_ask.call_args[1]
-            # The CLI might pass 'local' as backend or set offline=True
-            assert call_kwargs.get("backend") == "local" or call_kwargs.get("offline") == True
 
     def test_ask_from_stdin(self):
         """Test reading prompt from stdin."""
@@ -294,15 +279,12 @@ class TestCLIArguments:
             result = self.runner.invoke(main, [
                 "ask", "Question",
                 "--model", "gpt-4",
-                "--online",
                 "--verbose"
             ])
             
             assert result.exit_code == 0
             call_kwargs = mock_ask.call_args[1]
             assert call_kwargs["model"] == "gpt-4"
-            # Check for either backend="cloud" or online=True
-            assert call_kwargs.get("backend") == "cloud" or call_kwargs.get("online") == True
 
     def test_cli_short_flags(self):
         """Test CLI with short flag versions."""
@@ -340,7 +322,6 @@ class TestCLIArguments:
                 "ask", "Question",
                 "--model", "gpt-4",
                 "--system", "You are helpful",
-                "--online",
                 "--temperature", "0.7",
                 "--max-tokens", "150",
                 "--verbose"
@@ -350,8 +331,6 @@ class TestCLIArguments:
             call_kwargs = mock_ask.call_args[1]
             assert call_kwargs["model"] == "gpt-4"
             assert call_kwargs["system"] == "You are helpful"
-            # Check for either backend="cloud" or online=True
-            assert call_kwargs.get("backend") == "cloud" or call_kwargs.get("online") == True
             assert call_kwargs["temperature"] == 0.7
             assert call_kwargs["max_tokens"] == 150
 

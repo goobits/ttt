@@ -14,7 +14,8 @@
       "Bash(pytest:*)",
       "Bash(pipx install:*)",
       "Bash(npm run test:unit:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(ai ask:*)"
     ],
     "deny": []
   }

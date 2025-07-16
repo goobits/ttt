@@ -42,7 +42,6 @@ class TestClickCLI:
             result = self.runner.invoke(main, [
                 "ask", "Debug this code",
                 "--model", "gpt-4",
-                "--online",
                 "--temperature", "0.7",
                 "--verbose",
                 "--code"
@@ -51,27 +50,8 @@ class TestClickCLI:
             assert result.exit_code == 0
             call_kwargs = mock_ask.call_args[1]
             assert call_kwargs["model"] == "gpt-4"
-            assert call_kwargs["backend"] == "cloud"
             assert call_kwargs["temperature"] == 0.7
 
-    def test_ask_command_with_shortcuts(self):
-        """Test ask command with offline/online shortcuts."""
-        with patch('ai.ask') as mock_ask:
-            mock_response = Mock()
-            mock_response.__str__ = lambda x: "Mock response"
-            mock_ask.return_value = mock_response
-            
-            # Test offline shortcut
-            result = self.runner.invoke(main, ["ask", "test", "--offline"])
-            assert result.exit_code == 0
-            call_kwargs = mock_ask.call_args[1]
-            assert call_kwargs["backend"] == "local"
-
-            # Test online shortcut
-            result = self.runner.invoke(main, ["ask", "test", "--online"])
-            assert result.exit_code == 0
-            call_kwargs = mock_ask.call_args[1]
-            assert call_kwargs["backend"] == "cloud"
 
     def test_ask_command_stdin(self):
         """Test ask command with stdin input."""
@@ -145,7 +125,7 @@ class TestClickCLI:
         assert result.exit_code == 0
         assert "Ask the AI a question" in result.stdout
         assert "--model" in result.stdout
-        assert "--offline" in result.stdout
+        assert "--model" in result.stdout
 
     def test_invalid_arguments(self):
         """Test handling of invalid arguments."""
