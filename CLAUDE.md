@@ -13,21 +13,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `./test.sh --markers "not slow"` - Skip slow tests
 
 ### Linting and Code Quality
-- `ruff ai/ tests/` - Run ruff linter (configured in pyproject.toml)
-- `black ai/ tests/` - Format code with black
-- `mypy ai/` - Type checking (strict configuration)
+- `ruff ai/ tests/` - Run ruff linter (install with: `pip install ruff`)
+- `black ai/ tests/` - Format code with black (install with: `pip install black`)
+- `mypy ai/` - Type checking (install with: `pip install mypy`)
 
 ### Installation and Setup
 - `./setup.sh install` - Install the AI library with dependencies
 - `./setup.sh uninstall` - Remove the AI library
-- `poetry install` - Install dependencies if Poetry is available
-- `pip install -e .` - Install in development mode
+- `pip install -e .` - Install in development mode (recommended)
+- `poetry install` - Alternative if Poetry is available
 
 ### CLI Testing
 - `ai` - Show help menu
-- `ai "test question"` - Basic functionality test
-- `ai backend-status` - Check backend connectivity
-- `ai models-list` - List available models
+- `ai "test question"` - Basic functionality test (direct prompt syntax)
+- `ai status` - Check backend connectivity
+- `ai models` - List available models
+- `ai tools` - List available tools
+- `ai config` - Show configuration settings
 
 ## Architecture Overview
 
@@ -162,6 +164,7 @@ Integration tests use special fixtures (`delayed_ask`, `delayed_stream`, `delaye
 - Cloud models: Patterns like `openrouter/`, `gpt-`, `claude-`, `gemini-`
 - Local models: Assumes Ollama for non-cloud patterns
 - Default model: `openrouter/google/gemini-flash-1.5`
+- Model aliases: `fast`, `best`, `cheap`, `coding`, `local` (defined in config.yaml)
 
 ### API Keys (Environment Variables)
 - `OPENROUTER_API_KEY` - Recommended (access to 100+ models)
