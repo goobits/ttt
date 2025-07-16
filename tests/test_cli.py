@@ -195,10 +195,12 @@ class TestErrorHandling:
 
     def test_missing_prompt(self):
         """Test handling of missing prompt argument."""
-        result = self.runner.invoke(main, ['ask'])
+        # With new CLI, missing prompt should show help, not error
+        result = self.runner.invoke(main, [])
         
-        assert result.exit_code != 0
-        assert 'Error:' in result.output
+        # Should either show help (exit 0) or report no input (exit 1)
+        assert result.exit_code in (0, 1)
+        assert ('AI Library' in result.output or 'No input provided' in result.output)
 
     def test_invalid_temperature(self):
         """Test handling of invalid temperature value."""

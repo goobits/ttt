@@ -19,6 +19,8 @@ console = Console()
 import ai
 
 
+
+
 def setup_logging_level(verbose=False, debug=False):
     """Setup logging level based on verbosity flags."""
     import logging
@@ -55,10 +57,9 @@ def setup_logging_level(verbose=False, debug=False):
 @click.option('--online', is_flag=True, help='Force cloud backend')
 @click.option('--code', is_flag=True, help='Optimize for code-related tasks')
 @click.option('--json', 'json_output', is_flag=True, help='Output in JSON format')
-@click.argument('prompt', required=False)
 @click.pass_context
 def main(ctx, version, model, system, temperature, max_tokens, 
-         tools, stream, verbose, debug, offline, online, code, json_output, prompt):
+         tools, stream, verbose, debug, offline, online, code, json_output):
     """AI Library - Unified AI Interface for local and cloud models."""
     
     # Setup logging based on verbosity
@@ -68,15 +69,15 @@ def main(ctx, version, model, system, temperature, max_tokens,
         click.echo(f"AI Library v{getattr(ai, '__version__', '0.4.0')}")
         return
     
-    # If no subcommand and we have a prompt, default to 'ask'
+    # If no subcommand was invoked, handle stdin input or show help
     if ctx.invoked_subcommand is None:
-        if prompt or not sys.stdin.isatty():
-            # Default to ask command
-            ask_command(prompt, model, system, temperature, max_tokens, 
+        if not sys.stdin.isatty():
+            # Handle piped input - default to ask command
+            ask_command(None, model, system, temperature, max_tokens, 
                        tools, stream, verbose, offline, online, code, json_output, allow_empty=True)
             return
         else:
-            # Show help when no args provided
+            # Show help when no args provided and no stdin
             click.echo(ctx.get_help())
             return
 
