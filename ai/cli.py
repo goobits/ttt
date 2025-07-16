@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.panel import Panel
 from dotenv import load_dotenv
 
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -719,4 +720,16 @@ def set_config_key(key, value):
 
 
 if __name__ == "__main__":
+    # Preprocess sys.argv to inject 'ask' command when needed
+    # This allows 'ai "prompt"' to work without explicit 'ask'
+    known_commands = ['ask', 'chat', 'status', 'models', 'tools', 'config']
+    
+    # Check if we have args and first arg is not a known command or flag
+    if len(sys.argv) > 1:
+        first_arg = sys.argv[1]
+        # If first arg is not a flag (--something) and not a known command
+        if not first_arg.startswith('-') and first_arg not in known_commands:
+            # Inject 'ask' command
+            sys.argv.insert(1, 'ask')
+    
     main()

@@ -199,8 +199,8 @@ install() {
     echo "  ${YELLOW}ai${NC}                               # Show help menu"
     echo "  ${YELLOW}ai${NC} 'Your question here'           # Basic usage"
     echo "  ${YELLOW}echo 'text' | ai${NC}                 # Pipe text to AI"
-    echo "  ${YELLOW}ai${NC} backend-status                 # Check system status"
-    echo "  ${YELLOW}ai${NC} models-list                    # List available models"
+    echo "  ${YELLOW}ai${NC} status                         # Check system status"
+    echo "  ${YELLOW}ai${NC} models                         # List available models"
     echo "  ${YELLOW}ai${NC} --help                         # Show all options"
     echo
     echo -e "${BLUE}EXAMPLE USAGE:${NC}"
@@ -227,7 +227,7 @@ install() {
     echo "If you see 'model not found' errors:"
     echo "  ${YELLOW}ai config backend cloud${NC}         # Switch to cloud backend"
     echo "  ${YELLOW}ai config openai_key sk-...${NC}     # Add your API key"
-    echo "  ${YELLOW}ai backend-status${NC}               # Check configuration"
+    echo "  ${YELLOW}ai status${NC}                       # Check configuration"
     echo
     echo "For local models (requires Ollama):"
     echo "  ${YELLOW}curl https://ollama.ai/install.sh | sh${NC}"
@@ -290,8 +290,8 @@ test_current_session() {
         source "$API_KEY_FILE" 2>/dev/null || true
     fi
     
-    echo "Running: python -m ai backend-status"
-    python -m ai backend-status || {
+    echo "Running: python -m ai status"
+    python -m ai status || {
         print_warning "CLI test failed, trying Python API..."
         python -c "
 from ai.api import ask
@@ -326,7 +326,7 @@ usage() {
     echo "  ✅ Clean output (filtered async warnings)"
     echo "  ✅ OpenRouter integration (multiple AI models)"
     echo "  ✅ Smart defaults (cloud backend, gemini-flash model)"
-    echo "  ✅ Comprehensive commands (backend-status, models-list)"
+    echo "  ✅ Comprehensive commands (status, models, tools)"
 }
 
 # Main script logic
