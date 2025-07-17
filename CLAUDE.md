@@ -18,10 +18,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `mypy ai/` - Type checking (install with: `pip install mypy`)
 
 ### Installation and Setup
-- `./setup.sh install` - Install the AI library with dependencies
+- `./setup.sh install` - Install with pipx (recommended)
+- `./setup.sh install --dev` - Install in development mode with pipx --editable
+- `./setup.sh upgrade` - Upgrade to latest version  
 - `./setup.sh uninstall` - Remove the AI library
-- `pip install -e .` - Install in development mode (recommended)
-- `poetry install` - Alternative if Poetry is available
 
 ### CLI Testing
 - `ttt` - Show help menu
@@ -90,8 +90,9 @@ CLI Interface / Python API
 - `ai/exceptions.py` - Custom exception classes
 
 **Supporting:**
-- `ai/chat.py` - Chat session management
-- `ai/plugins.py` - Plugin system for extensions
+- `ttt/chat.py` - Chat session management  
+- `ttt/plugins.py` - Plugin system for extensions
+- `config.yaml` - Default configuration with model registry
 
 ## Testing Patterns
 
@@ -202,3 +203,6 @@ Integration tests use special fixtures (`delayed_ask`, `delayed_stream`, `delaye
 - Include comprehensive docstrings for schema generation
 - Test security implications for code execution tools
 - Follow existing patterns in `ai/tools/builtins.py`
+
+### Temporary Files
+When creating temporary debug or test scripts, use `/tmp` directory to keep the project clean.

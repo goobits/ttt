@@ -98,8 +98,24 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
     Returns:
         ConfigModel instance with loaded configuration
     """
-    # Load .env file if it exists
-    load_dotenv()
+    # Load .env file if it exists, searching in project directories
+    env_paths = [
+        Path(__file__).parent.parent / ".env",  # Relative to ttt package (installed location)
+        Path.cwd() / ".env",  # Current working directory
+    ]
+    
+    # Also search up the directory tree from current working directory
+    current_path = Path.cwd()
+    for parent in [current_path] + list(current_path.parents):
+        env_path = parent / ".env"
+        if env_path not in env_paths:
+            env_paths.append(env_path)
+    
+    for env_path in env_paths:
+        if env_path.exists():
+            load_dotenv(env_path)
+            logger.debug(f"Loaded environment from {env_path}")
+            break
 
     # Load defaults from project config.yaml
     defaults = load_project_defaults()

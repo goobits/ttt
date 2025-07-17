@@ -11,8 +11,24 @@ from rich.panel import Panel
 from dotenv import load_dotenv
 
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env file in project directory
+from pathlib import Path
+env_paths = [
+    Path(__file__).parent.parent / ".env",  # Relative to ttt package (installed location)
+    Path.cwd() / ".env",  # Current working directory
+]
+
+# Also search up the directory tree from current working directory
+current_path = Path.cwd()
+for parent in [current_path] + list(current_path.parents):
+    env_path = parent / ".env"
+    if env_path not in env_paths:
+        env_paths.append(env_path)
+
+for env_path in env_paths:
+    if env_path.exists():
+        load_dotenv(env_path)
+        break
 
 console = Console()
 
