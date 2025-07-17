@@ -66,14 +66,14 @@ def setup_logging_level(verbose=False, debug=False):
 def main(ctx, version, model, system, temperature, max_tokens, 
          tools, stream, verbose, debug, code, json_output, 
          chat, status, models, tools_list, config, args):
-    """🚀 AI Library - Your unified gateway to the world's best AI models
+    """🚀 TTT - Text-to-Text Processing Library
     
     \b
     💡 Quick Examples:
-      ai "What's the weather like?"
-      ai "Write a Python function to sort a list"
-      echo "Hello world" | ai "Translate to Spanish"
-      ai --chat  # Start interactive conversation
+      ttt "What's the weather like?"
+      ttt "Write a Python function to sort a list"
+      echo "Hello world" | ttt "Translate to Spanish"
+      ttt --chat  # Start interactive conversation
     
     \b
     🌟 Features:
@@ -86,14 +86,14 @@ def main(ctx, version, model, system, temperature, max_tokens,
     \b
     🔑 Setup:
       export OPENROUTER_API_KEY=your-key-here
-      ai status  # Check your setup
+      ttt status  # Check your setup
     """
     
     # Setup logging based on verbosity
     setup_logging_level(verbose, debug)
     
     if version:
-        click.echo(f"AI Library v{getattr(ai, '__version__', '0.4.0')}")
+        click.echo(f"TTT Library v{getattr(ai, '__version__', '0.4.0')}")
         return
     
     # Handle special commands first
@@ -644,7 +644,7 @@ def show_all_config():
                 console.print(f"  {user_key}: {value}")
     
     console.print()
-    console.print("[dim]Use 'ai config <key> <value>' to change settings[/dim]")
+    console.print("[dim]Use 'ttt config <key> <value>' to change settings[/dim]")
 
 
 def show_config_key(key):

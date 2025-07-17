@@ -323,7 +323,7 @@ class ToolExecutor:
             if len(available_tools) > 5:
                 error_msg += f" and {len(available_tools) - 5} more"
 
-        error_msg += "\n🔧 Use 'ai tools-list' to see all available tools"
+        error_msg += "\n🔧 Use 'ttt tools-list' to see all available tools"
 
         return error_msg
 

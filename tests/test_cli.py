@@ -120,14 +120,14 @@ class TestCLICommands:
         result = self.runner.invoke(main, ['--help'])
         
         assert result.exit_code == 0
-        assert 'AI Library - Unified AI Interface' in result.output
+        assert 'TTT - Text-to-Text Processing Library' in result.output
 
     def test_version_display(self):
         """Test version display."""
         result = self.runner.invoke(main, ['--version'])
         
         assert result.exit_code == 0
-        assert 'AI Library v' in result.output
+        assert 'TTT Library v' in result.output
 
 
 class TestHelperFunctions:
@@ -164,7 +164,7 @@ class TestErrorHandling:
         
         # Should either show help (exit 0) or report no input (exit 1)
         assert result.exit_code in (0, 1)
-        assert ('AI Library' in result.output or 'No input provided' in result.output)
+        assert ('TTT' in result.output or 'No input provided' in result.output)
 
     def test_invalid_temperature(self):
         """Test handling of invalid temperature value."""

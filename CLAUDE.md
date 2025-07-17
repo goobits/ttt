@@ -24,12 +24,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `poetry install` - Alternative if Poetry is available
 
 ### CLI Testing
-- `ai` - Show help menu
-- `ai "test question"` - Basic functionality test (direct prompt syntax)
-- `ai status` - Check backend connectivity
-- `ai models` - List available models
-- `ai tools` - List available tools
-- `ai config` - Show configuration settings
+- `ttt` - Show help menu
+- `ttt "test question"` - Basic functionality test (direct prompt syntax)
+- `ttt status` - Check backend connectivity
+- `ttt models` - List available models
+- `ttt tools` - List available tools
+- `ttt config` - Show configuration settings
 
 ## Architecture Overview
 
@@ -67,8 +67,8 @@ CLI Interface / Python API
 - Custom tool registration via decorators
 
 **CLI Interface** (`ai/cli.py`):
-- Direct command execution: `ai "question"`
-- Pipe support: `echo "text" | ai`
+- Direct command execution: `ttt "question"`
+- Pipe support: `echo "text" | ttt`
 - Rich terminal output with error handling
 
 **Configuration System** (`ai/config.py`, `ai/config_loader.py`):

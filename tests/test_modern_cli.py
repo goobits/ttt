@@ -114,7 +114,7 @@ class TestClickCLI:
         result = self.runner.invoke(main, ["--help"])
         
         assert result.exit_code == 0
-        assert "AI Library - Unified AI Interface" in result.stdout
+        assert "TTT - Text-to-Text Processing Library" in result.stdout
         assert "--chat" in result.stdout
         assert "--status" in result.stdout
 
@@ -123,18 +123,17 @@ class TestClickCLI:
         result = self.runner.invoke(main, ["--help"])
         
         assert result.exit_code == 0
-        assert "AI Library - Unified AI Interface" in result.stdout
+        assert "TTT - Text-to-Text Processing Library" in result.stdout
         assert "--model" in result.stdout
         assert "--model" in result.stdout
 
     def test_invalid_arguments(self):
         """Test handling of invalid arguments."""
-        # Missing required prompt argument (stdin not a TTY)
+        # No arguments shows help (exit 0) or no input error (exit 1)
         result = self.runner.invoke(main, [])
-        assert result.exit_code != 0
-        # The message can be either "Missing argument" or "No input provided"
-        # depending on whether stdin is considered a TTY
-        assert ("Missing argument" in result.output or 
+        assert result.exit_code in (0, 1)
+        # Either shows help or reports no input
+        assert ("TTT - Text-to-Text Processing Library" in result.output or 
                 "No input provided" in result.output)
 
     def test_tools_parsing(self):

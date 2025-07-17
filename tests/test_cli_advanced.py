@@ -263,7 +263,7 @@ class TestCLIArguments:
         # Both are valid behaviors depending on stdin state
         assert result.exit_code in (0, 1)
         # Should either show help or error about no input
-        assert ("AI Library - Unified AI Interface" in result.output or 
+        assert ("TTT - Text-to-Text Processing Library" in result.output or 
                 "No input provided" in result.output)
 
     def test_cli_multiple_flags(self):

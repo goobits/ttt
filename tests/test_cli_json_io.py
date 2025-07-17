@@ -50,7 +50,7 @@ class TestJSONInputOutput:
         with patch('ai.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
-            result = self.runner.invoke(main, [], input=json_input)
+            result = self.runner.invoke(main, ['-'], input=json_input)
             
             assert result.exit_code == 0
             # Verify ai.ask was called with extracted values
@@ -66,7 +66,7 @@ class TestJSONInputOutput:
         with patch('ai.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
-            result = self.runner.invoke(main, [], input=json_input)
+            result = self.runner.invoke(main, ['-'], input=json_input)
             
             assert result.exit_code == 0
             call_args, call_kwargs = mock_ask.call_args
@@ -80,7 +80,7 @@ class TestJSONInputOutput:
         with patch('ai.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
-            result = self.runner.invoke(main, [], input=json_input)
+            result = self.runner.invoke(main, ['-'], input=json_input)
             
             assert result.exit_code == 0
             call_args, call_kwargs = mock_ask.call_args
@@ -94,7 +94,7 @@ class TestJSONInputOutput:
         with patch('ai.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
-            result = self.runner.invoke(main, [], input=json_input)
+            result = self.runner.invoke(main, ['-'], input=json_input)
             
             assert result.exit_code == 0
             call_args, call_kwargs = mock_ask.call_args
@@ -108,7 +108,7 @@ class TestJSONInputOutput:
         with patch('ai.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
-            result = self.runner.invoke(main, [], input=json_input)
+            result = self.runner.invoke(main, ['-'], input=json_input)
             
             assert result.exit_code == 0
             call_args, call_kwargs = mock_ask.call_args
@@ -121,7 +121,7 @@ class TestJSONInputOutput:
         with patch('ai.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
-            result = self.runner.invoke(main, [], input=text_input)
+            result = self.runner.invoke(main, ['-'], input=text_input)
             
             assert result.exit_code == 0
             call_args, call_kwargs = mock_ask.call_args
@@ -134,7 +134,7 @@ class TestJSONInputOutput:
         with patch('ai.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
-            result = self.runner.invoke(main, [], input=json_input)
+            result = self.runner.invoke(main, ['-'], input=json_input)
             
             assert result.exit_code == 0
             call_args, call_kwargs = mock_ask.call_args
@@ -224,7 +224,7 @@ class TestDefaultAskBehavior:
             mock_response.time = 0.5
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, [], input="stdin input text")
+            result = self.runner.invoke(main, ['-'], input="stdin input text")
             
             assert result.exit_code == 0
             assert "Stdin response" in result.output
@@ -237,7 +237,7 @@ class TestDefaultAskBehavior:
         
         # Should either show help (exit 0) or no input error (exit 1)
         assert result.exit_code in (0, 1)
-        assert ("AI Library" in result.output or 
+        assert ("TTT" in result.output or 
                 "No input provided" in result.output or
                 "help" in result.output.lower())
 
@@ -263,7 +263,7 @@ class TestCompleteJSONWorkflow:
             mock_response.tokens_out = 15
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ['--json'], input=json_input)
+            result = self.runner.invoke(main, ['-', '--json'], input=json_input)
             
             assert result.exit_code == 0
             
@@ -299,7 +299,7 @@ class TestCompleteJSONWorkflow:
         with patch('ai.ask') as mock_ask:
             mock_ask.return_value = SimpleResponse()
             
-            result = self.runner.invoke(main, ['--json'], input="simple text query")
+            result = self.runner.invoke(main, ['-', '--json'], input="simple text query")
             
             assert result.exit_code == 0
             

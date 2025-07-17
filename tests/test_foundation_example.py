@@ -191,7 +191,7 @@ class TestCLIFoundation:
         result = self.runner.invoke(main, ["--help"])
         
         assert result.exit_code == 0
-        assert "AI Library - Unified AI Interface" in result.stdout
+        assert "TTT - Text-to-Text Processing Library" in result.stdout
         assert "--chat" in result.stdout
         assert "--status" in result.stdout
         assert "--models" in result.stdout

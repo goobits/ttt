@@ -46,7 +46,7 @@ CLI Interface / Python API
 
 ## ✨ Key Features
 
-- **🎯 Simple CLI** - Just `ai "your question"` - works instantly
+- **🎯 Simple CLI** - Just `ttt "your question"` - works instantly
 - **🔧 Function Calling** - AI can call your Python functions and tools
 - **🌐 Multi-Provider** - OpenRouter, OpenAI, Anthropic, Google APIs
 - **🤖 Local Support** - Optional Ollama integration for privacy
@@ -54,8 +54,8 @@ CLI Interface / Python API
 - **🛡️ Robust Error Handling** - Comprehensive error messages with helpful suggestions
 - **📊 Status Monitoring** - Backend health checks and model listing
 - **🎨 Rich Terminal UI** - Beautiful formatted output with color support
-- **🔄 Direct Pipe Support** - `echo "text" | ai` - no dash needed!
-- **📋 Smart Help** - `ai` shows help, `ai "question"` executes
+- **🔄 Direct Pipe Support** - `echo "text" | ttt` - no dash needed!
+- **📋 Smart Help** - `ttt` shows help, `ttt "question"` executes
 
 ## 🚀 Quick Start
 
@@ -67,25 +67,25 @@ CLI Interface / Python API
 source ~/.bashrc
 
 # Set up API key (choose one)
-ai config openai_key sk-your-key-here
-ai config openrouter_key sk-or-v1-your-key-here
+ttt config openai_key sk-your-key-here
+ttt config openrouter_key sk-or-v1-your-key-here
 
 # Start using immediately
-ai "What is Python?"
-ai "Write a function to sort a list" --code
+ttt "What is Python?"
+ttt "Write a function to sort a list" --code
 
 # Pipe text directly to AI
-echo "Explain this code" | ai
-cat file.txt | ai "Review this code"
+echo "Explain this code" | ttt
+cat file.txt | ttt "Review this code"
 
 # Use local models (privacy-focused)
-ai config backend local
-ai config model qwen2.5:32b
-ai "private question"
+ttt config backend local
+ttt config model qwen2.5:32b
+ttt "private question"
 
 # Use built-in tools
-ai "What time is it in Tokyo?" --tools get_current_time
-ai "Search for Python tutorials" --tools web_search
+ttt "What time is it in Tokyo?" --tools get_current_time
+ttt "Search for Python tutorials" --tools web_search
 ```
 
 ## ⚙️ Configuration Management
@@ -94,28 +94,28 @@ ai "Search for Python tutorials" --tools web_search
 
 ```bash
 # View all settings
-ai config
+ttt config
 
 # Set API keys (masked when displayed)
-ai config openai_key sk-your-key-here
-ai config anthropic_key sk-ant-your-key-here
-ai config openrouter_key sk-or-v1-your-key-here
+ttt config openai_key sk-your-key-here
+ttt config anthropic_key sk-ant-your-key-here
+ttt config openrouter_key sk-or-v1-your-key-here
 
 # Configure behavior
-ai config model gpt-4                     # Default model
-ai config backend local                   # Backend (local/cloud/auto)
-ai config timeout 60                      # Request timeout
-ai config retries 3                       # Max retry attempts
+ttt config model gpt-4                     # Default model
+ttt config backend local                   # Backend (local/cloud/auto)
+ttt config timeout 60                      # Request timeout
+ttt config retries 3                       # Max retry attempts
 ```
 
 ### Common Configurations
 
 | Use Case | Configuration |
 |----------|---------------|
-| **Privacy-First** | `ai config backend local && ai config model qwen2.5:32b` |
-| **Fast Responses** | `ai config model gpt-3.5-turbo` |
-| **Coding Assistant** | `ai config model claude-3-sonnet && ai config backend cloud` |
-| **Cost-Effective** | `ai config openrouter_key sk-or-... && ai config model google/gemini-flash` |
+| **Privacy-First** | `ttt config backend local && ttt config model qwen2.5:32b` |
+| **Fast Responses** | `ttt config model gpt-3.5-turbo` |
+| **Coding Assistant** | `ttt config model claude-3-sonnet && ttt config backend cloud` |
+| **Cost-Effective** | `ttt config openrouter_key sk-or-... && ttt config model google/gemini-flash` |
 
 All settings saved to `~/.config/ai/config.yaml`
 
@@ -125,56 +125,56 @@ All settings saved to `~/.config/ai/config.yaml`
 
 ```bash
 # If you used: llm "question"
-ai "question"                    # Same simple interface
+ttt "question"                    # Same simple interface
 
 # Enhanced with new features:
-ai "question" --code             # Coding-optimized responses
-ai "question" --verbose          # Show detailed metadata
+ttt "question" --code             # Coding-optimized responses
+ttt "question" --verbose          # Show detailed metadata
 
 # Easy configuration management (NEW):
-ai config model qwen2.5:32b     # Set default model for Qwen users
-ai config backend local          # Set default to local for privacy
-ai config                        # View all current settings
+ttt config model qwen2.5:32b     # Set default model for Qwen users
+ttt config backend local          # Set default to local for privacy
+ttt config                        # View all current settings
 
 # Flexible flag positioning (all equivalent):
-ai "write a function" --code
-ai --code "write a function"  
-ai "write" --code "a function"
+ttt "write a function" --code
+ttt --code "write a function"  
+ttt "write" --code "a function"
 
 # Interactive mode (coming soon):
-# ai --chat                      # Start persistent conversation
+# ttt --chat                      # Start persistent conversation
 ```
 
 ### Usage Examples
 
 ```bash
 # Basic usage - just like llm
-ai "What is Python?"
+ttt "What is Python?"
 
 # Show help menu
-ai
+ttt
 
 # Pipe text directly (NEW!)
-echo "Hello world" | ai
-cat script.py | ai "Review this code"
-git diff | ai "Explain these changes"
+echo "Hello world" | ttt
+cat script.py | ttt "Review this code"
+git diff | ttt "Explain these changes"
 
 # Coding assistance with optimization
-ai "write a Python function to sort a list" --code --verbose
+ttt "write a Python function to sort a list" --code --verbose
 
 # Specify models directly
-ai "private question" --model qwen2.5:32b  # Uses local model automatically
-ai "complex analysis" --model gpt-4        # Uses cloud model automatically
+ttt "private question" --model qwen2.5:32b  # Uses local model automatically
+ttt "complex analysis" --model gpt-4        # Uses cloud model automatically
 
 # Stream responses in real-time
-ai "Tell me a story" --stream
+ttt "Tell me a story" --stream
 
 # System status and discovery
-ai status                               # Check what's configured
-ai models                               # See available models
+ttt status                               # Check what's configured
+ttt models                               # See available models
 
 # Traditional stdin support (also works)
-echo "2 + 2" | ai -
+echo "2 + 2" | ttt -
 ```
 
 ### Tools and Function Calling
@@ -324,119 +324,119 @@ response = ask(
 
 ```bash
 # Simple usage (like llm)
-ai "Your question here"
+ttt "Your question here"
 
 # Show help menu
-ai --help
+ttt --help
 
 # NEW: Direct pipe support (no dash needed!)
-echo "Hello world" | ai
-cat file.txt | ai
-git diff | ai
+echo "Hello world" | ttt
+cat file.txt | ttt
+git diff | ttt
 
 # Enhanced features
-ai "Question" --code                     # Coding-optimized responses
-ai "Question" --verbose                  # Show detailed metadata
+ttt "Question" --code                     # Coding-optimized responses
+ttt "Question" --verbose                  # Show detailed metadata
 
 # Stream responses (real-time output)
-ai "Tell me a story" --stream
+ttt "Tell me a story" --stream
 
 # Specify model
-ai "Code question" --model openrouter/anthropic/claude-3-sonnet
+ttt "Code question" --model openrouter/anthropic/claude-3-sonnet
 
 # Local model specification (automatic routing)
-ai "Question" --model llama2
+ttt "Question" --model llama2
 
 # System prompts
-ai "Translate this" --system "You are a translator"
+ttt "Translate this" --system "You are a translator"
 
 # Temperature control
-ai "Write a poem" --temperature 0.9
+ttt "Write a poem" --temperature 0.9
 
 # Token limits
-ai "Summarize this" --max-tokens 100
+ttt "Summarize this" --max-tokens 100
 
 # Enhanced pipe support (multiple ways)
-echo "What is this?" | ai               # NEW: Direct pipe
-echo "What is this?" | ai               # Direct pipe
-cat file.txt | ai "Explain this code"   # Pipe with additional prompt
-cat script.py | ai "review this code" --code
+echo "What is this?" | ttt               # NEW: Direct pipe
+echo "What is this?" | ttt               # Direct pipe
+cat file.txt | ttt "Explain this code"   # Pipe with additional prompt
+cat script.py | ttt "review this code" --code
 
 # Use tools from CLI
-ai "What time is it in Tokyo?" --tools get_current_time
-ai "Search for Python tutorials" --tools web_search
-ai "List files in current directory" --tools list_directory
+ttt "What time is it in Tokyo?" --tools get_current_time
+ttt "Search for Python tutorials" --tools web_search
+ttt "List files in current directory" --tools list_directory
 
 # Multiple tools
-ai "Search web and save results" --tools web_search,write_file
+ttt "Search web and save results" --tools web_search,write_file
 
 # Custom tools (module:function format)
-ai "Process data" --tools my_module:process_data
-ai "Analyze file" --tools /path/to/tools.py:analyze
+ttt "Process data" --tools my_module:process_data
+ttt "Analyze file" --tools /path/to/tools.py:analyze
 
 # Built-in tools by category
-ai "Read config.json" --tools read_file
-ai "Calculate 15% of 250" --tools calculate
+ttt "Read config.json" --tools read_file
+ttt "Calculate 15% of 250" --tools calculate
 
 # Flexible flag positioning (all equivalent)
-ai "write a function" --code --verbose
-ai --code "write a function" --verbose  
-ai --verbose --code "write a function"
+ttt "write a function" --code --verbose
+ttt --code "write a function" --verbose  
+ttt --verbose --code "write a function"
 ```
 
 ### System Commands
 
 ```bash
 # Check backend status and connectivity
-ai --status
+ttt --status
 
 # List all available models
-ai --models
+ttt --models
 
 # List available tools
-ai --tools-list
+ttt --tools-list
 
 # Manage configuration (see Configuration Reference above)
-ai --config
+ttt --config
 
 # Show help
-ai --help
+ttt --help
 ```
 
 ### Advanced Options
 
 ```bash
 # Enhanced features
-ai "Question" --code               # Coding-optimized responses
+ttt "Question" --code               # Coding-optimized responses
 
 # Model specification
-ai "Question" --model gpt-4
-ai "Question" --model openrouter/google/gemini-flash-1.5
-ai "Question" --model anthropic/claude-3-haiku
+ttt "Question" --model gpt-4
+ttt "Question" --model openrouter/google/gemini-flash-1.5
+ttt "Question" --model anthropic/claude-3-haiku
 
 # Model aliases (fast, best, cheap, coding, local)
-ai "Question" --model fast              # Uses gpt-3.5-turbo
-ai "Question" --model best              # Uses gpt-4
-ai "Question" --model coding            # Uses google/gemini-1.5-pro
+ttt "Question" --model fast              # Uses gpt-3.5-turbo
+ttt "Question" --model best              # Uses gpt-4
+ttt "Question" --model coding            # Uses google/gemini-1.5-pro
 
 # Response formatting
-ai "Question" --stream             # Stream response tokens
-ai "Question" --verbose            # Show timing and metadata
+ttt "Question" --stream             # Stream response tokens
+ttt "Question" --verbose            # Show timing and metadata
 
 # Model parameters
-ai "Question" --temperature 0.7    # Creativity (0.0-2.0)
-ai "Question" --max-tokens 500     # Response length limit
-ai "Question" --system "You are..." # System prompt
+ttt "Question" --temperature 0.7    # Creativity (0.0-2.0)
+ttt "Question" --max-tokens 500     # Response length limit
+ttt "Question" --system "You are..." # System prompt
 
 # Short flags
-ai "Question" -m gpt-4            # Model
-ai "Question" -s "System prompt"   # System
-ai "Question" -v                   # Verbose
+ttt "Question" -m gpt-4            # Model
+ttt "Question" -s "System prompt"   # System
+ttt "Question" -v                   # Verbose
 
 # NEW: Smart features
-ai "debug this function" --code    # Auto-detects coding context
-ai "debug this function"           # Also works (auto-detection)
-ai "Question" --verbose --model gpt-4  # Combine multiple flags
+ttt "debug this function" --code    # Auto-detects coding context
+ttt "debug this function"           # Also works (auto-detection)
+ttt "Question" --verbose --model gpt-4  # Combine multiple flags
 ```
 
 ## Backend Configuration
@@ -469,7 +469,7 @@ ollama pull codellama
 ollama pull mistral
 
 # Use local models (automatic routing)
-ai "Question" --model llama2
+ttt "Question" --model llama2
 ```
 
 **Configuration:**
@@ -720,13 +720,13 @@ black ai/ tests/
 source ~/.bashrc
 
 # Check if binary exists
-ls -la ~/.local/bin/ai
+ls -la ~/.local/bin/ttt
 ```
 
 **API Key errors:**
 ```bash
 # Check configuration
-ai backend-status
+ttt backend-status
 
 # Verify .env file
 cat .env
@@ -776,7 +776,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - **Documentation**: This README covers all features
 - **Issues**: Report bugs or request features via GitHub issues
-- **Setup Problems**: Use `ai backend-status` for diagnostics
+- **Setup Problems**: Use `ttt backend-status` for diagnostics
 
 ---
 

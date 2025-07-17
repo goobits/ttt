@@ -127,7 +127,7 @@ setup_shell() {
     detect_shell
     
     # Create function with subshell to avoid persistent venv activation
-    local ai_function="function ai() { (cd $AI_DIR && source .venv/bin/activate && python -m ai \"\$@\"); }"
+    local ttt_function="function ttt() { (cd $AI_DIR && source .venv/bin/activate && python -m ai \"\$@\"); }"
     local ai_path_export="export PATH=\"$VENV_DIR/bin:\$PATH\""
     local ai_comment="# AI Library Integration"
     
@@ -138,7 +138,7 @@ setup_shell() {
     echo "" >> "$SHELL_RC"
     echo "$ai_comment" >> "$SHELL_RC"
     echo "$ai_path_export" >> "$SHELL_RC"
-    echo "$ai_function" >> "$SHELL_RC"
+    echo "$ttt_function" >> "$SHELL_RC"
     
     print_success "Shell integration configured"
 }
@@ -236,7 +236,7 @@ install() {
         echo
         echo -e "${YELLOW}Next Steps:${NC}"
         echo -e "1. 🔑 Set your API key: ${YELLOW}export OPENROUTER_API_KEY=your-key-here${NC}"
-        echo -e "2. 🧪 Test it out: ${YELLOW}ai 'What is 2+2?'${NC}"
+        echo -e "2. 🧪 Test it out: ${YELLOW}ttt 'What is 2+2?'${NC}"
         echo
         if [[ "$dev_mode" == "true" ]]; then
             echo -e "${GREEN}Development mode:${NC}"
@@ -246,7 +246,7 @@ install() {
             echo -e "${GREEN}pipx provides:${NC}"
             echo "  ✅ Isolated virtual environment"
         fi
-        echo "  ✅ Global 'ai' command"
+        echo "  ✅ Global 'ttt' command"
         echo "  ✅ Easy updates with 'pipx upgrade ai'"
         echo "  ✅ Clean uninstall with 'pipx uninstall ai'"
         
@@ -260,10 +260,10 @@ install() {
     
     echo
     echo -e "${BLUE}Quick Examples:${NC}"
-    echo -e "  ${YELLOW}ai${NC} 'Explain quantum computing'"
-    echo -e "  ${YELLOW}echo 'Hello world' | ai${NC}"
-    echo -e "  ${YELLOW}git diff | ai 'Explain changes'${NC}"
-    echo -e "  ${YELLOW}ai${NC} status"
+    echo -e "  ${YELLOW}ttt${NC} 'Explain quantum computing'"
+    echo -e "  ${YELLOW}echo 'Hello world' | ttt${NC}"
+    echo -e "  ${YELLOW}git diff | ttt 'Explain changes'${NC}"
+    echo -e "  ${YELLOW}ttt${NC} status"
     echo
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${GREEN}Ready to chat with AI! 🤖${NC}"
@@ -296,10 +296,14 @@ uninstall() {
             print_success "Removed shell integration"
         fi
         
-        # Remove global binary
+        # Remove global binaries (both old 'ai' and new 'ttt')
         if [[ -f "$HOME/.local/bin/ai" ]]; then
             rm -f "$HOME/.local/bin/ai"
-            print_success "Removed global binary"
+            print_success "Removed old 'ai' binary"
+        fi
+        if [[ -f "$HOME/.local/bin/ttt" ]]; then
+            rm -f "$HOME/.local/bin/ttt"
+            print_success "Removed 'ttt' binary"
         fi
     fi
     
@@ -367,7 +371,7 @@ install_with_pip() {
     echo -e "${YELLOW}Next Steps:${NC}"
     echo -e "1. 🔄 Restart your terminal or run: ${YELLOW}source $SHELL_RC${NC}"
     echo -e "2. 🔑 Add your API keys to: ${YELLOW}$API_KEY_FILE${NC}"
-    echo -e "3. 🧪 Test it out: ${YELLOW}ai 'What is 2+2?'${NC}"
+    echo -e "3. 🧪 Test it out: ${YELLOW}ttt 'What is 2+2?'${NC}"
 }
 
 # Test installation
@@ -378,8 +382,8 @@ test_installation() {
         source "$API_KEY_FILE" 2>/dev/null || true
     fi
     
-    echo "Running: ai status"
-    ai status || {
+    echo "Running: ttt status"
+    ttt status || {
         print_warning "CLI test failed - make sure to add API keys to $API_KEY_FILE"
     }
 }
@@ -398,8 +402,8 @@ usage() {
     echo "  help           Show this help message"
     echo
     echo "After installation, use:"
-    echo "  ai 'Your question here'  # Clean output with minimal logging"
-    echo "  ai --help               # Show available options"
+    echo "  ttt 'Your question here'  # Clean output with minimal logging"
+    echo "  ttt --help               # Show available options"
     echo
     echo "Features:"
     echo "  ✅ Clean output (filtered async warnings)"

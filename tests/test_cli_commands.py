@@ -166,7 +166,7 @@ class TestMainCommand:
         """Test --help argument."""
         result = self.runner.invoke(main, ["--help"])
         assert result.exit_code == 0
-        assert "AI Library - Unified AI Interface" in result.output
+        assert "TTT - Text-to-Text Processing Library" in result.output
 
     def test_backend_status_command(self):
         """Test status command."""

@@ -1,4 +1,4 @@
-# Testing Foundation for AI Library
+# Testing Foundation for TTT Library
 
 This document outlines the testing foundation and patterns established for the AI library.
 

@@ -239,24 +239,24 @@ def demo_cli_examples():
     print()
     
     print("1. Using built-in tools:")
-    print('   ai "Search for Python tutorials" --tools "web_search"')
-    print('   ai "Calculate 15% of 250" --tools "calculate"')
+    print('   ttt "Search for Python tutorials" --tools "web_search"')
+    print('   ttt "Calculate 15% of 250" --tools "calculate"')
     print()
     
     print("2. Using multiple tools:")
-    print('   ai "Search for weather data and calculate averages" --tools "web_search,calculate"')
+    print('   ttt "Search for weather data and calculate averages" --tools "web_search,calculate"')
     print()
     
     print("3. Using custom tools from modules:")
-    print('   ai "Get system info" --tools "os:getcwd,platform:system"')
+    print('   ttt "Get system info" --tools "os:getcwd,platform:system"')
     print()
     
     print("4. Using tools from custom scripts:")
-    print('   ai "Process data" --tools "/path/to/my_tools.py:process_data"')
+    print('   ttt "Process data" --tools "/path/to/my_tools.py:process_data"')
     print()
     
     print("5. Complex workflows:")
-    print('   ai "Research topic, analyze data, create report" --tools "web_search,calculate,write_file"')
+    print('   ttt "Research topic, analyze data, create report" --tools "web_search,calculate,write_file"')
 
 
 def main():
