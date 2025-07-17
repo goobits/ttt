@@ -73,6 +73,111 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Check Python version meets minimum requirements
+check_python_version() {
+    if ! command_exists python3; then
+        print_error "Python 3 is required but not installed"
+        exit 1
+    fi
+    
+    local python_version
+    python_version=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "unknown")
+    
+    if [ "$python_version" != "unknown" ]; then
+        print_status "Detected Python $python_version"
+    fi
+    
+    if ! python3 -c "import sys; exit(0 if sys.version_info >= (3, 8) else 1)" 2>/dev/null; then
+        print_error "Python 3.8+ required (found $python_version)"
+        echo "Please upgrade your Python installation"
+        exit 1
+    fi
+    
+    print_success "Python version check passed"
+}
+
+# Check for dependency conflicts
+check_dependency_conflicts() {
+    print_status "Checking for dependency conflicts..."
+    
+    local conflicts_found=false
+    local warning_packages=()
+    
+    # Check for conflicting AI/LLM packages that might cause issues
+    local conflict_packages=(
+        "openai==0.*"           # Old OpenAI versions
+        "anthropic==0.2.*"      # Very old Anthropic versions
+        "litellm==0.*"          # Old LiteLLM versions
+        "langchain-core==0.0.*" # Very old LangChain versions
+    )
+    
+    # Check for packages that might conflict with our dependencies
+    for package in "${conflict_packages[@]}"; do
+        local pkg_name="${package%%==*}"  # Extract package name before ==
+        
+        if python3 -m pip show "$pkg_name" >/dev/null 2>&1; then
+            local installed_version
+            installed_version=$(python3 -m pip show "$pkg_name" 2>/dev/null | grep "^Version:" | cut -d' ' -f2)
+            
+            # Check if this version might conflict
+            case "$package" in
+                "openai==0.*")
+                    if [[ "$installed_version" =~ ^0\. ]]; then
+                        warning_packages+=("$pkg_name ($installed_version) - recommend upgrading to 1.0+")
+                        conflicts_found=true
+                    fi
+                    ;;
+                "anthropic==0.2.*")
+                    if [[ "$installed_version" =~ ^0\.2\. ]]; then
+                        warning_packages+=("$pkg_name ($installed_version) - recommend upgrading to 0.3+")
+                        conflicts_found=true
+                    fi
+                    ;;
+                "litellm==0.*")
+                    if [[ "$installed_version" =~ ^0\. ]]; then
+                        warning_packages+=("$pkg_name ($installed_version) - recommend upgrading to 1.0+")
+                        conflicts_found=true
+                    fi
+                    ;;
+                "langchain-core==0.0.*")
+                    if [[ "$installed_version" =~ ^0\.0\. ]]; then
+                        warning_packages+=("$pkg_name ($installed_version) - may cause import conflicts")
+                        conflicts_found=true
+                    fi
+                    ;;
+            esac
+        fi
+    done
+    
+    # Check for virtual environment conflicts if not using pipx
+    if [[ "$VIRTUAL_ENV" != "" ]] && ! command_exists pipx; then
+        print_warning "Active virtual environment detected: $VIRTUAL_ENV"
+        echo "Consider using pipx for global installation or deactivate venv first"
+    fi
+    
+    if [ "$conflicts_found" = true ]; then
+        print_warning "Potential dependency conflicts detected:"
+        for warning in "${warning_packages[@]}"; do
+            echo "  ⚠️  $warning"
+        done
+        echo
+        echo "These packages may cause compatibility issues. Consider upgrading them:"
+        for warning in "${warning_packages[@]}"; do
+            local pkg_name="${warning%% (*}"  # Extract package name before space
+            echo "  pip install --upgrade $pkg_name"
+        done
+        echo
+        echo -n "Continue anyway? [y/N]: "
+        read -r response
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+            echo "Installation cancelled. Please resolve conflicts first."
+            exit 1
+        fi
+    else
+        print_success "No dependency conflicts detected"
+    fi
+}
+
 # Clean shell RC file of AI Library entries
 clean_shell_rc() {
     if [[ -f "$SHELL_RC" ]]; then
@@ -181,6 +286,50 @@ EOF
     fi
 }
 
+# Upgrade function
+upgrade() {
+    echo
+    echo -e "${BLUE}🔄 AI Library Upgrader${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo
+    
+    # Check Python version first
+    check_python_version
+    echo
+    
+    # Check for dependency conflicts
+    check_dependency_conflicts
+    echo
+    
+    # Check if installed via pipx
+    if command_exists pipx && pipx list | grep -q "^  package ai "; then
+        print_status "Upgrading pipx installation..."
+        if pipx upgrade ai; then
+            print_success "AI library upgraded successfully via pipx!"
+        else
+            print_error "pipx upgrade failed"
+            exit 1
+        fi
+    else
+        print_warning "No pipx installation found"
+        echo "Upgrade is only supported for pipx installations"
+        echo "For other installation methods, please uninstall and reinstall:"
+        echo "  $0 uninstall"
+        echo "  $0 install"
+        exit 1
+    fi
+    
+    echo
+    echo -e "${GREEN}🎉 Upgrade Complete!${NC}"
+    echo
+    echo -e "${YELLOW}Next Steps:${NC}"
+    echo -e "1. 🧪 Test the upgrade: ${YELLOW}ttt 'What is 2+2?'${NC}"
+    echo -e "2. 🔍 Check version: ${YELLOW}ttt --version${NC}"
+    echo
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}Ready to continue with AI! 🤖${NC}"
+}
+
 # Install function
 install() {
     local dev_mode=${1:-false}
@@ -192,6 +341,14 @@ install() {
         echo -e "${BLUE}🚀 AI Library Installer${NC}"
     fi
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo
+    
+    # Check Python version first
+    check_python_version
+    echo
+    
+    # Check for dependency conflicts
+    check_dependency_conflicts
     echo
     
     # Check for pipx (recommended)
@@ -393,11 +550,12 @@ test_installation() {
 usage() {
     echo "AI Library Setup Script"
     echo
-    echo "Usage: $0 {install|install --dev|uninstall|help}"
+    echo "Usage: $0 {install|install --dev|upgrade|uninstall|help}"
     echo
     echo "Commands:"
     echo "  install        Install the AI library and CLI"
     echo "  install --dev  Install in development mode (editable)"
+    echo "  upgrade        Upgrade existing installation to latest version"
     echo "  uninstall      Remove the AI library and CLI"
     echo "  help           Show this help message"
     echo
@@ -420,6 +578,9 @@ case "${1:-}" in
         else
             install false
         fi
+        ;;
+    upgrade)
+        upgrade
         ;;
     uninstall)
         uninstall
