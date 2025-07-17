@@ -45,48 +45,58 @@ def setup_logging_level(verbose=False, debug=False):
 
 
 @click.command(context_settings={"allow_extra_args": True})
-@click.option('--version', is_flag=True, help='📋 Show version information')
-@click.option('--model', '-m', help='🤖 Choose your AI model (e.g., gpt-4o, claude-3-5-sonnet)')
-@click.option('--system', '-s', help='🎭 Set the AI\'s personality with a system prompt')
-@click.option('--temperature', '-t', type=float, help='🌡️  Control creativity (0=focused, 1=creative)')
-@click.option('--max-tokens', type=int, help='📝 Limit response length (tokens)')
-@click.option('--tools', help='🔧 Enable AI tools (comma-separated)')
-@click.option('--stream', is_flag=True, help='⚡ Stream responses in real-time')
-@click.option('--verbose', '-v', is_flag=True, help='🔍 Show detailed information')
-@click.option('--debug', is_flag=True, help='🐛 Enable debug logging')
-@click.option('--code', is_flag=True, help='💻 Optimize for coding tasks')
-@click.option('--json', 'json_output', is_flag=True, help='📦 Output as JSON')
-@click.option('--chat', is_flag=True, help='💬 Start interactive chat session')
-@click.option('--status', is_flag=True, help='⚡ Check system status')
-@click.option('--models', is_flag=True, help='🤖 List all available AI models')
-@click.option('--tools-list', is_flag=True, help='🔧 List all available tools')
-@click.option('--config', is_flag=True, help='⚙️  Manage configuration settings')
+@click.option('--version', is_flag=True, help='📋 Show version and system information')
+@click.option('--model', '-m', help='🤖 Select your AI model for optimal results (e.g., gpt-4o, claude-3-5-sonnet)')
+@click.option('--system', '-s', help='🎭 Define AI behavior and expertise with custom instructions')
+@click.option('--temperature', '-t', type=float, help='🌡️  Balance creativity vs precision (0=focused, 1=creative)')
+@click.option('--max-tokens', type=int, help='📝 Control response length for concise or detailed output')
+@click.option('--tools', help='🔧 Activate AI capabilities: web search, code execution, file operations')
+@click.option('--stream', is_flag=True, help='⚡ Watch responses appear in real-time as AI thinks')
+@click.option('--verbose', '-v', is_flag=True, help='🔍 Show detailed processing information and diagnostics')
+@click.option('--debug', is_flag=True, help='🐛 Enable comprehensive debugging for troubleshooting')
+@click.option('--code', is_flag=True, help='💻 Optimize AI responses for programming and development tasks')
+@click.option('--json', 'json_output', is_flag=True, help='📦 Export results as JSON for automation and scripting')
+@click.option('--chat', is_flag=True, help='💬 Launch interactive conversation mode with memory')
+@click.option('--status', is_flag=True, help='⚡ Verify system health and API connectivity')
+@click.option('--models', is_flag=True, help='🤖 Browse all available AI models and their capabilities')
+@click.option('--tools-list', is_flag=True, help='🔧 Discover all available AI tools and functions')
+@click.option('--config', is_flag=True, help='⚙️  Access configuration management and preferences')
 @click.argument('args', nargs=-1)
 @click.pass_context
 def main(ctx, version, model, system, temperature, max_tokens, 
          tools, stream, verbose, debug, code, json_output, 
          chat, status, models, tools_list, config, args):
-    """🚀 TTT - Text-to-Text Processing Library
+    """🚀 TTT - Transform any text with intelligent AI processing
+    
+    TTT empowers developers, writers, and creators to process text with precision.
+    From simple transformations to complex analysis - AI-powered and pipeline-ready.
     
     \b
-    💡 Quick Examples:
-      ttt "What's the weather like?"
-      ttt "Write a Python function to sort a list"
-      echo "Hello world" | ttt "Translate to Spanish"
-      ttt --chat  # Start interactive conversation
+    💡 Quick Wins:
+      ttt "Fix grammar in this text"           # Instant text cleanup
+      ttt "Summarize this article"             # Extract key insights
+      echo "data.txt" | ttt "Convert to JSON"  # Pipeline integration
+      ttt --chat                               # Interactive AI assistant
     
     \b
-    🌟 Features:
-      • 100+ AI models via OpenRouter, OpenAI, Anthropic & more
-      • Smart model routing and fallbacks
-      • Built-in tools for web search, code execution & file ops
-      • Streaming responses and JSON output
-      • Local and cloud backends
+    🎯 Text Transformation & Analysis:
+      ttt "Translate to Spanish"               # Language conversion
+      ttt "Write a Python function to sort"    # Code generation
+      ttt "What's the main theme here?"        # Content analysis
+      ttt "Rewrite this professionally"        # Style transformation
     
     \b
-    🔑 Setup:
+    🌟 Why Choose TTT:
+      • 100+ AI models with smart auto-selection
+      • Stream responses in real-time or batch process
+      • Built-in tools: web search, code execution, file operations
+      • JSON output for scripting and automation
+      • Works in pipelines, scripts, and interactive sessions
+    
+    \b
+    🔑 Quick Setup:
       export OPENROUTER_API_KEY=your-key-here
-      ttt status  # Check your setup
+      ttt status  # Verify your installation and API access
     """
     
     # Setup logging based on verbosity

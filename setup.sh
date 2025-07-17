@@ -289,7 +289,8 @@ EOF
 # Upgrade function
 upgrade() {
     echo
-    echo -e "${BLUE}🔄 AI Library Upgrader${NC}"
+    echo -e "${BLUE}🔄 TTT - AI Text Transformation Upgrader${NC}"
+    echo -e "${BLUE}    Getting latest AI models and capabilities...${NC}"
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo
     
@@ -336,9 +337,11 @@ install() {
     
     echo
     if [[ "$dev_mode" == "true" ]]; then
-        echo -e "${BLUE}🚀 AI Library Installer (Development Mode)${NC}"
+        echo -e "${BLUE}🚀 TTT - AI Text Transformation (Development Setup)${NC}"
+        echo -e "${BLUE}    Setting up live development environment...${NC}"
     else
-        echo -e "${BLUE}🚀 AI Library Installer${NC}"
+        echo -e "${BLUE}🚀 TTT - AI Text Transformation Installer${NC}"
+        echo -e "${BLUE}    Transform any text with intelligent AI processing${NC}"
     fi
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo
@@ -548,26 +551,37 @@ test_installation() {
 
 # Usage function
 usage() {
-    echo "AI Library Setup Script"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}    🚀 TTT - AI-Powered Text Transformation${NC}"
+    echo -e "${BLUE}    Modern PipX Installation${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo
     echo "Usage: $0 {install|install --dev|upgrade|uninstall|help}"
     echo
-    echo "Commands:"
-    echo "  install        Install the AI library and CLI"
-    echo "  install --dev  Install in development mode (editable)"
-    echo "  upgrade        Upgrade existing installation to latest version"
-    echo "  uninstall      Remove the AI library and CLI"
-    echo "  help           Show this help message"
+    echo -e "${YELLOW}Commands:${NC}"
+    echo "  install        🎯 Install TTT for instant text transformation"
+    echo "  install --dev  💻 Development setup with live code changes"
+    echo "  upgrade        ⬆️  Upgrade to latest AI models and features"
+    echo "  uninstall      🗑️  Clean removal of TTT installation"
+    echo "  help           📚 Show this comprehensive guide"
     echo
-    echo "After installation, use:"
-    echo "  ttt 'Your question here'  # Clean output with minimal logging"
-    echo "  ttt --help               # Show available options"
+    echo -e "${YELLOW}Quick Start:${NC}"
+    echo "  $0 install                    # Recommended: Fast pipx installation"
+    echo "  $0 install --dev              # For contributors and developers"
+    echo "  $0 upgrade                    # Get latest AI capabilities"
     echo
-    echo "Features:"
-    echo "  ✅ Clean output (filtered async warnings)"
-    echo "  ✅ OpenRouter integration (multiple AI models)"
-    echo "  ✅ Smart defaults (cloud backend, gemini-flash model)"
-    echo "  ✅ Comprehensive commands (status, models, tools)"
+    echo -e "${YELLOW}After installation:${NC}"
+    echo "  ttt 'Fix grammar in this text'      # Instant text improvement"
+    echo "  ttt 'Translate to Spanish'          # Language transformation"
+    echo "  ttt --chat                          # Interactive AI assistant"
+    echo "  ttt status                          # Verify system health"
+    echo
+    echo -e "${GREEN}🌟 Why TTT:${NC}"
+    echo "  ✅ Transform any text with 100+ AI models"
+    echo "  ✅ Pipeline-ready for automation and scripting"
+    echo "  ✅ Real-time streaming and JSON output"
+    echo "  ✅ Built-in tools: web search, code execution, file ops"
+    echo "  ✅ Smart model routing with automatic fallbacks"
 }
 
 # Main script logic
