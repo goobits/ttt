@@ -5,13 +5,13 @@ immediately use without additional setup. All tools include proper error
 handling, input validation, and security measures.
 
 Usage:
-    from ai.tools.builtins import load_builtin_tools
+    from ttt.tools.builtins import load_builtin_tools
 
     # Load all built-in tools into the registry
     load_builtin_tools()
 
     # Or import specific tools
-    from ai.tools.builtins import web_search, read_file
+    from ttt.tools.builtins import web_search, read_file
 """
 
 import os
@@ -32,8 +32,8 @@ import math
 import re
 import asyncio
 
-from ai.tools import tool
-from ai.config import get_config
+from ttt.tools import tool
+from ttt.config import get_config
 from .recovery import ErrorRecoverySystem, RetryConfig, InputSanitizer
 
 

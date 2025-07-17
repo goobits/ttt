@@ -20,15 +20,64 @@ NC='\033[0m' # No Color
 
 # Detect shell and set RC file
 detect_shell() {
+    local detected_shell=""
     if [[ -n "$ZSH_VERSION" ]]; then
         SHELL_RC="$HOME/.zshrc"
+        detected_shell="zsh"
         echo "Detected: zsh"
     elif [[ -n "$BASH_VERSION" ]]; then
         SHELL_RC="$HOME/.bashrc"
+        detected_shell="bash"
         echo "Detected: bash"
+    elif [[ "$SHELL" == *"fish"* ]]; then
+        SHELL_RC="$HOME/.config/fish/config.fish"
+        detected_shell="fish"
+        echo "Detected: fish"
     else
         echo -e "${YELLOW}Warning: Could not detect shell. Defaulting to ~/.bashrc${NC}"
         SHELL_RC="$HOME/.bashrc"
+        detected_shell="bash"
+    fi
+    export DETECTED_SHELL="$detected_shell"
+}
+
+# Refresh shell environment to make ttt command available immediately
+refresh_shell_environment() {
+    print_status "Refreshing shell environment..."
+    
+    # Ensure pipx path is in current PATH
+    if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+        export PATH="$HOME/.local/bin:$PATH"
+    fi
+    
+    # Try to reload shell configuration
+    case "$DETECTED_SHELL" in
+        "zsh")
+            if [[ -f "$HOME/.zshrc" ]]; then
+                source "$HOME/.zshrc" 2>/dev/null || true
+            fi
+            ;;
+        "bash")
+            if [[ -f "$HOME/.bashrc" ]]; then
+                source "$HOME/.bashrc" 2>/dev/null || true
+            fi
+            ;;
+        "fish")
+            # Fish doesn't source config files the same way
+            # Just ensure PATH is updated for current session
+            if [[ -d "$HOME/.local/bin" ]]; then
+                export PATH="$HOME/.local/bin:$PATH"
+            fi
+            ;;
+    esac
+    
+    # Verify ttt command is now available
+    if command -v ttt >/dev/null 2>&1; then
+        print_success "TTT command is now available in current session"
+        return 0
+    else
+        print_warning "TTT command not immediately available - may need shell restart"
+        return 1
     fi
 }
 
@@ -294,6 +343,10 @@ upgrade() {
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo
     
+    # Detect shell for later use
+    detect_shell
+    echo
+    
     # Check Python version first
     check_python_version
     echo
@@ -302,25 +355,45 @@ upgrade() {
     check_dependency_conflicts
     echo
     
-    # Check if installed via pipx
-    if command_exists pipx && pipx list | grep -q "^  package ai "; then
-        print_status "Upgrading pipx installation..."
-        if pipx upgrade ai; then
-            print_success "AI library upgraded successfully via pipx!"
+    # Check if installed via pipx (check for both old 'ai' and new 'ttt' package names)
+    if command_exists pipx; then
+        if pipx list | grep -q "package ttt "; then
+            print_status "Upgrading TTT installation..."
+            if pipx upgrade ttt; then
+                print_success "TTT library upgraded successfully via pipx!"
+            else
+                print_error "pipx upgrade failed"
+                exit 1
+            fi
+        elif pipx list | grep -q "package ai "; then
+            print_warning "Found old 'ai' package. Upgrading to 'ttt'..."
+            pipx uninstall ai 2>/dev/null || true
+            if pipx install .; then
+                print_success "Upgraded from 'ai' to 'ttt' successfully!"
+            else
+                print_error "Upgrade installation failed"
+                exit 1
+            fi
         else
-            print_error "pipx upgrade failed"
+            print_warning "No pipx installation found"
+            echo "Upgrade is only supported for pipx installations"
+            echo "For other installation methods, please uninstall and reinstall:"
+            echo "  $0 uninstall"
+            echo "  $0 install"
             exit 1
         fi
     else
-        print_warning "No pipx installation found"
-        echo "Upgrade is only supported for pipx installations"
-        echo "For other installation methods, please uninstall and reinstall:"
-        echo "  $0 uninstall"
-        echo "  $0 install"
+        print_warning "pipx not available"
+        echo "Upgrade requires pipx. Please install pipx first."
         exit 1
     fi
     
     echo
+    
+    # Refresh shell environment to make ttt available immediately
+    refresh_shell_environment
+    echo
+    
     echo -e "${GREEN}🎉 Upgrade Complete!${NC}"
     echo
     echo -e "${YELLOW}Next Steps:${NC}"
@@ -346,6 +419,10 @@ install() {
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo
     
+    # Detect shell for later use
+    detect_shell
+    echo
+    
     # Check Python version first
     check_python_version
     echo
@@ -358,20 +435,32 @@ install() {
     if command_exists pipx; then
         print_status "Using pipx for clean installation"
         
-        # Check if already installed via pipx
-        if pipx list | grep -q "^  package ai "; then
-            if [[ "$dev_mode" == "true" ]]; then
-                print_warning "AI library already installed. Development mode requires clean reinstall."
-                pipx uninstall ai 2>/dev/null || true
+        # Check if already installed via pipx (check for both 'ai' and 'ttt' package names)
+        local ai_installed=$(pipx list | grep -q "package ai " && echo "true" || echo "false")
+        local ttt_installed=$(pipx list | grep -q "package ttt " && echo "true" || echo "false")
+        local ttt_command_available=$(command -v ttt >/dev/null 2>&1 && echo "true" || echo "false")
+        
+        if [[ "$ai_installed" == "true" ]]; then
+            print_warning "Old AI library found. Removing for clean TTT installation."
+            pipx uninstall ai 2>/dev/null || true
+        fi
+        
+        if [[ "$ttt_installed" == "true" ]]; then
+            if [[ "$ttt_command_available" == "false" ]]; then
+                print_warning "TTT package found but command not working. Forcing reinstall."
+                pipx uninstall ttt 2>/dev/null || true
+            elif [[ "$dev_mode" == "true" ]]; then
+                print_warning "TTT library already installed. Development mode requires clean reinstall."
+                pipx uninstall ttt 2>/dev/null || true
             else
-                print_warning "AI library already installed via pipx"
+                print_warning "TTT library already installed via pipx"
                 echo -n "Reinstall? [y/N]: "
                 read -r response
                 if [[ ! "$response" =~ ^[Yy]$ ]]; then
                     echo "Installation cancelled"
                     exit 0
                 fi
-                pipx uninstall ai 2>/dev/null || true
+                pipx uninstall ttt 2>/dev/null || true
             fi
         fi
         
@@ -391,6 +480,11 @@ install() {
         fi
         
         echo
+        
+        # Refresh shell environment to make ttt available immediately
+        refresh_shell_environment
+        echo
+        
         echo -e "${GREEN}🎉 Installation Complete!${NC}"
         echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
         echo
@@ -437,12 +531,24 @@ uninstall() {
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo
     
-    # Check if installed via pipx
-    if command_exists pipx && pipx list | grep -q "^  package ai "; then
-        print_status "Removing pipx installation..."
-        pipx uninstall ai
-        print_success "Removed pipx installation"
-    else
+    # Check if installed via pipx (handle both old 'ai' and new 'ttt' package names)
+    local removed_something=false
+    if command_exists pipx; then
+        if pipx list | grep -q "package ttt "; then
+            print_status "Removing TTT pipx installation..."
+            pipx uninstall ttt
+            print_success "Removed TTT pipx installation"
+            removed_something=true
+        fi
+        if pipx list | grep -q "package ai "; then
+            print_status "Removing old AI pipx installation..."
+            pipx uninstall ai
+            print_success "Removed old AI pipx installation"
+            removed_something=true
+        fi
+    fi
+    
+    if [[ "$removed_something" == "false" ]]; then
         # Legacy removal - virtual environment and shell integration
         if [[ -d "$VENV_DIR" ]]; then
             rm -rf "$VENV_DIR"

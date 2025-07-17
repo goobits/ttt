@@ -16,8 +16,8 @@ load_dotenv()
 
 console = Console()
 
-# Import AI library modules
-import ai
+# Import TTT library modules
+import ttt as ai  # Keep ai alias for existing code compatibility
 
 
 
@@ -167,7 +167,7 @@ def start_chat_session(model, system, session_id, tools, load, verbose):
     try:
         # Load existing session if requested
         if load:
-            from ai.chat import PersistentChatSession
+            from ttt.chat import PersistentChatSession
             session = PersistentChatSession.load(load)
             console.print(f"[green]Loaded session from {load}[/green]")
         else:
@@ -177,7 +177,7 @@ def start_chat_session(model, system, session_id, tools, load, verbose):
         
         # Get chat help message from config
         try:
-            from ai.config import load_project_defaults
+            from ttt.config import load_project_defaults
             project_defaults = load_project_defaults()
             help_message = project_defaults.get("chat", {}).get("commands", {}).get(
                 "help_message", 
@@ -248,7 +248,7 @@ def start_chat_session(model, system, session_id, tools, load, verbose):
 
 def handle_config_command(args):
     """Handle config command with arguments."""
-    from ai.config import get_config, configure, save_config
+    from ttt.config import get_config, configure, save_config
     
     try:
         if not args:
@@ -506,7 +506,7 @@ def show_models_list():
     
     # Try to get models from config
     try:
-        from ai.config_loader import get_project_config
+        from ttt.config_loader import get_project_config
         config = get_project_config()
         available_models = config.get("models", {}).get("available", {})
         
@@ -548,7 +548,7 @@ def show_tools_list():
     console.print()
     
     try:
-        from ai.tools import list_tools, get_categories
+        from ttt.tools import list_tools, get_categories
         
         categories = get_categories()
         for category in sorted(categories):
@@ -567,7 +567,7 @@ def resolve_tools(tool_specs: List[str]) -> List:
     tools = []
     
     try:
-        from ai.tools import get_tool, list_tools
+        from ttt.tools import get_tool, list_tools
         
         for spec in tool_specs:
             if ':' in spec:
@@ -634,7 +634,7 @@ def get_config_key_mapping():
 
 def show_all_config():
     """Display all current configuration settings."""
-    from ai.config import get_config
+    from ttt.config import get_config
     
     config = get_config()
     console.print("[bold blue]Current Configuration:[/bold blue]")
@@ -659,7 +659,7 @@ def show_all_config():
 
 def show_config_key(key):
     """Display a specific configuration value."""
-    from ai.config import get_config
+    from ttt.config import get_config
     
     key_mapping = get_config_key_mapping()
     
@@ -686,7 +686,7 @@ def show_config_key(key):
 
 def set_config_key(key, value):
     """Set a configuration value and persist it."""
-    from ai.config import get_config, configure, save_config
+    from ttt.config import get_config, configure, save_config
     
     key_mapping = get_config_key_mapping()
     

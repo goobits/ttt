@@ -209,7 +209,7 @@ def chat(
         ...     session.save("alice_chat.json")
 
         >>> # Resume a saved session
-        >>> from ai.chat import PersistentChatSession
+        >>> from ttt.chat import PersistentChatSession
         >>> session = PersistentChatSession.load("alice_chat.json")
         >>> session.ask("What's my name?")  # Will remember it's Alice
 
