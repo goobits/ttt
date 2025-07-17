@@ -119,7 +119,7 @@ def main(ctx, version, model, system, temperature, max_tokens,
     setup_logging_level(verbose, debug)
     
     if version:
-        click.echo(f"TTT Library v{getattr(ai, '__version__', '0.4.0')}")
+        click.echo(f"TTT Library v{getattr(ttt, '__version__', '0.4.0')}")
         return
     
     # Handle special commands first
