@@ -9,8 +9,8 @@ import asyncio
 import random
 import time
 from typing import AsyncIterator, Dict, Any, Optional, List
-from ai.backends import BaseBackend
-from ai.models import AIResponse
+from ttt.backends import BaseBackend
+from ttt.models import AIResponse
 
 
 class MockLLMBackend(BaseBackend):

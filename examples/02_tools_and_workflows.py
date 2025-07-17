@@ -8,8 +8,8 @@ and create custom tools for complex workflows.
 
 import asyncio
 from ai import ask, chat
-from ai.tools import list_tools, get_tool, tool
-from ai.tools.builtins import (
+from ttt.tools import list_tools, get_tool, tool
+from ttt.tools.builtins import (
     web_search,
     read_file,
     write_file,

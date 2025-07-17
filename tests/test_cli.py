@@ -9,7 +9,7 @@ from click.testing import CliRunner
 # Add the project root to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from ai.cli import main, is_coding_request, apply_coding_optimization
+from ttt.cli import main, is_coding_request, apply_coding_optimization
 
 
 class TestCLICommands:
@@ -21,7 +21,7 @@ class TestCLICommands:
 
     def test_basic_ask_command(self):
         """Test basic direct prompt functionality."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_response.model = "test-model"
@@ -38,7 +38,7 @@ class TestCLICommands:
 
     def test_ask_with_model_option(self):
         """Test direct prompt with model option."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
@@ -52,7 +52,7 @@ class TestCLICommands:
 
     def test_ask_with_temperature(self):
         """Test direct prompt with temperature option."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
@@ -68,7 +68,7 @@ class TestCLICommands:
 
     def test_ask_with_streaming(self):
         """Test direct prompt with streaming."""
-        with patch('ai.stream') as mock_stream:
+        with patch('ttt.stream') as mock_stream:
             mock_stream.return_value = iter(['chunk1', 'chunk2', 'chunk3'])
             
             result = self.runner.invoke(main, ['Test prompt', '--stream'])
@@ -79,7 +79,7 @@ class TestCLICommands:
 
     def test_chat_command(self):
         """Test chat command initialization."""
-        with patch('ai.chat') as mock_chat_context:
+        with patch('ttt.chat') as mock_chat_context:
             mock_session = MagicMock()
             mock_chat_context.return_value.__enter__ = lambda x: mock_session
             mock_chat_context.return_value.__exit__ = lambda x, *args: None
@@ -93,7 +93,7 @@ class TestCLICommands:
 
     def test_backend_status_command(self):
         """Test status command."""
-        with patch('ai.cli.show_backend_status') as mock_status:
+        with patch('ttt.cli.show_backend_status') as mock_status:
             result = self.runner.invoke(main, ['--status'])
             
             assert result.exit_code == 0
@@ -101,7 +101,7 @@ class TestCLICommands:
 
     def test_models_list_command(self):
         """Test models command."""
-        with patch('ai.cli.show_models_list') as mock_models:
+        with patch('ttt.cli.show_models_list') as mock_models:
             result = self.runner.invoke(main, ['--models'])
             
             assert result.exit_code == 0
@@ -109,7 +109,7 @@ class TestCLICommands:
 
     def test_tools_list_command(self):
         """Test tools command."""
-        with patch('ai.cli.show_tools_list') as mock_tools:
+        with patch('ttt.cli.show_tools_list') as mock_tools:
             result = self.runner.invoke(main, ['--tools-list'])
             
             assert result.exit_code == 0
@@ -168,7 +168,7 @@ class TestErrorHandling:
 
     def test_invalid_temperature(self):
         """Test handling of invalid temperature value."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_ask.side_effect = ValueError("Invalid temperature")
             
             result = self.runner.invoke(main, ['test', '--temperature', '2.0'])
@@ -178,7 +178,7 @@ class TestErrorHandling:
 
     def test_api_error_handling(self):
         """Test handling of API errors."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_ask.side_effect = Exception("API Error")
             
             result = self.runner.invoke(main, ['test'])
@@ -196,7 +196,7 @@ class TestStdinInput:
 
     def test_stdin_input(self):
         """Test reading from stdin."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response

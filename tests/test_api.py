@@ -2,10 +2,10 @@
 
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
-from ai.api import ask, stream, chat
-from ai.chat import PersistentChatSession
-from ai.models import AIResponse
-from ai.backends import BaseBackend
+from ttt.api import ask, stream, chat
+from ttt.chat import PersistentChatSession
+from ttt.models import AIResponse
+from ttt.backends import BaseBackend
 
 
 class MockBackend(BaseBackend):

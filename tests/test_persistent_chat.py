@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch, AsyncMock
 import tempfile
 
 from ai import chat, PersistentChatSession, AIResponse
-from ai.chat import PersistentChatSession as ChatClass
+from ttt.chat import PersistentChatSession as ChatClass
 
 
 class TestPersistentChatSession:
@@ -35,7 +35,7 @@ class TestPersistentChatSession:
         assert session.metadata["session_id"].startswith("chat_")
         assert len(session.metadata["session_id"]) > 10
 
-    @patch("ai.routing.router")
+    @patch("ttt.routing.router")
     def test_ask_updates_history(self, mock_router):
         """Test that ask() updates conversation history."""
         # Setup mock backend
@@ -71,7 +71,7 @@ class TestPersistentChatSession:
         assert session.history[1]["tokens_out"] == 20
         assert session.history[1]["cost"] == 0.001
 
-    @patch("ai.routing.router")
+    @patch("ttt.routing.router")
     def test_metadata_tracking(self, mock_router):
         """Test that metadata is properly tracked."""
         # Setup mock backend
@@ -296,7 +296,7 @@ class TestPersistentChatSession:
         # Metadata should be preserved
         assert session.metadata["session_id"] is not None
 
-    @patch("ai.routing.router")
+    @patch("ttt.routing.router")
     def test_multimodal_in_persistent_session(self, mock_router):
         """Test multi-modal content in persistent sessions."""
         from ai import ImageInput

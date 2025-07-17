@@ -7,16 +7,16 @@ import sys
 import os
 
 # Import functions from the CLI
-from ai.cli import show_backend_status, show_models_list, main
-from ai.backends.local import LocalBackend
-from ai.backends.cloud import CloudBackend
-from ai.api import ask, stream
+from ttt.cli import show_backend_status, show_models_list, main
+from ttt.backends.local import LocalBackend
+from ttt.backends.cloud import CloudBackend
+from ttt.api import ask, stream
 
 
 class TestModelsCommands:
     """Test the models command."""
 
-    @patch("ai.backends.local.LocalBackend")
+    @patch("ttt.backends.local.LocalBackend")
     @patch("httpx.get")
     def test_models_list_all(self, mock_httpx_get, mock_local_backend):
         """Test listing all models."""
@@ -35,7 +35,7 @@ class TestModelsCommands:
         mock_httpx_get.return_value = mock_response
 
         # Capture output
-        with patch("ai.cli.console") as mock_console:
+        with patch("ttt.cli.console") as mock_console:
             show_models_list()
 
             # Check that models were printed
@@ -52,7 +52,7 @@ class TestModelsCommands:
             # Also check that cloud models are shown
             assert any("gpt-4o" in str(call) or "gpt-3.5-turbo" in str(call) for call in print_calls)
 
-    @patch("ai.backends.local.LocalBackend")
+    @patch("ttt.backends.local.LocalBackend")
     def test_models_list_no_local_backend(self, mock_local_backend):
         """Test listing models when local backend is not available."""
         # Mock local backend not available
@@ -61,7 +61,7 @@ class TestModelsCommands:
         mock_local_backend.return_value = mock_backend_instance
 
         # Capture output
-        with patch("ai.cli.console") as mock_console:
+        with patch("ttt.cli.console") as mock_console:
             show_models_list()
 
             # Check that appropriate message was shown
@@ -70,7 +70,7 @@ class TestModelsCommands:
                 "Local backend not available" in str(call) for call in print_calls
             )
 
-    @patch("ai.backends.local.LocalBackend")
+    @patch("ttt.backends.local.LocalBackend")
     @patch("httpx.get")
     def test_models_list_ollama_error(self, mock_httpx_get, mock_local_backend):
         """Test listing models when Ollama returns an error."""
@@ -84,7 +84,7 @@ class TestModelsCommands:
         mock_httpx_get.side_effect = Exception("Connection error")
 
         # Capture output
-        with patch("ai.cli.console") as mock_console:
+        with patch("ttt.cli.console") as mock_console:
             show_models_list()
 
             # Check error handling
@@ -99,7 +99,7 @@ class TestBackendCommands:
     """Test the status command."""
 
     @patch.dict(os.environ, {}, clear=True)
-    @patch("ai.backends.local.LocalBackend")
+    @patch("ttt.backends.local.LocalBackend")
     def test_backend_status_basic(self, mock_local_backend):
         """Test basic backend status check."""
         # Mock local backend
@@ -110,7 +110,7 @@ class TestBackendCommands:
         mock_local_backend.return_value = mock_backend_instance
 
         # Capture output
-        with patch("ai.cli.console") as mock_console:
+        with patch("ttt.cli.console") as mock_console:
             show_backend_status()
 
             # Check output
@@ -120,7 +120,7 @@ class TestBackendCommands:
             assert any("Available" in str(call) for call in print_calls)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key-123"}, clear=True)
-    @patch("ai.backends.cloud.CloudBackend")
+    @patch("ttt.backends.cloud.CloudBackend")
     def test_backend_status_with_api_key(self, mock_cloud_backend):
         """Test backend status with API key present."""
         # Mock cloud backend
@@ -130,7 +130,7 @@ class TestBackendCommands:
         mock_cloud_backend.return_value = mock_backend_instance
 
         # Capture output
-        with patch("ai.cli.console") as mock_console:
+        with patch("ttt.cli.console") as mock_console:
             show_backend_status()
 
             # Check output
@@ -139,14 +139,14 @@ class TestBackendCommands:
             assert any("Available" in str(call) for call in print_calls)
             assert any("OPENAI" in str(call) for call in print_calls)
 
-    @patch("ai.backends.local.LocalBackend")
+    @patch("ttt.backends.local.LocalBackend")
     def test_backend_status_connection_error(self, mock_local_backend):
         """Test backend status with connection errors."""
         # Mock connection error
         mock_local_backend.side_effect = Exception("Connection refused")
 
         # Capture output
-        with patch("ai.cli.console") as mock_console:
+        with patch("ttt.cli.console") as mock_console:
             show_backend_status()
 
             # Check error handling
@@ -170,21 +170,21 @@ class TestMainCommand:
 
     def test_backend_status_command(self):
         """Test status command."""
-        with patch("ai.cli.show_backend_status") as mock_status:
+        with patch("ttt.cli.show_backend_status") as mock_status:
             result = self.runner.invoke(main, ["--status"])
             assert result.exit_code == 0
             mock_status.assert_called_once()
 
     def test_models_list_command(self):
         """Test models command."""
-        with patch("ai.cli.show_models_list") as mock_models:
+        with patch("ttt.cli.show_models_list") as mock_models:
             result = self.runner.invoke(main, ["--models"])
             assert result.exit_code == 0
             mock_models.assert_called_once()
 
     def test_ask_basic_query(self):
         """Test basic ask query."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
@@ -197,7 +197,7 @@ class TestMainCommand:
 
     def test_ask_with_model(self):
         """Test ask query with model."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
@@ -210,7 +210,7 @@ class TestMainCommand:
 
     def test_ask_with_stream(self):
         """Test ask query with stream flag."""
-        with patch('ai.stream') as mock_stream:
+        with patch('ttt.stream') as mock_stream:
             mock_stream.return_value = iter(["chunk1", "chunk2"])
             
             result = self.runner.invoke(main, ["Question", "--stream"])
@@ -219,7 +219,7 @@ class TestMainCommand:
 
     def test_ask_with_backend(self):
         """Test ask query with backend."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
@@ -229,7 +229,7 @@ class TestMainCommand:
 
     def test_main_query(self):
         """Test main function with query."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = Mock(return_value="Test response")
             mock_response.model = "test-model"
@@ -244,7 +244,7 @@ class TestMainCommand:
 
     def test_main_stream(self):
         """Test main function with streaming."""
-        with patch('ai.stream') as mock_stream:
+        with patch('ttt.stream') as mock_stream:
             mock_stream.return_value = iter(["Hello", " ", "world"])
 
             result = self.runner.invoke(main, ['Test question', '--stream'])

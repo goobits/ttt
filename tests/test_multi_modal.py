@@ -6,8 +6,8 @@ from pathlib import Path
 import base64
 
 from ai import ask, stream, ImageInput
-from ai.models import AIResponse
-from ai.backends import CloudBackend, LocalBackend
+from ttt.models import AIResponse
+from ttt.backends import CloudBackend, LocalBackend
 
 
 class TestImageInput:
@@ -79,7 +79,7 @@ class TestImageInput:
 class TestMultiModalAPI:
     """Test multi-modal API functionality."""
 
-    @patch("ai.api.router")
+    @patch("ttt.api.router")
     def test_ask_with_image(self, mock_router):
         """Test ask() with image input."""
         # Setup mock
@@ -107,7 +107,7 @@ class TestMultiModalAPI:
         assert call_args[0][0][0] == "What's in this image?"
         assert isinstance(call_args[0][0][1], ImageInput)
 
-    @patch("ai.api.router")
+    @patch("ttt.api.router")
     def test_stream_with_image(self, mock_router):
         """Test stream() with image input."""
         # Setup mock
@@ -220,7 +220,7 @@ class TestLocalBackendMultiModal:
     @pytest.mark.asyncio
     async def test_local_backend_rejects_images(self):
         """Test local backend properly rejects image inputs."""
-        from ai.exceptions import MultiModalError
+        from ttt.exceptions import MultiModalError
 
         backend = LocalBackend()
 
@@ -264,7 +264,7 @@ class TestRoutingMultiModal:
 
     def test_routing_detects_images(self):
         """Test router detects images and switches to cloud."""
-        from ai.routing import Router
+        from ttt.routing import Router
 
         router = Router()
 
@@ -284,7 +284,7 @@ class TestRoutingMultiModal:
 
     def test_routing_respects_explicit_vision_model(self):
         """Test routing respects explicit vision model selection."""
-        from ai.routing import Router
+        from ttt.routing import Router
 
         router = Router()
 

@@ -4,10 +4,10 @@ import pytest
 import tempfile
 from pathlib import Path
 from typing import AsyncIterator, Dict, Any, List, Optional
-from ai.plugins import PluginRegistry, BackendPlugin, plugin_registry
-from ai.backends import BaseBackend
-from ai.models import AIResponse
-from ai.exceptions import PluginValidationError
+from ttt.plugins import PluginRegistry, BackendPlugin, plugin_registry
+from ttt.backends import BaseBackend
+from ttt.models import AIResponse
+from ttt.exceptions import PluginValidationError
 
 
 class MockTestBackend(BaseBackend):
@@ -127,8 +127,8 @@ class TestPluginLoading:
         plugin_file = tmp_path / "test_plugin.py"
 
         plugin_code = """
-from ai.backends import BaseBackend
-from ai.models import AIResponse
+from ttt.backends import BaseBackend
+from ttt.models import AIResponse
 
 class FileMockTestBackend(BaseBackend):
     @property
@@ -190,8 +190,8 @@ def register_plugin(registry):
         init_file = package_dir / "__init__.py"
 
         plugin_code = """
-from ai.backends import BaseBackend
-from ai.models import AIResponse
+from ttt.backends import BaseBackend
+from ttt.models import AIResponse
 
 class PackageBackend(BaseBackend):
     @property
@@ -236,8 +236,8 @@ def register_plugin(registry):
         plugin_file = plugins_dir / "discovered_plugin.py"
 
         plugin_code = """
-from ai.backends import BaseBackend
-from ai.models import AIResponse
+from ttt.backends import BaseBackend
+from ttt.models import AIResponse
 
 class DiscoveredBackend(BaseBackend):
     @property
@@ -280,14 +280,14 @@ class TestGlobalRegistry:
 
     def test_global_registry_exists(self):
         """Test that global registry is available."""
-        from ai.plugins import plugin_registry
+        from ttt.plugins import plugin_registry
 
         assert plugin_registry is not None
         assert isinstance(plugin_registry, PluginRegistry)
 
     def test_register_backend_function(self):
         """Test the module-level register_backend function."""
-        from ai.plugins import register_backend
+        from ttt.plugins import register_backend
 
         # Create a unique backend to avoid conflicts
         class UniqueMockTestBackend(MockTestBackend):

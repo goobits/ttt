@@ -5,9 +5,9 @@ from unittest.mock import Mock, AsyncMock, patch, MagicMock
 import asyncio
 from typing import AsyncIterator
 
-from ai.backends.cloud import CloudBackend
-from ai.models import AIResponse, ImageInput
-from ai.exceptions import (
+from ttt.backends.cloud import CloudBackend
+from ttt.models import AIResponse, ImageInput
+from ttt.exceptions import (
     BackendNotAvailableError,
     ModelNotFoundError,
     APIKeyError,
@@ -65,11 +65,11 @@ def cloud_backend(mock_litellm):
     """Fixture that provides a CloudBackend with mocked litellm."""
     # Need to reload the module to pick up the mocked litellm
     import importlib
-    import ai.backends.cloud
+    import ttt.backends.cloud
 
-    importlib.reload(ai.backends.cloud)
+    importlib.reload(ttt.backends.cloud)
 
-    backend = ai.backends.cloud.CloudBackend()
+    backend = ttt.backends.cloud.CloudBackend()
     backend.litellm = mock_litellm
     return backend
 
@@ -80,11 +80,11 @@ class TestCloudBackendInitialization:
     def test_init_success(self, mock_litellm):
         """Test successful initialization with litellm available."""
         import importlib
-        import ai.backends.cloud
+        import ttt.backends.cloud
 
-        importlib.reload(ai.backends.cloud)
+        importlib.reload(ttt.backends.cloud)
 
-        backend = ai.backends.cloud.CloudBackend()
+        backend = ttt.backends.cloud.CloudBackend()
         assert backend.name == "cloud"
         assert backend.litellm is not None
 
@@ -92,12 +92,12 @@ class TestCloudBackendInitialization:
         """Test initialization fails without litellm."""
         with patch.dict("sys.modules", {"litellm": None}):
             import importlib
-            import ai.backends.cloud
+            import ttt.backends.cloud
 
-            importlib.reload(ai.backends.cloud)
+            importlib.reload(ttt.backends.cloud)
 
             with pytest.raises(BackendNotAvailableError) as exc_info:
-                ai.backends.cloud.CloudBackend()
+                ttt.backends.cloud.CloudBackend()
 
             assert "LiteLLM is required" in str(exc_info.value)
 

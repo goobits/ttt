@@ -3,7 +3,7 @@
 import pytest
 from click.testing import CliRunner
 from unittest.mock import patch, MagicMock, Mock
-from ai.cli import main
+from ttt.cli import main
 
 
 class TestClickCLI:
@@ -15,7 +15,7 @@ class TestClickCLI:
 
     def test_direct_prompt_basic(self):
         """Test basic direct prompt functionality."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
@@ -29,7 +29,7 @@ class TestClickCLI:
 
     def test_direct_prompt_with_options(self):
         """Test direct prompt with various options."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_response.model = "gpt-4"
@@ -55,7 +55,7 @@ class TestClickCLI:
 
     def test_direct_prompt_stdin(self):
         """Test direct prompt with stdin input."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
@@ -68,7 +68,7 @@ class TestClickCLI:
 
     def test_chat_command(self):
         """Test chat command."""
-        with patch('ai.chat') as mock_chat_context:
+        with patch('ttt.chat') as mock_chat_context:
             mock_session = Mock()
             mock_chat_context.return_value.__enter__ = lambda x: mock_session
             mock_chat_context.return_value.__exit__ = lambda x, *args: None
@@ -87,7 +87,7 @@ class TestClickCLI:
 
     def test_backend_status_command(self):
         """Test status command."""
-        with patch('ai.cli.show_backend_status') as mock_status:
+        with patch('ttt.cli.show_backend_status') as mock_status:
             result = self.runner.invoke(main, ["--status"])
             
             assert result.exit_code == 0
@@ -95,7 +95,7 @@ class TestClickCLI:
 
     def test_models_list_command(self):
         """Test models command."""
-        with patch('ai.cli.show_models_list') as mock_models:
+        with patch('ttt.cli.show_models_list') as mock_models:
             result = self.runner.invoke(main, ["--models"])
             
             assert result.exit_code == 0
@@ -103,7 +103,7 @@ class TestClickCLI:
 
     def test_tools_list_command(self):
         """Test tools command."""
-        with patch('ai.cli.show_tools_list') as mock_tools:
+        with patch('ttt.cli.show_tools_list') as mock_tools:
             result = self.runner.invoke(main, ["--tools-list"])
             
             assert result.exit_code == 0
@@ -138,7 +138,7 @@ class TestClickCLI:
 
     def test_tools_parsing(self):
         """Test tools argument parsing."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
@@ -162,7 +162,7 @@ class TestCLIIntegration:
 
     def test_full_ask_flow(self):
         """Test the complete ask flow."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             # Mock response
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "AI response"
@@ -182,9 +182,9 @@ class TestCLIIntegration:
 
     def test_no_backend_available(self):
         """Test behavior when no backend is available."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             # Simulate backend not available error
-            from ai.exceptions import BackendNotAvailableError
+            from ttt.exceptions import BackendNotAvailableError
             mock_ask.side_effect = BackendNotAvailableError("local", "No backends available")
             
             result = self.runner.invoke(main, ["test"])
@@ -195,7 +195,7 @@ class TestCLIIntegration:
 
     def test_auto_coding_detection(self):
         """Test that coding-related prompts work."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "response"
             mock_response.model = "gpt-4"

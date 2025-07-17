@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import Mock, patch
 from click.testing import CliRunner
 
-from ai.cli import main
+from ttt.cli import main
 
 
 class TestJSONInputOutput:
@@ -26,7 +26,7 @@ class TestJSONInputOutput:
 
     def test_json_output_format(self):
         """Test --json flag produces correct JSON output."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
             result = self.runner.invoke(main, ['test prompt', '--json'])
@@ -47,13 +47,13 @@ class TestJSONInputOutput:
         """Test JSON input parsing with 'prompt' field."""
         json_input = '{"prompt": "what is 2+2?", "model": "custom-model"}'
         
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
             result = self.runner.invoke(main, ['-'], input=json_input)
             
             assert result.exit_code == 0
-            # Verify ai.ask was called with extracted values
+            # Verify ttt.ask was called with extracted values
             mock_ask.assert_called_once()
             call_args, call_kwargs = mock_ask.call_args
             assert call_args[0] == "what is 2+2?"
@@ -63,7 +63,7 @@ class TestJSONInputOutput:
         """Test JSON input parsing with 'query' field."""
         json_input = '{"query": "capital of France?", "temperature": 0.7}'
         
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
             result = self.runner.invoke(main, ['-'], input=json_input)
@@ -77,7 +77,7 @@ class TestJSONInputOutput:
         """Test JSON input parsing with 'message' field."""
         json_input = '{"message": "translate hello", "max_tokens": 100}'
         
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
             result = self.runner.invoke(main, ['-'], input=json_input)
@@ -91,7 +91,7 @@ class TestJSONInputOutput:
         """Test JSON input parsing with 'content' field."""
         json_input = '{"content": "tell a joke", "system": "be funny"}'
         
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
             result = self.runner.invoke(main, ['-'], input=json_input)
@@ -105,7 +105,7 @@ class TestJSONInputOutput:
         """Test JSON input parsing with 'text' field."""
         json_input = '{"text": "explain AI"}'
         
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
             result = self.runner.invoke(main, ['-'], input=json_input)
@@ -118,7 +118,7 @@ class TestJSONInputOutput:
         """Test that invalid JSON falls back to plain text."""
         text_input = "plain text input {not json"
         
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
             result = self.runner.invoke(main, ['-'], input=text_input)
@@ -131,7 +131,7 @@ class TestJSONInputOutput:
         """Test JSON without recognized prompt field uses entire JSON."""
         json_input = '{"unknown": "value", "other": "data"}'
         
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
             result = self.runner.invoke(main, ['-'], input=json_input)
@@ -142,7 +142,7 @@ class TestJSONInputOutput:
 
     def test_json_error_output(self):
         """Test JSON error output format."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_ask.side_effect = Exception("Test error message")
             
             result = self.runner.invoke(main, ['test prompt', '--json'])
@@ -154,7 +154,7 @@ class TestJSONInputOutput:
 
     def test_json_streaming_output(self):
         """Test JSON streaming output."""
-        with patch('ai.stream') as mock_stream:
+        with patch('ttt.stream') as mock_stream:
             mock_stream.return_value = ["Hello", " ", "world", "!"]
             
             result = self.runner.invoke(main, ['test prompt', '--stream', '--json'])
@@ -176,7 +176,7 @@ class TestJSONInputOutput:
         mock_response_no_tokens.tokens_in = None
         mock_response_no_tokens.tokens_out = None
         
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_ask.return_value = mock_response_no_tokens
             
             result = self.runner.invoke(main, ['test', '--json'])
@@ -199,7 +199,7 @@ class TestDefaultAskBehavior:
 
     def test_command_line_argument_defaults_to_ask(self):
         """Test that providing an argument defaults to direct prompt."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = Mock(return_value="Response")
             mock_response.model = "gpt-3.5-turbo"
@@ -216,7 +216,7 @@ class TestDefaultAskBehavior:
 
     def test_stdin_input_defaults_to_ask(self):
         """Test that stdin input defaults to direct prompt."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = Mock(return_value="Stdin response")
             mock_response.model = "gpt-3.5-turbo"
@@ -253,7 +253,7 @@ class TestCompleteJSONWorkflow:
         """Test complete JSON input to JSON output workflow."""
         json_input = '{"prompt": "what is AI?", "model": "gpt-4", "temperature": 0.3}'
         
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = Mock(return_value="AI is artificial intelligence")
             mock_response.model = "gpt-4"
@@ -296,7 +296,7 @@ class TestCompleteJSONWorkflow:
             def __str__(self):
                 return "Text response"
         
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_ask.return_value = SimpleResponse()
             
             result = self.runner.invoke(main, ['-', '--json'], input="simple text query")

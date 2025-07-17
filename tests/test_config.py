@@ -5,8 +5,8 @@ import os
 import tempfile
 from pathlib import Path
 import yaml
-from ai.config import load_config, save_config, configure, get_config, model_registry
-from ai.models import ConfigModel, ModelInfo
+from ttt.config import load_config, save_config, configure, get_config, model_registry
+from ttt.models import ConfigModel, ModelInfo
 
 
 class TestConfigModel:
@@ -15,7 +15,7 @@ class TestConfigModel:
     def test_default_values(self):
         """Test default configuration values from loaded config."""
         # Get config with defaults loaded from config.yaml
-        from ai.config import get_config
+        from ttt.config import get_config
         config = get_config()
         
         # Test that we have the expected structure
@@ -37,7 +37,7 @@ class TestConfigModel:
         monkeypatch.setenv("OLLAMA_BASE_URL", "http://custom:8080")
         monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
-        from ai.config import load_config
+        from ttt.config import load_config
 
         config = load_config()
 
@@ -194,9 +194,9 @@ class TestProgrammaticConfiguration:
     def test_configure_updates_global_config(self):
         """Test that configure() updates the global configuration."""
         # Reset global config
-        import ai.config
+        import ttt.config
 
-        ai.config._config = None
+        ttt.config._config = None
 
         configure(default_backend="local", timeout=120, custom_option="value")
 
@@ -207,9 +207,9 @@ class TestProgrammaticConfiguration:
     def test_configure_partial_update(self):
         """Test that configure() does partial updates."""
         # Reset global config
-        import ai.config
+        import ttt.config
 
-        ai.config._config = None
+        ttt.config._config = None
 
         # First configuration
         configure(default_backend="cloud", timeout=60)

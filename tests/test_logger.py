@@ -5,7 +5,7 @@ import logging
 from unittest.mock import patch, Mock
 import os
 
-from ai.utils.logger import get_logger, setup_logging
+from ttt.utils.logger import get_logger, setup_logging
 
 
 class TestGetLogger:
@@ -21,7 +21,7 @@ class TestGetLogger:
     def test_get_logger_hierarchy(self):
         """Test logger hierarchy."""
         parent = get_logger("ai")
-        child = get_logger("ai.backends")
+        child = get_logger("ttt.backends")
 
         assert child.parent == parent
 

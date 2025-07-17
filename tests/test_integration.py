@@ -14,8 +14,8 @@ Note: These tests will consume API credits and should be run sparingly.
 import pytest
 import os
 from ai import ask, stream, chat
-from ai.backends.cloud import CloudBackend
-from ai.exceptions import APIKeyError, ModelNotFoundError, RateLimitError
+from ttt.backends.cloud import CloudBackend
+from ttt.exceptions import APIKeyError, ModelNotFoundError, RateLimitError
 
 
 def skip_if_no_api_keys():

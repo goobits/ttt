@@ -2,7 +2,7 @@
 
 import pytest
 from datetime import datetime
-from ai.models import AIResponse, ModelInfo, ConfigModel
+from ttt.models import AIResponse, ModelInfo, ConfigModel
 
 
 class TestAIResponse:

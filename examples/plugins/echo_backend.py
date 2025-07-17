@@ -7,8 +7,8 @@ This demonstrates how to create a custom backend for the AI library.
 from typing import AsyncIterator, Dict, Any, Optional, List
 import asyncio
 import time
-from ai.backends import BaseBackend
-from ai.models import AIResponse
+from ttt.backends import BaseBackend
+from ttt.models import AIResponse
 
 
 class EchoBackend(BaseBackend):

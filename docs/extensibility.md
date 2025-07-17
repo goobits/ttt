@@ -24,10 +24,10 @@ The library loads configuration from multiple sources with the following precede
 ### Configuration Files
 
 The library searches for configuration files in these locations:
-- `./ai.yaml` or `./ai.yml` (current directory)
-- `./.ai.yaml` or `./.ai.yml` (hidden file in current directory)
+- `./ttt.yaml` or `./ttt.yml` (current directory)
+- `./.ttt.yaml` or `./.ttt.yml` (hidden file in current directory)
 - `~/.config/ai/config.yaml` or `~/.config/ai/config.yml`
-- `~/.ai.yaml` or `~/.ai.yml`
+- `~/.ttt.yaml` or `~/.ttt.yml`
 
 ### Configuration Schema
 
@@ -104,7 +104,7 @@ The model registry manages all available models and their metadata.
 ### Accessing the Registry
 
 ```python
-from ai import model_registry
+from ttt import model_registry
 
 # List all models
 all_models = model_registry.list_models()
@@ -125,8 +125,8 @@ aliases = model_registry.list_aliases()
 ### Adding Custom Models
 
 ```python
-from ai import model_registry
-from ai.models import ModelInfo
+from ttt import model_registry
+from ttt.models import ModelInfo
 
 # Add a custom model
 model_registry.add_model(ModelInfo(
@@ -181,7 +181,7 @@ load_plugin(Path("/path/to/my_plugin.py"))
 discover_plugins()
 
 # Plugins are loaded automatically on import
-import ai  # This triggers plugin discovery
+import ttt  # This triggers plugin discovery
 ```
 
 ### Plugin Structure
@@ -208,8 +208,8 @@ def register_plugin(registry):
 All backends must inherit from `BaseBackend` and implement required methods:
 
 ```python
-from ai.backends import BaseBackend
-from ai.models import AIResponse
+from ttt.backends import BaseBackend
+from ttt.models import AIResponse
 from typing import AsyncIterator, List, Dict, Any, Optional
 
 class MyBackend(BaseBackend):
@@ -418,4 +418,4 @@ def test_error_handling(setup_backend):
 For complete working examples, see:
 - [examples/plugins/echo_backend.py](../examples/plugins/echo_backend.py) - Simple echo backend
 - [examples/plugins/mock_llm_backend.py](../examples/plugins/mock_llm_backend.py) - Sophisticated mock backend
-- [examples/config/ai.yaml](../examples/config/ai.yaml) - Full configuration example
+- [examples/config/ttt.yaml](../examples/config/ttt.yaml) - Full configuration example

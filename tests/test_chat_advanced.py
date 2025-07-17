@@ -8,10 +8,10 @@ from pathlib import Path
 from datetime import datetime, timezone
 from unittest.mock import Mock, patch, MagicMock
 
-from ai.chat import PersistentChatSession, _estimate_tokens
-from ai.models import AIResponse, ImageInput
-from ai.backends import BaseBackend
-from ai.exceptions import (
+from ttt.chat import PersistentChatSession, _estimate_tokens
+from ttt.models import AIResponse, ImageInput
+from ttt.backends import BaseBackend
+from ttt.exceptions import (
     SessionLoadError,
     SessionSaveError,
     InvalidParameterError,
@@ -83,7 +83,7 @@ def mock_backend():
 @pytest.fixture
 def mock_router(mock_backend):
     """Mock router to return our backend."""
-    with patch("ai.routing.router") as mock:
+    with patch("ttt.routing.router") as mock:
         mock.smart_route.return_value = (mock_backend, "mock-model")
         mock.resolve_backend.return_value = mock_backend
         mock.resolve_model.return_value = "mock-model"

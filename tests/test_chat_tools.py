@@ -5,10 +5,10 @@ from unittest.mock import Mock, AsyncMock, patch, MagicMock
 import json
 from pathlib import Path
 
-from ai.chat import PersistentChatSession as ChatSession, PersistentChatSession
-from ai.api import chat
-from ai.models import AIResponse
-from ai.tools import ToolCall, ToolResult
+from ttt.chat import PersistentChatSession as ChatSession, PersistentChatSession
+from ttt.api import chat
+from ttt.models import AIResponse
+from ttt.tools import ToolCall, ToolResult
 
 
 class TestChatSessionTools:
@@ -29,7 +29,7 @@ class TestChatSessionTools:
         def test_tool(x: int) -> int:
             return x * 2
 
-        with patch("ai.routing.router.smart_route") as mock_route:
+        with patch("ttt.routing.router.smart_route") as mock_route:
             backend_instance = Mock()
             backend_instance.ask = AsyncMock(
                 return_value=AIResponse("Response", model="test", backend="test")
@@ -73,7 +73,7 @@ class TestPersistentChatSessionTools:
         def test_tool(x: int) -> int:
             return x * 2
 
-        from ai.chat import router
+        from ttt.chat import router
 
         with patch.object(router, "smart_route") as mock_smart_route:
             backend_instance = Mock()
@@ -189,16 +189,16 @@ class TestCLIToolSupport:
     def test_cli_with_tools(self):
         """Test CLI argument parsing with --tools flag."""
         from click.testing import CliRunner
-        from ai.cli import main
+        from ttt.cli import main
         
         runner = CliRunner()
         
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
             
-            with patch('ai.cli.resolve_tools') as mock_resolve:
+            with patch('ttt.cli.resolve_tools') as mock_resolve:
                 mock_resolve.return_value = []  # Simplified for test
                 
                 result = runner.invoke(main, [
@@ -211,8 +211,8 @@ class TestCLIToolSupport:
 
     def test_resolve_tools_from_registry(self):
         """Test resolving tools from registry."""
-        from ai.cli import resolve_tools
-        from ai.tools.registry import register_tool, clear_registry
+        from ttt.cli import resolve_tools
+        from ttt.tools.registry import register_tool, clear_registry
 
         # Register a test tool
         def test_tool(x: int) -> int:
@@ -231,8 +231,8 @@ class TestCLIToolSupport:
 
     def test_resolve_tools_from_module(self):
         """Test resolving tools from module imports."""
-        from ai.cli import resolve_tools
-        from ai.tools import register_tool, unregister_tool, tool
+        from ttt.cli import resolve_tools
+        from ttt.tools import register_tool, unregister_tool, tool
 
         # Register a test tool in a test category
         @tool(register=False)
@@ -254,7 +254,7 @@ class TestCLIToolSupport:
 
     def test_resolve_tools_handles_errors(self):
         """Test tool resolution handles errors gracefully."""
-        from ai.cli import resolve_tools
+        from ttt.cli import resolve_tools
 
         # Non-existent module
         tools = resolve_tools(["nonexistent:function"])

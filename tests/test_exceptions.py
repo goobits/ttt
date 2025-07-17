@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 
-from ai.exceptions import (
+from ttt.exceptions import (
     AIError,
     BackendNotAvailableError,
     BackendConnectionError,
@@ -73,10 +73,10 @@ class TestExceptionHierarchy:
 class TestBackendExceptions:
     """Test backend-related exceptions in actual usage."""
 
-    @patch("ai.backends.local.httpx.AsyncClient")
+    @patch("ttt.backends.local.httpx.AsyncClient")
     def test_local_backend_connection_error(self, mock_client):
         """Test that connection errors raise BackendConnectionError."""
-        from ai.backends.local import LocalBackend
+        from ttt.backends.local import LocalBackend
         import httpx
 
         # Mock connection error
@@ -99,10 +99,10 @@ class TestBackendExceptions:
         assert "local" in str(exc_info.value)
         assert exc_info.value.details["backend"] == "local"
 
-    @patch("ai.backends.local.httpx.AsyncClient")
+    @patch("ttt.backends.local.httpx.AsyncClient")
     def test_local_backend_timeout(self, mock_client):
         """Test that timeouts raise BackendTimeoutError."""
-        from ai.backends.local import LocalBackend
+        from ttt.backends.local import LocalBackend
         import httpx
 
         # Mock timeout
@@ -127,8 +127,8 @@ class TestBackendExceptions:
 
     def test_local_backend_multimodal_error(self):
         """Test that multi-modal input raises MultiModalError."""
-        from ai.backends.local import LocalBackend
-        from ai.models import ImageInput
+        from ttt.backends.local import LocalBackend
+        from ttt.models import ImageInput
 
         backend = LocalBackend()
 
@@ -147,10 +147,10 @@ class TestBackendExceptions:
         assert "Ollama" in str(exc_info.value)
         assert "vision" in str(exc_info.value)
 
-    @patch("ai.backends.local.httpx.AsyncClient")
+    @patch("ttt.backends.local.httpx.AsyncClient")
     def test_model_not_found(self, mock_client):
         """Test that 404 errors for models raise ModelNotFoundError."""
-        from ai.backends.local import LocalBackend
+        from ttt.backends.local import LocalBackend
         import httpx
 
         # Mock 404 response
@@ -186,7 +186,7 @@ class TestCloudBackendExceptions:
     def test_litellm_not_installed(self):
         """Test that missing LiteLLM raises BackendNotAvailableError."""
         with patch.dict("sys.modules", {"litellm": None}):
-            from ai.backends.cloud import CloudBackend
+            from ttt.backends.cloud import CloudBackend
 
             with pytest.raises(BackendNotAvailableError) as exc_info:
                 CloudBackend()
@@ -196,7 +196,7 @@ class TestCloudBackendExceptions:
 
     def test_api_key_error(self):
         """Test that authentication errors raise APIKeyError."""
-        from ai.backends.cloud import CloudBackend
+        from ttt.backends.cloud import CloudBackend
 
         backend = CloudBackend()
 
@@ -220,7 +220,7 @@ class TestCloudBackendExceptions:
 
     def test_rate_limit_error(self):
         """Test that rate limit errors are handled properly."""
-        from ai.backends.cloud import CloudBackend
+        from ttt.backends.cloud import CloudBackend
 
         backend = CloudBackend()
 
@@ -249,7 +249,7 @@ class TestConfigExceptions:
 
     def test_invalid_yaml_config(self, tmp_path):
         """Test that invalid YAML raises ConfigFileError."""
-        from ai.config import load_config
+        from ttt.config import load_config
 
         # Create invalid YAML
         config_file = tmp_path / "invalid.yaml"
@@ -263,7 +263,7 @@ class TestConfigExceptions:
 
     def test_unsupported_config_format(self, tmp_path):
         """Test that unsupported formats raise ConfigFileError."""
-        from ai.config import load_config
+        from ttt.config import load_config
 
         # Create config with unsupported extension
         config_file = tmp_path / "config.json"
@@ -280,7 +280,7 @@ class TestSessionExceptions:
 
     def test_session_load_not_found(self):
         """Test loading non-existent session raises SessionLoadError."""
-        from ai.chat import PersistentChatSession
+        from ttt.chat import PersistentChatSession
 
         with pytest.raises(SessionLoadError) as exc_info:
             PersistentChatSession.load("nonexistent.json")
@@ -290,7 +290,7 @@ class TestSessionExceptions:
 
     def test_session_load_invalid_json(self, tmp_path):
         """Test loading invalid JSON raises SessionLoadError."""
-        from ai.chat import PersistentChatSession
+        from ttt.chat import PersistentChatSession
 
         # Create invalid JSON
         session_file = tmp_path / "invalid.json"
@@ -303,7 +303,7 @@ class TestSessionExceptions:
 
     def test_session_save_invalid_format(self):
         """Test saving with invalid format raises InvalidParameterError."""
-        from ai.chat import PersistentChatSession
+        from ttt.chat import PersistentChatSession
 
         session = PersistentChatSession()
 
@@ -316,7 +316,7 @@ class TestSessionExceptions:
 
     def test_session_save_permission_error(self, tmp_path):
         """Test saving to protected location raises SessionSaveError."""
-        from ai.chat import PersistentChatSession
+        from ttt.chat import PersistentChatSession
 
         session = PersistentChatSession()
 
@@ -343,7 +343,7 @@ class TestPluginExceptions:
 
     def test_plugin_load_error(self, tmp_path):
         """Test that plugin load errors are handled properly."""
-        from ai.plugins import PluginRegistry
+        from ttt.plugins import PluginRegistry
 
         # Create a plugin with syntax error
         plugin_file = tmp_path / "bad_plugin.py"
@@ -360,7 +360,7 @@ class TestPluginExceptions:
 
     def test_plugin_validation_error(self, tmp_path):
         """Test that plugins without register_plugin raise PluginValidationError."""
-        from ai.plugins import PluginRegistry
+        from ttt.plugins import PluginRegistry
 
         # Create a plugin without register_plugin
         plugin_file = tmp_path / "invalid_plugin.py"
@@ -379,7 +379,7 @@ class TestRoutingExceptions:
 
     def test_unknown_backend(self):
         """Test that unknown backends raise BackendNotAvailableError."""
-        from ai.routing import Router
+        from ttt.routing import Router
 
         router = Router()
 

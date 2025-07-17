@@ -17,7 +17,7 @@ load_dotenv()
 console = Console()
 
 # Import TTT library modules
-import ttt as ai  # Keep ai alias for existing code compatibility
+import ttt
 
 
 
@@ -171,7 +171,7 @@ def start_chat_session(model, system, session_id, tools, load, verbose):
             session = PersistentChatSession.load(load)
             console.print(f"[green]Loaded session from {load}[/green]")
         else:
-            session = ai.chat(**kwargs).__enter__()
+            session = ttt.chat(**kwargs).__enter__()
         
         console.print("[bold blue]AI Chat Session[/bold blue]")
         
@@ -364,18 +364,18 @@ def ask_command(prompt, model, system, temperature, max_tokens,
             if json_output:
                 # For streaming with JSON, we need to collect chunks
                 chunks = []
-                for chunk in ai.stream(prompt, **kwargs):
+                for chunk in ttt.stream(prompt, **kwargs):
                     chunks.append(chunk)
                 import json
                 output = {"content": "".join(chunks), "streaming": True}
                 click.echo(json.dumps(output))
             else:
-                for chunk in ai.stream(prompt, **kwargs):
+                for chunk in ttt.stream(prompt, **kwargs):
                     click.echo(chunk, nl=False)
                 click.echo()  # Final newline
         else:
             # Regular response
-            response = ai.ask(prompt, **kwargs)
+            response = ttt.ask(prompt, **kwargs)
             
             if json_output:
                 import json
@@ -422,7 +422,7 @@ def show_backend_status():
 
     # Check local backend
     try:
-        import ai.backends.local as local_module
+        import ttt.backends.local as local_module
 
         local = local_module.LocalBackend()
         if local.is_available:
@@ -438,7 +438,7 @@ def show_backend_status():
 
     # Check cloud backend
     try:
-        import ai.backends.cloud as cloud_module
+        import ttt.backends.cloud as cloud_module
 
         cloud = cloud_module.CloudBackend()
         if cloud.is_available:
@@ -474,7 +474,7 @@ def show_models_list():
     # Local models
     console.print("[bold green]Local Models (Ollama):[/bold green]")
     try:
-        import ai.backends.local as local_module
+        import ttt.backends.local as local_module
 
         local = local_module.LocalBackend()
         if local.is_available:

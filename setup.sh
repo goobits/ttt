@@ -355,7 +355,7 @@ upgrade() {
     check_dependency_conflicts
     echo
     
-    # Check if installed via pipx (check for both old 'ai' and new 'ttt' package names)
+    # Check if installed via pipx
     if command_exists pipx; then
         if pipx list | grep -q "package ttt "; then
             print_status "Upgrading TTT installation..."
@@ -365,17 +365,8 @@ upgrade() {
                 print_error "pipx upgrade failed"
                 exit 1
             fi
-        elif pipx list | grep -q "package ai "; then
-            print_warning "Found old 'ai' package. Upgrading to 'ttt'..."
-            pipx uninstall ai 2>/dev/null || true
-            if pipx install .; then
-                print_success "Upgraded from 'ai' to 'ttt' successfully!"
-            else
-                print_error "Upgrade installation failed"
-                exit 1
-            fi
         else
-            print_warning "No pipx installation found"
+            print_warning "No TTT pipx installation found"
             echo "Upgrade is only supported for pipx installations"
             echo "For other installation methods, please uninstall and reinstall:"
             echo "  $0 uninstall"
@@ -435,15 +426,9 @@ install() {
     if command_exists pipx; then
         print_status "Using pipx for clean installation"
         
-        # Check if already installed via pipx (check for both 'ai' and 'ttt' package names)
-        local ai_installed=$(pipx list | grep -q "package ai " && echo "true" || echo "false")
+        # Check if already installed via pipx
         local ttt_installed=$(pipx list | grep -q "package ttt " && echo "true" || echo "false")
         local ttt_command_available=$(command -v ttt >/dev/null 2>&1 && echo "true" || echo "false")
-        
-        if [[ "$ai_installed" == "true" ]]; then
-            print_warning "Old AI library found. Removing for clean TTT installation."
-            pipx uninstall ai 2>/dev/null || true
-        fi
         
         if [[ "$ttt_installed" == "true" ]]; then
             if [[ "$ttt_command_available" == "false" ]]; then
@@ -501,8 +486,8 @@ install() {
             echo "  ✅ Isolated virtual environment"
         fi
         echo "  ✅ Global 'ttt' command"
-        echo "  ✅ Easy updates with 'pipx upgrade ai'"
-        echo "  ✅ Clean uninstall with 'pipx uninstall ai'"
+        echo "  ✅ Easy updates with 'pipx upgrade ttt'"
+        echo "  ✅ Clean uninstall with 'pipx uninstall ttt'"
         
     else
         print_error "pipx is required for installation"
@@ -527,23 +512,17 @@ install() {
 # Uninstall function
 uninstall() {
     echo
-    echo -e "${YELLOW}🗑️  Uninstalling AI Library${NC}"
+    echo -e "${YELLOW}🗑️  Uninstalling TTT Library${NC}"
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo
     
-    # Check if installed via pipx (handle both old 'ai' and new 'ttt' package names)
+    # Check if installed via pipx
     local removed_something=false
     if command_exists pipx; then
         if pipx list | grep -q "package ttt "; then
             print_status "Removing TTT pipx installation..."
             pipx uninstall ttt
             print_success "Removed TTT pipx installation"
-            removed_something=true
-        fi
-        if pipx list | grep -q "package ai "; then
-            print_status "Removing old AI pipx installation..."
-            pipx uninstall ai
-            print_success "Removed old AI pipx installation"
             removed_something=true
         fi
     fi
@@ -562,11 +541,7 @@ uninstall() {
             print_success "Removed shell integration"
         fi
         
-        # Remove global binaries (both old 'ai' and new 'ttt')
-        if [[ -f "$HOME/.local/bin/ai" ]]; then
-            rm -f "$HOME/.local/bin/ai"
-            print_success "Removed old 'ai' binary"
-        fi
+        # Remove global binaries
         if [[ -f "$HOME/.local/bin/ttt" ]]; then
             rm -f "$HOME/.local/bin/ttt"
             print_success "Removed 'ttt' binary"

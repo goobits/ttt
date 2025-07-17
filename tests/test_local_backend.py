@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock, PropertyMock
 import httpx
-from ai.backends.local import LocalBackend
+from ttt.backends.local import LocalBackend
 
 
 @pytest.fixture
@@ -97,7 +97,7 @@ class TestLocalBackend:
     @pytest.mark.asyncio
     async def test_ask_http_error(self, local_backend):
         """Test ask with HTTP error."""
-        from ai.exceptions import ModelNotFoundError
+        from ttt.exceptions import ModelNotFoundError
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
@@ -171,7 +171,7 @@ class TestLocalBackend:
     @pytest.mark.asyncio
     async def test_models_error(self, local_backend):
         """Test models listing with error."""
-        from ai.exceptions import BackendConnectionError
+        from ttt.exceptions import BackendConnectionError
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.get = AsyncMock(

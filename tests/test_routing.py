@@ -2,12 +2,12 @@
 
 import pytest
 from unittest.mock import Mock, patch
-from ai.routing import Router
-from ai.backends import BaseBackend
-from ai.models import AIResponse, ModelInfo
-from ai.config import model_registry
-from ai.plugins import plugin_registry
-from ai.exceptions import BackendNotAvailableError
+from ttt.routing import Router
+from ttt.backends import BaseBackend
+from ttt.models import AIResponse, ModelInfo
+from ttt.config import model_registry
+from ttt.plugins import plugin_registry
+from ttt.exceptions import BackendNotAvailableError
 
 
 class MockBackend(BaseBackend):

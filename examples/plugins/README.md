@@ -61,7 +61,7 @@ To create a custom backend plugin:
 1. **Create a new Python file** with your backend implementation
 2. **Inherit from BaseBackend**:
    ```python
-   from ai.backends import BaseBackend
+   from ttt.backends import BaseBackend
    
    class MyBackend(BaseBackend):
        # Implementation here
@@ -114,8 +114,8 @@ Here's a template for creating a backend that calls a custom HTTP API:
 
 ```python
 import httpx
-from ai.backends import BaseBackend
-from ai.models import AIResponse
+from ttt.backends import BaseBackend
+from ttt.models import AIResponse
 
 class HTTPBackend(BaseBackend):
     def __init__(self, config=None):
@@ -162,7 +162,7 @@ Test your plugin thoroughly:
 ```python
 import asyncio
 from ai import ask, stream, chat
-from ai.plugins import load_plugin
+from ttt.plugins import load_plugin
 
 # Load and test
 load_plugin(Path("my_plugin.py"))

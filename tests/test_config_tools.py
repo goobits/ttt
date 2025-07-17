@@ -5,8 +5,8 @@ from unittest.mock import patch, Mock
 import tempfile
 import os
 
-from ai.tools.builtins import _get_max_file_size, _get_code_timeout, _get_web_timeout
-from ai.config import load_config
+from ttt.tools.builtins import _get_max_file_size, _get_code_timeout, _get_web_timeout
+from ttt.config import load_config
 
 
 class TestConfigurableTools:
@@ -31,7 +31,7 @@ class TestConfigurableTools:
         }
 
         # Patch get_config where it's imported in builtins
-        with patch("ai.tools.builtins.get_config") as mock_get_config:
+        with patch("ttt.tools.builtins.get_config") as mock_get_config:
             mock_config = Mock()
             # Set up tools_config with the custom values
             mock_config.tools_config = custom_config["tools"]
@@ -44,7 +44,7 @@ class TestConfigurableTools:
 
     def test_read_file_respects_config(self):
         """Test that read_file tool respects max_file_size config."""
-        from ai.tools.builtins import read_file
+        from ttt.tools.builtins import read_file
 
         # Create a temporary file larger than custom limit
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
@@ -56,7 +56,7 @@ class TestConfigurableTools:
             # Mock config with 5MB limit
             custom_config = {"tools": {"max_file_size": 5 * 1024 * 1024}}  # 5MB
 
-            with patch("ai.tools.builtins.get_config") as mock_get_config:
+            with patch("ttt.tools.builtins.get_config") as mock_get_config:
                 mock_config = Mock()
                 mock_config.tools_config = custom_config["tools"]
                 mock_get_config.return_value = mock_config
@@ -72,12 +72,12 @@ class TestConfigurableTools:
 
     def test_run_python_respects_timeout_config(self):
         """Test that run_python tool respects timeout config."""
-        from ai.tools.builtins import run_python
+        from ttt.tools.builtins import run_python
 
         # Mock config with shorter timeout
         custom_config = {"tools": {"code_execution_timeout": 1}}  # 1 second
 
-        with patch("ai.tools.builtins.get_config") as mock_get_config:
+        with patch("ttt.tools.builtins.get_config") as mock_get_config:
             mock_config = Mock()
             mock_config.tools_config = custom_config["tools"]
             mock_get_config.return_value = mock_config
@@ -104,19 +104,19 @@ class TestToolsListCommand:
     def test_tools_list_command_parsing(self):
         """Test that tools command works correctly."""
         from click.testing import CliRunner
-        from ai.cli import main
+        from ttt.cli import main
         
         runner = CliRunner()
         
-        with patch("ai.cli.show_tools_list") as mock_show_tools:
+        with patch("ttt.cli.show_tools_list") as mock_show_tools:
             result = runner.invoke(main, ["--tools-list"])
             assert result.exit_code == 0
             mock_show_tools.assert_called_once()
 
-    @patch("ai.cli.console")
+    @patch("ttt.cli.console")
     def test_show_tools_list(self, mock_console):
         """Test the show_tools_list function."""
-        from ai.cli import show_tools_list
+        from ttt.cli import show_tools_list
 
         # Mock the tools registry
         mock_tool = Mock()
@@ -124,8 +124,8 @@ class TestToolsListCommand:
         mock_tool.description = "A test tool"
         mock_tool.category = "test"
 
-        with patch("ai.tools.list_tools", return_value=[mock_tool]), \
-             patch("ai.tools.get_categories", return_value=["test"]):
+        with patch("ttt.tools.list_tools", return_value=[mock_tool]), \
+             patch("ttt.tools.get_categories", return_value=["test"]):
             show_tools_list()
 
             # Should have called console.print with tool information

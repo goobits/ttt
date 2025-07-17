@@ -10,7 +10,7 @@ import urllib.error
 import datetime
 import zoneinfo
 
-from ai.tools.builtins import (
+from ttt.tools.builtins import (
     web_search,
     read_file,
     write_file,
@@ -21,7 +21,7 @@ from ai.tools.builtins import (
     list_directory,
     load_builtin_tools,
 )
-from ai.tools import get_tool, list_tools
+from ttt.tools import get_tool, list_tools
 
 
 class TestWebSearch:

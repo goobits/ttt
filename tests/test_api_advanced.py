@@ -5,7 +5,7 @@ from unittest.mock import Mock, AsyncMock, patch, MagicMock
 import asyncio
 from typing import AsyncIterator
 
-from ai.api import (
+from ttt.api import (
     ask,
     stream,
     chat,
@@ -13,10 +13,10 @@ from ai.api import (
     stream_async,
     achat,
 )
-from ai.chat import PersistentChatSession as ChatSession
-from ai.models import AIResponse, ImageInput
-from ai.backends import BaseBackend
-from ai.exceptions import BackendNotAvailableError
+from ttt.chat import PersistentChatSession as ChatSession
+from ttt.models import AIResponse, ImageInput
+from ttt.backends import BaseBackend
+from ttt.exceptions import BackendNotAvailableError
 
 
 class MockBackend(BaseBackend):
@@ -82,7 +82,7 @@ def mock_backend():
 @pytest.fixture
 def mock_router(mock_backend):
     """Mock the router to return our mock backend."""
-    with patch("ai.api.router") as mock:
+    with patch("ttt.api.router") as mock:
         mock.smart_route.return_value = (mock_backend, "mock-model")
         yield mock
 
@@ -182,7 +182,7 @@ class TestChatSession:
 
     def test_chat_session_initialization_default(self):
         """Test ChatSession initialization with defaults."""
-        with patch("ai.routing.router") as mock_router:
+        with patch("ttt.routing.router") as mock_router:
             mock_backend = MockBackend()
             # Mock the smart_route to return backend and model
             mock_router.smart_route.return_value = (mock_backend, "default-model")
@@ -200,7 +200,7 @@ class TestChatSession:
 
     def test_chat_session_initialization_with_params(self):
         """Test ChatSession initialization with parameters."""
-        with patch("ai.routing.router") as mock_router:
+        with patch("ttt.routing.router") as mock_router:
             mock_backend = MockBackend("local")
             # Mock router to return our backend
             mock_router.resolve_backend.return_value = mock_backend
@@ -298,7 +298,7 @@ class TestChatContextManager:
 
     def test_chat_context_basic(self):
         """Test basic chat context manager."""
-        with patch("ai.routing.router.smart_route") as mock_route:
+        with patch("ttt.routing.router.smart_route") as mock_route:
             mock_backend = MockBackend()
             mock_route.return_value = (mock_backend, "mock-model")
 
@@ -309,7 +309,7 @@ class TestChatContextManager:
 
     def test_chat_context_with_params(self):
         """Test chat context manager with parameters."""
-        with patch("ai.backends.local.LocalBackend") as mock_local:
+        with patch("ttt.backends.local.LocalBackend") as mock_local:
             mock_backend = MockBackend("local")
             mock_local.return_value = mock_backend
 
@@ -329,7 +329,7 @@ class TestAsyncFunctions:
     @pytest.mark.asyncio
     async def test_ask_async(self):
         """Test async ask function."""
-        with patch("ai.api.router.smart_route") as mock_route:
+        with patch("ttt.api.router.smart_route") as mock_route:
             mock_backend = MockBackend("local")
             # Mock the router to return our backend
             mock_route.return_value = (mock_backend, "model")
@@ -350,7 +350,7 @@ class TestAsyncFunctions:
     @pytest.mark.asyncio
     async def test_stream_async(self):
         """Test async stream function."""
-        with patch("ai.routing.router.smart_route") as mock_route:
+        with patch("ttt.routing.router.smart_route") as mock_route:
             mock_backend = MockBackend()
             mock_backend.response_text = "Async stream test"
             mock_route.return_value = (mock_backend, "mock-model")
@@ -364,7 +364,7 @@ class TestAsyncFunctions:
     @pytest.mark.asyncio
     async def test_achat_context_manager(self):
         """Test async chat context manager."""
-        with patch("ai.routing.router.smart_route") as mock_route:
+        with patch("ttt.routing.router.smart_route") as mock_route:
             mock_backend = MockBackend()
             mock_route.return_value = (mock_backend, "mock-model")
 
@@ -414,7 +414,7 @@ class TestBackendSelection:
         """Test passing backend instance directly."""
         custom_backend = MockBackend("custom")
 
-        with patch("ai.api.router") as mock_router:
+        with patch("ttt.api.router") as mock_router:
             mock_router.smart_route.return_value = (custom_backend, "model")
 
             response = ask("Test", backend=custom_backend)

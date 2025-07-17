@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch, AsyncMock
 import httpx
 
 # Example 1: Testing the calculate tool with edge cases
-from ai.tools.builtins import calculate
+from ttt.tools.builtins import calculate
 
 
 class TestCalculateToolFoundation:
@@ -55,7 +55,7 @@ class TestCalculateToolFoundation:
 
 
 # Example 2: Testing LocalBackend with mocked HTTP client
-from ai.backends.local import LocalBackend
+from ttt.backends.local import LocalBackend
 
 
 class TestLocalBackendFoundation:
@@ -133,7 +133,7 @@ class TestLocalBackendFoundation:
             mock_client_class.return_value.__aexit__ = AsyncMock(return_value=None)
 
             # Should raise our custom exception
-            from ai.exceptions import ModelNotFoundError
+            from ttt.exceptions import ModelNotFoundError
             with pytest.raises(ModelNotFoundError) as exc_info:
                 await backend.ask("Test prompt", model="test-model")
 
@@ -143,7 +143,7 @@ class TestLocalBackendFoundation:
 
 # Example 3: Testing CLI with Click's CliRunner
 from click.testing import CliRunner
-from ai.cli import main
+from ttt.cli import main
 
 
 class TestCLIFoundation:
@@ -155,7 +155,7 @@ class TestCLIFoundation:
 
     def test_backend_status_command(self):
         """Test status command invocation."""
-        with patch('ai.cli.show_backend_status') as mock_status:
+        with patch('ttt.cli.show_backend_status') as mock_status:
             result = self.runner.invoke(main, ["--status"])
             
             assert result.exit_code == 0
@@ -163,7 +163,7 @@ class TestCLIFoundation:
 
     def test_ask_command_argument_parsing(self):
         """Test direct prompt parses arguments correctly."""
-        with patch('ai.ask') as mock_ask:
+        with patch('ttt.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_response.model = "gpt-4"
@@ -219,9 +219,9 @@ class TestAsyncFoundation:
     @pytest.mark.asyncio
     async def test_async_function_example(self):
         """Example of testing async functions."""
-        from ai.api import ask_async
+        from ttt.api import ask_async
         
-        with patch('ai.routing.router.smart_route') as mock_route:
+        with patch('ttt.routing.router.smart_route') as mock_route:
             # Mock backend and response
             mock_backend = AsyncMock()
             mock_response = Mock()

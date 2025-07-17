@@ -10,8 +10,8 @@ This script demonstrates advanced functionality including:
 """
 
 import os
-import ai
-from ai import (
+import ttt
+from ttt import (
     ask,
     stream,
     chat,
@@ -45,7 +45,7 @@ def basic_image_analysis():
 
     try:
         # Using a public image URL
-        response = ai.ask(
+        response = ttt.ask(
             [
                 "What's in this image? Describe what you see in detail.",
                 ImageInput("https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/YellowLabradorLooking_new.jpg/640px-YellowLabradorLooking_new.jpg"),
@@ -69,7 +69,7 @@ def multiple_images_comparison():
     print("=== Multiple Images Comparison ===\n")
 
     try:
-        response = ai.ask(
+        response = ttt.ask(
             [
                 "Compare these two images. What breed of dog do you see in each?",
                 ImageInput("https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/YellowLabradorLooking_new.jpg/640px-YellowLabradorLooking_new.jpg"),
@@ -92,7 +92,7 @@ def streaming_with_vision():
 
     try:
         print("Analysis: ", end="", flush=True)
-        for chunk in ai.stream(
+        for chunk in ttt.stream(
             [
                 "Write a detailed analysis of this image, including colors, composition, and mood. Take your time to describe everything you observe.",
                 ImageInput("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/200px-Python-logo-notext.svg.png"),
@@ -113,7 +113,7 @@ def chat_with_images():
     print("=== Chat with Images ===\n")
 
     try:
-        with ai.chat(model="gpt-4-vision-preview") as session:
+        with ttt.chat(model="gpt-4-vision-preview") as session:
             # First message with image
             response1 = session.ask(
                 [
@@ -146,7 +146,7 @@ def vision_model_selection():
     
     for model in vision_models:
         try:
-            response = ai.ask(
+            response = ttt.ask(
                 [
                     "Describe this image in one sentence.",
                     ImageInput("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/200px-Python-logo-notext.svg.png"),
@@ -390,7 +390,7 @@ def config_error_handling():
     invalid_config.write_text("invalid: yaml: content: [}")
 
     try:
-        from ai.config import load_config
+        from ttt.config import load_config
         config = load_config(invalid_config)
         
     except ConfigFileError as e:

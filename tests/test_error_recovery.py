@@ -7,7 +7,7 @@ import os
 from unittest.mock import patch, Mock, AsyncMock
 from pathlib import Path
 
-from ai.tools.recovery import (
+from ttt.tools.recovery import (
     ErrorRecoverySystem,
     RetryConfig,
     InputSanitizer,
@@ -15,8 +15,8 @@ from ai.tools.recovery import (
     ErrorPattern,
     FallbackSuggestion,
 )
-from ai.tools.executor import ToolExecutor, ExecutionConfig
-from ai.tools.base import ToolCall, ToolResult
+from ttt.tools.executor import ToolExecutor, ExecutionConfig
+from ttt.tools.base import ToolCall, ToolResult
 
 
 class TestInputSanitizer:
@@ -253,8 +253,8 @@ class TestToolExecutor:
     def test_tool_not_found_error(self, executor):
         """Test helpful error when tool is not found."""
         # Mock the tool registry to return None
-        with patch("ai.tools.executor.get_tool", return_value=None):
-            with patch("ai.tools.executor.list_tools", return_value=[]):
+        with patch("ttt.tools.executor.get_tool", return_value=None):
+            with patch("ttt.tools.executor.list_tools", return_value=[]):
                 result = asyncio.run(executor.execute_tool("nonexistent_tool", {}))
 
                 assert not result.succeeded
@@ -269,7 +269,7 @@ class TestToolExecutor:
         mock_tool.name = "test_tool"
         mock_tool.function = Mock(return_value="success")
 
-        with patch("ai.tools.executor.get_tool", return_value=mock_tool):
+        with patch("ttt.tools.executor.get_tool", return_value=mock_tool):
             result = await executor.execute_tool(
                 "test_tool",
                 {
@@ -295,7 +295,7 @@ class TestToolExecutor:
         mock_tool.name = "slow_tool"
         mock_tool.function = slow_tool
 
-        with patch("ai.tools.executor.get_tool", return_value=mock_tool):
+        with patch("ttt.tools.executor.get_tool", return_value=mock_tool):
             result = await executor.execute_tool("slow_tool", {}, timeout=1.0)
 
             assert not result.succeeded
@@ -320,7 +320,7 @@ class TestToolExecutor:
             {"name": "quick_tool", "arguments": {"id": "tool3"}},
         ]
 
-        with patch("ai.tools.executor.get_tool", return_value=mock_tool):
+        with patch("ttt.tools.executor.get_tool", return_value=mock_tool):
             result = await executor.execute_tools(tool_calls, parallel=True)
 
             assert len(result.calls) == 3
@@ -393,7 +393,7 @@ class TestIntegration:
         mock_tool.name = "web_search"
         mock_tool.function = mock_web_search
 
-        with patch("ai.tools.executor.get_tool", return_value=mock_tool):
+        with patch("ttt.tools.executor.get_tool", return_value=mock_tool):
             # Patch the recovery system to handle the error correctly
             with patch.object(
                 executor.recovery_system,

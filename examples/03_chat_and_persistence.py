@@ -10,9 +10,9 @@ This script demonstrates advanced chat session functionality including:
 - Cost tracking and session management
 """
 
-import ai
-from ai import chat, PersistentChatSession
-from ai.tools import tool
+import ttt
+from ttt import chat, PersistentChatSession
+from ttt.tools import tool
 from pathlib import Path
 
 
@@ -50,7 +50,7 @@ def basic_persistence():
     print("=== Basic Persistence ===\n")
 
     # Create a persistent session
-    with ai.chat(persist=True, system="You are a helpful coding assistant") as session:
+    with ttt.chat(persist=True, system="You are a helpful coding assistant") as session:
         # Have a conversation
         session.ask("My name is Alice and I'm learning web development.")
         session.ask("I want to build a portfolio website.")
@@ -284,12 +284,12 @@ def session_with_multimodal():
     print("\n=== Session with Multi-modal Content ===\n")
 
     try:
-        with ai.chat(persist=True, model="gpt-4-vision-preview") as session:
+        with ttt.chat(persist=True, model="gpt-4-vision-preview") as session:
             # First interaction with image
             session.ask([
                 "I'm going to show you images for analysis.",
                 "Here's a Python logo:",
-                ai.ImageInput("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/200px-Python-logo-notext.svg.png")
+                ttt.ImageInput("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/200px-Python-logo-notext.svg.png")
             ])
 
             # Follow-up without image
@@ -319,7 +319,7 @@ def cost_tracking_example():
     print("\n=== Cost Tracking ===\n")
 
     # Create a session for cost tracking
-    with ai.chat(persist=True, model="gpt-3.5-turbo") as session:
+    with ttt.chat(persist=True, model="gpt-3.5-turbo") as session:
         # Simulate some API calls
         session.ask("Explain Python list comprehensions")
         session.ask("Give me 3 examples")
