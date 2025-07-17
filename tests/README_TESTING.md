@@ -20,7 +20,7 @@ The testing suite is built on pytest with the following key components:
 
 ### 3. **CLI Testing** (`test_modern_cli.py`)
 - **Click CliRunner**: Uses Click's built-in testing utilities for reliable CLI testing
-- **Command Testing**: Tests all CLI commands (ask, chat, status, models, tools, etc.)
+- **Command Testing**: Tests all CLI functionality (direct prompts, chat, status, models, tools, etc.)
 - **Argument Parsing**: Verifies proper parsing of flags and options
 - **Help Output**: Tests help text generation and error handling
 
@@ -65,15 +65,15 @@ async def test_ask_success_mocked(self, backend):
 
 ### CLI Testing Pattern
 ```python
-def test_ask_command_basic(self):
-    """Test basic ask command functionality."""
+def test_direct_prompt_basic(self):
+    """Test basic direct prompt functionality."""
     runner = CliRunner()
     with patch('ai.ask') as mock_ask:
         mock_response = Mock()
         mock_response.__str__ = lambda x: "Mock response"
         mock_ask.return_value = mock_response
         
-        result = runner.invoke(main, ["ask", "What is Python?"])
+        result = runner.invoke(main, ["What is Python?"])
         
         assert result.exit_code == 0
         mock_ask.assert_called_once()

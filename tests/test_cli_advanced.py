@@ -35,7 +35,7 @@ class TestCLIAskCommand:
             mock_response.tokens_out = 20
             mock_ask.return_value = mock_response
 
-            result = self.runner.invoke(main, ['ask', 'What is Python?'])
+            result = self.runner.invoke(main, ['What is Python?'])
             
             assert result.exit_code == 0
             mock_ask.assert_called_once()
@@ -49,7 +49,7 @@ class TestCLIAskCommand:
             mock_response.__str__ = Mock(return_value="Response")
             mock_ask.return_value = mock_response
 
-            result = self.runner.invoke(main, ['ask', 'Question', '--model', 'gpt-4'])
+            result = self.runner.invoke(main, ['Question', '--model', 'gpt-4'])
             
             assert result.exit_code == 0
             call_kwargs = mock_ask.call_args[1]
@@ -62,7 +62,7 @@ class TestCLIAskCommand:
             mock_response.__str__ = Mock(return_value="Response")
             mock_ask.return_value = mock_response
 
-            result = self.runner.invoke(main, ['ask', 'Question', '--system', 'You are helpful'])
+            result = self.runner.invoke(main, ['Question', '--system', 'You are helpful'])
             
             assert result.exit_code == 0
             call_kwargs = mock_ask.call_args[1]
@@ -82,7 +82,7 @@ class TestCLIAskCommand:
             mock_response.tool_calls = None  # No tools called
             mock_ask.return_value = mock_response
 
-            result = self.runner.invoke(main, ['ask', 'Question', '--verbose'])
+            result = self.runner.invoke(main, ['Question', '--verbose'])
             
             assert result.exit_code == 0
             # Check that verbose info was shown in output
@@ -93,7 +93,7 @@ class TestCLIAskCommand:
         with patch('ai.stream') as mock_stream:
             mock_stream.return_value = iter(["Hello", " ", "world"])
 
-            result = self.runner.invoke(main, ['ask', 'Question', '--stream'])
+            result = self.runner.invoke(main, ['Question', '--stream'])
             
             assert result.exit_code == 0
             mock_stream.assert_called_once()
@@ -107,7 +107,7 @@ class TestCLIAskCommand:
             mock_response.__str__ = Mock(return_value="Response")
             mock_ask.return_value = mock_response
 
-            result = self.runner.invoke(main, ['ask', 'Question', '--temperature', '0.5'])
+            result = self.runner.invoke(main, ['Question', '--temperature', '0.5'])
             
             assert result.exit_code == 0
             call_kwargs = mock_ask.call_args[1]
@@ -120,7 +120,7 @@ class TestCLIAskCommand:
             mock_response.__str__ = Mock(return_value="Response")
             mock_ask.return_value = mock_response
 
-            result = self.runner.invoke(main, ['ask', 'Question', '--max-tokens', '100'])
+            result = self.runner.invoke(main, ['Question', '--max-tokens', '100'])
             
             assert result.exit_code == 0
             call_kwargs = mock_ask.call_args[1]
@@ -134,7 +134,7 @@ class TestCLIAskCommand:
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ["ask", "-"], input="stdin content")
+            result = self.runner.invoke(main, ["-"], input="stdin content")
             assert result.exit_code == 0
             
             call_args = mock_ask.call_args
@@ -153,7 +153,7 @@ class TestCLIErrorHandling:
         with patch('ai.ask') as mock_ask:
             mock_ask.side_effect = APIKeyError("openai", "OPENAI_API_KEY")
 
-            result = self.runner.invoke(main, ['ask', 'Question'])
+            result = self.runner.invoke(main, ['Question'])
             
             assert result.exit_code == 1
             assert "api key" in result.output.lower()
@@ -164,7 +164,7 @@ class TestCLIErrorHandling:
         with patch('ai.ask') as mock_ask:
             mock_ask.side_effect = ModelNotFoundError("gpt-5", "cloud")
 
-            result = self.runner.invoke(main, ['ask', 'Question'])
+            result = self.runner.invoke(main, ['Question'])
             
             assert result.exit_code == 1
             assert "not found" in result.output.lower()
@@ -175,7 +175,7 @@ class TestCLIErrorHandling:
         with patch('ai.ask') as mock_ask:
             mock_ask.side_effect = RateLimitError("openai", retry_after=60)
 
-            result = self.runner.invoke(main, ['ask', 'Question'])
+            result = self.runner.invoke(main, ['Question'])
             
             assert result.exit_code == 1
             assert "rate limit" in result.output.lower()
@@ -186,7 +186,7 @@ class TestCLIErrorHandling:
         with patch('ai.ask') as mock_ask:
             mock_ask.side_effect = BackendNotAvailableError("local", "Ollama not running")
 
-            result = self.runner.invoke(main, ['ask', 'Question'])
+            result = self.runner.invoke(main, ['Question'])
             
             assert result.exit_code == 1
             assert "not available" in result.output.lower()
@@ -197,7 +197,7 @@ class TestCLIErrorHandling:
         with patch('ai.ask') as mock_ask:
             mock_ask.side_effect = EmptyResponseError("gpt-3.5", "cloud")
 
-            result = self.runner.invoke(main, ['ask', 'Question'])
+            result = self.runner.invoke(main, ['Question'])
             
             assert result.exit_code == 1
             assert "empty response" in result.output.lower()
@@ -208,7 +208,7 @@ class TestCLIErrorHandling:
         with patch('ai.ask') as mock_ask:
             mock_ask.side_effect = Exception("Some unexpected error")
 
-            result = self.runner.invoke(main, ['ask', 'Question'])
+            result = self.runner.invoke(main, ['Question'])
             
             assert result.exit_code == 1
             assert "Error" in result.output
@@ -219,7 +219,7 @@ class TestCLIErrorHandling:
         with patch('ai.ask') as mock_ask:
             mock_ask.side_effect = Exception("Some unexpected error")
 
-            result = self.runner.invoke(main, ['ask', 'Question', '--verbose'])
+            result = self.runner.invoke(main, ['Question', '--verbose'])
             
             assert result.exit_code == 1
             assert "Error" in result.output
@@ -230,7 +230,7 @@ class TestCLIErrorHandling:
         with patch('ai.stream') as mock_stream:
             mock_stream.side_effect = Exception("Stream error")
 
-            result = self.runner.invoke(main, ['ask', 'Question', '--stream'])
+            result = self.runner.invoke(main, ['Question', '--stream'])
             
             assert result.exit_code == 1
             assert "Error" in result.output
@@ -241,7 +241,7 @@ class TestCLIErrorHandling:
         with patch('ai.ask') as mock_ask:
             mock_ask.side_effect = KeyboardInterrupt()
 
-            result = self.runner.invoke(main, ['ask', 'Question'])
+            result = self.runner.invoke(main, ['Question'])
             
             assert result.exit_code == 1
             # Click handles KeyboardInterrupt as "Aborted!"

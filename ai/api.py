@@ -41,7 +41,7 @@ def ask(
     **kwargs,
 ) -> AIResponse:
     """
-    Ask a question and get a response. The simplest way to use AI.
+    Get a response from AI. The simplest way to use AI.
 
     Examples:
         >>> response = ask("What is Python?")

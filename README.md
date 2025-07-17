@@ -327,7 +327,7 @@ response = ask(
 ai "Your question here"
 
 # Show help menu
-ai
+ai --help
 
 # NEW: Direct pipe support (no dash needed!)
 echo "Hello world" | ai
@@ -358,7 +358,7 @@ ai "Summarize this" --max-tokens 100
 
 # Enhanced pipe support (multiple ways)
 echo "What is this?" | ai               # NEW: Direct pipe
-echo "What is this?" | ai -             # Traditional stdin
+echo "What is this?" | ai               # Direct pipe
 cat file.txt | ai "Explain this code"   # Pipe with additional prompt
 cat script.py | ai "review this code" --code
 
@@ -388,16 +388,16 @@ ai --verbose --code "write a function"
 
 ```bash
 # Check backend status and connectivity
-ai status
+ai --status
 
 # List all available models
-ai models
+ai --models
 
 # List available tools
-ai tools
+ai --tools-list
 
 # Manage configuration (see Configuration Reference above)
-ai config
+ai --config
 
 # Show help
 ai --help

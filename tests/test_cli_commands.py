@@ -171,14 +171,14 @@ class TestMainCommand:
     def test_backend_status_command(self):
         """Test status command."""
         with patch("ai.cli.show_backend_status") as mock_status:
-            result = self.runner.invoke(main, ["status"])
+            result = self.runner.invoke(main, ["--status"])
             assert result.exit_code == 0
             mock_status.assert_called_once()
 
     def test_models_list_command(self):
         """Test models command."""
         with patch("ai.cli.show_models_list") as mock_models:
-            result = self.runner.invoke(main, ["models"])
+            result = self.runner.invoke(main, ["--models"])
             assert result.exit_code == 0
             mock_models.assert_called_once()
 
@@ -189,7 +189,7 @@ class TestMainCommand:
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ["ask", "What is Python?"])
+            result = self.runner.invoke(main, ["What is Python?"])
             assert result.exit_code == 0
             
             call_args = mock_ask.call_args
@@ -202,7 +202,7 @@ class TestMainCommand:
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ["ask", "Question", "--model", "gpt-4"])
+            result = self.runner.invoke(main, ["Question", "--model", "gpt-4"])
             assert result.exit_code == 0
             
             call_kwargs = mock_ask.call_args[1]
@@ -213,7 +213,7 @@ class TestMainCommand:
         with patch('ai.stream') as mock_stream:
             mock_stream.return_value = iter(["chunk1", "chunk2"])
             
-            result = self.runner.invoke(main, ["ask", "Question", "--stream"])
+            result = self.runner.invoke(main, ["Question", "--stream"])
             assert result.exit_code == 0
             mock_stream.assert_called_once()
 
@@ -224,7 +224,7 @@ class TestMainCommand:
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ["ask", "Question"])
+            result = self.runner.invoke(main, ["Question"])
             assert result.exit_code == 0
 
     def test_main_query(self):
@@ -237,7 +237,7 @@ class TestMainCommand:
             mock_response.time = 0.5
             mock_ask.return_value = mock_response
 
-            result = self.runner.invoke(main, ['ask', 'Test question'])
+            result = self.runner.invoke(main, ['Test question'])
             
             assert result.exit_code == 0
             assert "Test response" in result.output
@@ -247,7 +247,7 @@ class TestMainCommand:
         with patch('ai.stream') as mock_stream:
             mock_stream.return_value = iter(["Hello", " ", "world"])
 
-            result = self.runner.invoke(main, ['ask', 'Test question', '--stream'])
+            result = self.runner.invoke(main, ['Test question', '--stream'])
             
             assert result.exit_code == 0
             assert "Hello" in result.output and "world" in result.output

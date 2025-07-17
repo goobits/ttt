@@ -20,7 +20,7 @@ class TestCLICommands:
         self.runner = CliRunner()
 
     def test_basic_ask_command(self):
-        """Test basic ask command functionality."""
+        """Test basic direct prompt functionality."""
         with patch('ai.ask') as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
@@ -29,7 +29,7 @@ class TestCLICommands:
             mock_response.time = 1.23
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ['ask', 'What is Python?'])
+            result = self.runner.invoke(main, ['What is Python?'])
             
             assert result.exit_code == 0
             mock_ask.assert_called_once()
@@ -37,13 +37,13 @@ class TestCLICommands:
             assert call_args[0][0] == 'What is Python?'
 
     def test_ask_with_model_option(self):
-        """Test ask command with model option."""
+        """Test direct prompt with model option."""
         with patch('ai.ask') as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ['ask', 'Test prompt', '--model', 'gpt-4'])
+            result = self.runner.invoke(main, ['Test prompt', '--model', 'gpt-4'])
             
             assert result.exit_code == 0
             call_kwargs = mock_ask.call_args[1]
@@ -51,13 +51,13 @@ class TestCLICommands:
 
 
     def test_ask_with_temperature(self):
-        """Test ask command with temperature option."""
+        """Test direct prompt with temperature option."""
         with patch('ai.ask') as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ['ask', 'Test prompt', '--temperature', '0.7'])
+            result = self.runner.invoke(main, ['Test prompt', '--temperature', '0.7'])
             
             assert result.exit_code == 0
             call_kwargs = mock_ask.call_args[1]
@@ -67,11 +67,11 @@ class TestCLICommands:
 
 
     def test_ask_with_streaming(self):
-        """Test ask command with streaming."""
+        """Test direct prompt with streaming."""
         with patch('ai.stream') as mock_stream:
             mock_stream.return_value = iter(['chunk1', 'chunk2', 'chunk3'])
             
-            result = self.runner.invoke(main, ['ask', 'Test prompt', '--stream'])
+            result = self.runner.invoke(main, ['Test prompt', '--stream'])
             
             assert result.exit_code == 0
             mock_stream.assert_called_once()
@@ -86,7 +86,7 @@ class TestCLICommands:
             
             # Simulate immediate exit
             with patch('click.prompt', side_effect=EOFError):
-                result = self.runner.invoke(main, ['chat'])
+                result = self.runner.invoke(main, ['--chat'])
             
             assert result.exit_code == 0
             mock_chat_context.assert_called_once()
@@ -94,7 +94,7 @@ class TestCLICommands:
     def test_backend_status_command(self):
         """Test status command."""
         with patch('ai.cli.show_backend_status') as mock_status:
-            result = self.runner.invoke(main, ['status'])
+            result = self.runner.invoke(main, ['--status'])
             
             assert result.exit_code == 0
             mock_status.assert_called_once()
@@ -102,7 +102,7 @@ class TestCLICommands:
     def test_models_list_command(self):
         """Test models command."""
         with patch('ai.cli.show_models_list') as mock_models:
-            result = self.runner.invoke(main, ['models'])
+            result = self.runner.invoke(main, ['--models'])
             
             assert result.exit_code == 0
             mock_models.assert_called_once()
@@ -110,7 +110,7 @@ class TestCLICommands:
     def test_tools_list_command(self):
         """Test tools command."""
         with patch('ai.cli.show_tools_list') as mock_tools:
-            result = self.runner.invoke(main, ['tools'])
+            result = self.runner.invoke(main, ['--tools-list'])
             
             assert result.exit_code == 0
             mock_tools.assert_called_once()
@@ -171,7 +171,7 @@ class TestErrorHandling:
         with patch('ai.ask') as mock_ask:
             mock_ask.side_effect = ValueError("Invalid temperature")
             
-            result = self.runner.invoke(main, ['ask', 'test', '--temperature', '2.0'])
+            result = self.runner.invoke(main, ['test', '--temperature', '2.0'])
             
             assert result.exit_code == 1
             assert 'Error:' in result.output
@@ -181,7 +181,7 @@ class TestErrorHandling:
         with patch('ai.ask') as mock_ask:
             mock_ask.side_effect = Exception("API Error")
             
-            result = self.runner.invoke(main, ['ask', 'test'])
+            result = self.runner.invoke(main, ['test'])
             
             assert result.exit_code == 1
             assert 'Error: API Error' in result.output
@@ -201,7 +201,7 @@ class TestStdinInput:
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ['ask', '-'], input='stdin input')
+            result = self.runner.invoke(main, ['-'], input='stdin input')
             
             assert result.exit_code == 0
             call_args = mock_ask.call_args
@@ -209,7 +209,7 @@ class TestStdinInput:
 
     def test_empty_stdin(self):
         """Test handling of empty stdin."""
-        result = self.runner.invoke(main, ['ask', '-'], input='')
+        result = self.runner.invoke(main, ['-'], input='')
         
         assert result.exit_code == 1
         assert 'No input provided' in result.output

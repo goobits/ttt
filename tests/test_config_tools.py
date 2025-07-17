@@ -109,7 +109,7 @@ class TestToolsListCommand:
         runner = CliRunner()
         
         with patch("ai.cli.show_tools_list") as mock_show_tools:
-            result = runner.invoke(main, ["tools"])
+            result = runner.invoke(main, ["--tools-list"])
             assert result.exit_code == 0
             mock_show_tools.assert_called_once()
 

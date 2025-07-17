@@ -13,22 +13,22 @@ class TestClickCLI:
         """Set up test fixtures."""
         self.runner = CliRunner()
 
-    def test_ask_command_basic(self):
-        """Test basic ask command functionality."""
+    def test_direct_prompt_basic(self):
+        """Test basic direct prompt functionality."""
         with patch('ai.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ["ask", "What is Python?"])
+            result = self.runner.invoke(main, ["What is Python?"])
             
             assert result.exit_code == 0
             mock_ask.assert_called_once()
             call_args = mock_ask.call_args
             assert call_args[0][0] == "What is Python?"
 
-    def test_ask_command_with_options(self):
-        """Test ask command with various options."""
+    def test_direct_prompt_with_options(self):
+        """Test direct prompt with various options."""
         with patch('ai.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = lambda x: "Mock response"
@@ -40,7 +40,7 @@ class TestClickCLI:
             mock_ask.return_value = mock_response
             
             result = self.runner.invoke(main, [
-                "ask", "Debug this code",
+                "Debug this code",
                 "--model", "gpt-4",
                 "--temperature", "0.7",
                 "--verbose",
@@ -53,14 +53,14 @@ class TestClickCLI:
             assert call_kwargs["temperature"] == 0.7
 
 
-    def test_ask_command_stdin(self):
-        """Test ask command with stdin input."""
+    def test_direct_prompt_stdin(self):
+        """Test direct prompt with stdin input."""
         with patch('ai.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ["ask", "-"], input="Input from stdin")
+            result = self.runner.invoke(main, ["-"], input="Input from stdin")
             
             assert result.exit_code == 0
             call_args = mock_ask.call_args
@@ -76,7 +76,7 @@ class TestClickCLI:
             # Simulate immediate exit from chat
             with patch('click.prompt', side_effect=EOFError):
                 result = self.runner.invoke(main, [
-                    "chat",
+                    "--chat",
                     "--model", "claude-3-sonnet",
                     "--system", "You are helpful",
                     "--verbose"
@@ -88,7 +88,7 @@ class TestClickCLI:
     def test_backend_status_command(self):
         """Test status command."""
         with patch('ai.cli.show_backend_status') as mock_status:
-            result = self.runner.invoke(main, ["status"])
+            result = self.runner.invoke(main, ["--status"])
             
             assert result.exit_code == 0
             mock_status.assert_called_once()
@@ -96,7 +96,7 @@ class TestClickCLI:
     def test_models_list_command(self):
         """Test models command."""
         with patch('ai.cli.show_models_list') as mock_models:
-            result = self.runner.invoke(main, ["models"])
+            result = self.runner.invoke(main, ["--models"])
             
             assert result.exit_code == 0
             mock_models.assert_called_once()
@@ -104,7 +104,7 @@ class TestClickCLI:
     def test_tools_list_command(self):
         """Test tools command."""
         with patch('ai.cli.show_tools_list') as mock_tools:
-            result = self.runner.invoke(main, ["tools"])
+            result = self.runner.invoke(main, ["--tools-list"])
             
             assert result.exit_code == 0
             mock_tools.assert_called_once()
@@ -115,22 +115,22 @@ class TestClickCLI:
         
         assert result.exit_code == 0
         assert "AI Library - Unified AI Interface" in result.stdout
-        assert "ask" in result.stdout
-        assert "chat" in result.stdout
+        assert "--chat" in result.stdout
+        assert "--status" in result.stdout
 
     def test_command_help(self):
         """Test individual command help."""
-        result = self.runner.invoke(main, ["ask", "--help"])
+        result = self.runner.invoke(main, ["--help"])
         
         assert result.exit_code == 0
-        assert "Ask the AI a question" in result.stdout
+        assert "AI Library - Unified AI Interface" in result.stdout
         assert "--model" in result.stdout
         assert "--model" in result.stdout
 
     def test_invalid_arguments(self):
         """Test handling of invalid arguments."""
         # Missing required prompt argument (stdin not a TTY)
-        result = self.runner.invoke(main, ["ask"])
+        result = self.runner.invoke(main, [])
         assert result.exit_code != 0
         # The message can be either "Missing argument" or "No input provided"
         # depending on whether stdin is considered a TTY
@@ -145,7 +145,7 @@ class TestClickCLI:
             mock_ask.return_value = mock_response
             
             result = self.runner.invoke(main, [
-                "ask", "Calculate 2+2",
+                "Calculate 2+2",
                 "--tools", "math:add,calculate"
             ])
             
@@ -172,7 +172,7 @@ class TestCLIIntegration:
             mock_response.time = 1.23
             mock_ask.return_value = mock_response
 
-            result = self.runner.invoke(main, ["ask", "What is 2+2?"])
+            result = self.runner.invoke(main, ["What is 2+2?"])
             
             assert result.exit_code == 0
             mock_ask.assert_called_once()
@@ -188,7 +188,7 @@ class TestCLIIntegration:
             from ai.exceptions import BackendNotAvailableError
             mock_ask.side_effect = BackendNotAvailableError("local", "No backends available")
             
-            result = self.runner.invoke(main, ["ask", "test"])
+            result = self.runner.invoke(main, ["test"])
             
             # Should exit with error
             assert result.exit_code == 1
@@ -206,7 +206,7 @@ class TestCLIIntegration:
             mock_response.tokens_out = 20
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ["ask", "write a function", "--verbose"])
+            result = self.runner.invoke(main, ["write a function", "--verbose"])
             
             assert result.exit_code == 0
             mock_ask.assert_called_once()

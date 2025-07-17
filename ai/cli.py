@@ -44,22 +44,50 @@ def setup_logging_level(verbose=False, debug=False):
         logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 
-@click.group(invoke_without_command=True)
-@click.option('--version', is_flag=True, help='Show version information')
-@click.option('--model', '-m', help='Specific model to use')
-@click.option('--system', '-s', help='System prompt to set context')
-@click.option('--temperature', '-t', type=float, help='Sampling temperature (0-1)')
-@click.option('--max-tokens', type=int, help='Maximum tokens to generate')
-@click.option('--tools', help='Comma-separated list of tools to enable')
-@click.option('--stream', is_flag=True, help='Stream the response')
-@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
-@click.option('--debug', is_flag=True, help='Enable debug logging')
-@click.option('--code', is_flag=True, help='Optimize for code-related tasks')
-@click.option('--json', 'json_output', is_flag=True, help='Output in JSON format')
+@click.command(context_settings={"allow_extra_args": True})
+@click.option('--version', is_flag=True, help='📋 Show version information')
+@click.option('--model', '-m', help='🤖 Choose your AI model (e.g., gpt-4o, claude-3-5-sonnet)')
+@click.option('--system', '-s', help='🎭 Set the AI\'s personality with a system prompt')
+@click.option('--temperature', '-t', type=float, help='🌡️  Control creativity (0=focused, 1=creative)')
+@click.option('--max-tokens', type=int, help='📝 Limit response length (tokens)')
+@click.option('--tools', help='🔧 Enable AI tools (comma-separated)')
+@click.option('--stream', is_flag=True, help='⚡ Stream responses in real-time')
+@click.option('--verbose', '-v', is_flag=True, help='🔍 Show detailed information')
+@click.option('--debug', is_flag=True, help='🐛 Enable debug logging')
+@click.option('--code', is_flag=True, help='💻 Optimize for coding tasks')
+@click.option('--json', 'json_output', is_flag=True, help='📦 Output as JSON')
+@click.option('--chat', is_flag=True, help='💬 Start interactive chat session')
+@click.option('--status', is_flag=True, help='⚡ Check system status')
+@click.option('--models', is_flag=True, help='🤖 List all available AI models')
+@click.option('--tools-list', is_flag=True, help='🔧 List all available tools')
+@click.option('--config', is_flag=True, help='⚙️  Manage configuration settings')
+@click.argument('args', nargs=-1)
 @click.pass_context
 def main(ctx, version, model, system, temperature, max_tokens, 
-         tools, stream, verbose, debug, code, json_output):
-    """AI Library - Unified AI Interface for local and cloud models."""
+         tools, stream, verbose, debug, code, json_output, 
+         chat, status, models, tools_list, config, args):
+    """🚀 AI Library - Your unified gateway to the world's best AI models
+    
+    \b
+    💡 Quick Examples:
+      ai "What's the weather like?"
+      ai "Write a Python function to sort a list"
+      echo "Hello world" | ai "Translate to Spanish"
+      ai --chat  # Start interactive conversation
+    
+    \b
+    🌟 Features:
+      • 100+ AI models via OpenRouter, OpenAI, Anthropic & more
+      • Smart model routing and fallbacks
+      • Built-in tools for web search, code execution & file ops
+      • Streaming responses and JSON output
+      • Local and cloud backends
+    
+    \b
+    🔑 Setup:
+      export OPENROUTER_API_KEY=your-key-here
+      ai status  # Check your setup
+    """
     
     # Setup logging based on verbosity
     setup_logging_level(verbose, debug)
@@ -68,189 +96,45 @@ def main(ctx, version, model, system, temperature, max_tokens,
         click.echo(f"AI Library v{getattr(ai, '__version__', '0.4.0')}")
         return
     
-    # If no subcommand was invoked, handle stdin input or show help
-    if ctx.invoked_subcommand is None:
-        if not sys.stdin.isatty():
-            # Handle piped input - default to ask command
-            ask_command(None, model, system, temperature, max_tokens, 
-                       tools, stream, verbose, code, json_output, allow_empty=True)
-            return
-        else:
-            # Show help when no args provided and no stdin
+    # Handle special commands first
+    if chat:
+        start_chat_session(model, system, None, tools, None, verbose)
+        return
+    elif status:
+        show_backend_status()
+        return
+    elif models:
+        show_models_list()
+        return
+    elif tools_list:
+        show_tools_list()
+        return
+    elif config:
+        handle_config_command(args)
+        return
+    
+    # Default behavior: treat args as prompt for ask command
+    prompt = " ".join(args) if args else None
+    
+    # If no prompt, show help (unless reading from pipe)
+    if prompt is None:
+        # Check if there's actual stdin content by attempting a non-blocking read
+        import select
+        try:
+            if sys.stdin.isatty() or not select.select([sys.stdin], [], [], 0)[0]:
+                # Interactive terminal or no stdin data available - show help
+                click.echo(ctx.get_help())
+                return
+        except (OSError, io.UnsupportedOperation):
+            # Fallback: assume interactive if no clear pipe input
             click.echo(ctx.get_help())
             return
-
-
-@main.command()
-@click.argument('prompt', required=False)
-@click.option('--model', '-m', help='Specific model to use')
-@click.option('--system', '-s', help='System prompt to set context')
-@click.option('--temperature', '-t', type=float, help='Sampling temperature (0-1)')
-@click.option('--max-tokens', type=int, help='Maximum tokens to generate')
-@click.option('--tools', help='Comma-separated list of tools to enable')
-@click.option('--stream', is_flag=True, help='Stream the response')
-@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
-@click.option('--debug', is_flag=True, help='Enable debug logging')
-@click.option('--code', is_flag=True, help='Optimize for code-related tasks')
-@click.option('--json', 'json_output', is_flag=True, help='Output in JSON format')
-def ask(prompt, model, system, temperature, max_tokens, 
-        tools, stream, verbose, debug, code, json_output):
-    """Ask the AI a question and get a response."""
-    setup_logging_level(verbose, debug)
+    
     ask_command(prompt, model, system, temperature, max_tokens, 
                tools, stream, verbose, code, json_output, allow_empty=False)
 
 
-def ask_command(prompt, model, system, temperature, max_tokens, 
-                tools, stream, verbose, code, json_output, allow_empty=False):
-    """Internal function to handle AI questions."""
-    
-    # Handle missing prompt in interactive mode first
-    if prompt is None and sys.stdin.isatty() and not allow_empty:
-        click.echo("Error: Missing argument 'prompt'", err=True)
-        sys.exit(1)
-        
-    # If allow_empty is True and no prompt and no stdin, just return
-    if allow_empty and prompt is None and sys.stdin.isatty():
-        return
-    
-    # Handle stdin input
-    if prompt == '-' or (prompt is None and not sys.stdin.isatty()):
-        # Reading from pipe
-        try:
-            input_text = sys.stdin.read().strip()
-        except EOFError:
-            input_text = ""
-        
-        if not input_text:
-            # Handle empty input
-            click.echo("Error: No input provided", err=True)
-            sys.exit(1)
-            
-        # Try to parse as JSON first
-        try:
-            import json
-            json_input = json.loads(input_text)
-            
-            # Extract prompt from various possible fields
-            prompt = (json_input.get('prompt') or 
-                     json_input.get('query') or 
-                     json_input.get('message') or 
-                     json_input.get('text') or 
-                     json_input.get('content'))
-            
-            if not prompt:
-                # If no recognized prompt field, treat entire JSON as prompt
-                prompt = input_text
-            else:
-                # Extract other parameters from JSON if not already set
-                if not model and json_input.get('model'):
-                    model = json_input.get('model')
-                if not system and json_input.get('system'):
-                    system = json_input.get('system')
-                if temperature is None and json_input.get('temperature') is not None:
-                    temperature = json_input.get('temperature')
-                if not max_tokens and json_input.get('max_tokens'):
-                    max_tokens = json_input.get('max_tokens')
-                if not tools and json_input.get('tools'):
-                    tools = json_input.get('tools')
-                if not stream and json_input.get('stream'):
-                    stream = json_input.get('stream')
-                    
-        except json.JSONDecodeError:
-            # Not valid JSON, treat as plain text
-            prompt = input_text
-            
-    elif prompt is None:
-        # If we got here from the main function without a prompt, show help
-        return
-    
-    
-    # Parse tools
-    tools_list = None
-    if tools:
-        tools_list = [tool.strip() for tool in tools.split(',')]
-        tools_list = resolve_tools(tools_list)
-    
-    # Build request parameters
-    kwargs = {}
-    if model:
-        kwargs['model'] = model
-    if system:
-        kwargs['system'] = system
-    if temperature is not None:
-        kwargs['temperature'] = temperature
-    if max_tokens:
-        kwargs['max_tokens'] = max_tokens
-    if tools_list:
-        kwargs['tools'] = tools_list
-    
-    # Apply coding optimizations only if explicitly requested
-    if code:
-        apply_coding_optimization(kwargs)
-    
-    try:
-        if stream:
-            # Stream response
-            if json_output:
-                # For streaming with JSON, we need to collect chunks
-                chunks = []
-                for chunk in ai.stream(prompt, **kwargs):
-                    chunks.append(chunk)
-                import json
-                output = {"content": "".join(chunks), "streaming": True}
-                click.echo(json.dumps(output))
-            else:
-                for chunk in ai.stream(prompt, **kwargs):
-                    click.echo(chunk, nl=False)
-                click.echo()  # Final newline
-        else:
-            # Regular response
-            response = ai.ask(prompt, **kwargs)
-            
-            if json_output:
-                import json
-                output = {
-                    "content": str(response),
-                    "model": response.model,
-                    "backend": response.backend,
-                    "time": response.time,
-                    "streaming": False
-                }
-                if hasattr(response, 'tokens_in') and response.tokens_in:
-                    output["tokens_in"] = response.tokens_in
-                    output["tokens_out"] = response.tokens_out
-                click.echo(json.dumps(output))
-            else:
-                click.echo(str(response))
-                
-                if verbose:
-                    click.echo(f"\nModel: {response.model}", err=True)
-                    click.echo(f"Backend: {response.backend}", err=True)
-                    click.echo(f"Time: {response.time:.2f}s", err=True)
-                    if hasattr(response, 'tokens_in') and response.tokens_in:
-                        click.echo(f"Tokens: {response.tokens_in} in, {response.tokens_out} out", err=True)
-                    
-    except Exception as e:
-        if json_output:
-            import json
-            error_output = {"error": str(e)}
-            click.echo(json.dumps(error_output))
-        else:
-            click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
-
-
-
-
-@main.command()
-@click.option('--model', '-m', help='Default model for the session')
-@click.option('--system', '-s', help='System prompt for the session')
-@click.option('--session-id', help='Session ID for persistent chat')
-@click.option('--tools', help='Comma-separated list of tools to enable')
-@click.option('--load', help='Load chat session from file')
-@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
-def chat(model, system, session_id, tools, load, verbose):
+def start_chat_session(model, system, session_id, tools, load, verbose):
     """Start an interactive chat session."""
     
     # Parse tools
@@ -352,50 +236,172 @@ def chat(model, system, session_id, tools, load, verbose):
         sys.exit(1)
 
 
-@main.command(name='status')
-def backend_status():
-    """Show the status of available backends."""
-    show_backend_status()
-
-
-@main.command(name='models')
-def models_list():
-    """List available models from all backends."""
-    show_models_list()
-
-
-@main.command(name='tools')
-def tools_list():
-    """List available tools."""
-    show_tools_list()
-
-
-@main.command()
-@click.argument('key', required=False)
-@click.argument('value', required=False)
-def config(key, value):
-    """Manage configuration settings.
-    
-    Usage:
-      ai config                  - Show all configuration
-      ai config <key>           - Show specific configuration value
-      ai config <key> <value>   - Set configuration value
-    """
+def handle_config_command(args):
+    """Handle config command with arguments."""
     from ai.config import get_config, configure, save_config
     
     try:
-        if key is None:
+        if not args:
             # Show all configuration
             show_all_config()
-        elif value is None:
+        elif len(args) == 1:
             # Show specific key
-            show_config_key(key)
+            show_config_key(args[0])
         else:
             # Set key-value pair
-            set_config_key(key, value)
+            set_config_key(args[0], args[1])
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
+
+
+
+
+def ask_command(prompt, model, system, temperature, max_tokens, 
+                tools, stream, verbose, code, json_output, allow_empty=False):
+    """Internal function to handle AI questions."""
+    
+    # Handle missing prompt in interactive mode first
+    if prompt is None and sys.stdin.isatty() and not allow_empty:
+        click.echo("Error: Missing argument 'prompt'", err=True)
+        sys.exit(1)
+        
+    # If allow_empty is True and no prompt and no stdin, show help
+    if allow_empty and prompt is None and sys.stdin.isatty():
+        return
+    
+    # Handle stdin input
+    if prompt == '-' or (prompt is None and not sys.stdin.isatty()):
+        # Reading from pipe
+        try:
+            input_text = sys.stdin.read().strip()
+        except EOFError:
+            input_text = ""
+        
+        if not input_text:
+            # Handle empty input
+            click.echo("Error: No input provided", err=True)
+            sys.exit(1)
+            
+        # Try to parse as JSON first
+        try:
+            import json
+            json_input = json.loads(input_text)
+            
+            # Extract prompt from various possible fields
+            prompt = (json_input.get('prompt') or 
+                     json_input.get('query') or 
+                     json_input.get('message') or 
+                     json_input.get('text') or 
+                     json_input.get('content'))
+            
+            if not prompt:
+                # If no recognized prompt field, treat entire JSON as prompt
+                prompt = input_text
+            else:
+                # Extract other parameters from JSON if not already set
+                if not model and json_input.get('model'):
+                    model = json_input.get('model')
+                if not system and json_input.get('system'):
+                    system = json_input.get('system')
+                if temperature is None and json_input.get('temperature') is not None:
+                    temperature = json_input.get('temperature')
+                if not max_tokens and json_input.get('max_tokens'):
+                    max_tokens = json_input.get('max_tokens')
+                if not tools and json_input.get('tools'):
+                    tools = json_input.get('tools')
+                if not stream and json_input.get('stream'):
+                    stream = json_input.get('stream')
+                    
+        except json.JSONDecodeError:
+            # Not valid JSON, treat as plain text
+            prompt = input_text
+            
+    elif prompt is None:
+        # If we got here without a prompt and not from stdin, something's wrong
+        if allow_empty:
+            return
+        click.echo("Error: Missing argument 'prompt'", err=True)
+        sys.exit(1)
+    
+    
+    # Parse tools
+    tools_list = None
+    if tools:
+        tools_list = [tool.strip() for tool in tools.split(',')]
+        tools_list = resolve_tools(tools_list)
+    
+    # Build request parameters
+    kwargs = {}
+    if model:
+        kwargs['model'] = model
+    if system:
+        kwargs['system'] = system
+    if temperature is not None:
+        kwargs['temperature'] = temperature
+    if max_tokens:
+        kwargs['max_tokens'] = max_tokens
+    if tools_list:
+        kwargs['tools'] = tools_list
+    
+    # Apply coding optimizations only if explicitly requested
+    if code:
+        apply_coding_optimization(kwargs)
+    
+    try:
+        if stream:
+            # Stream response
+            if json_output:
+                # For streaming with JSON, we need to collect chunks
+                chunks = []
+                for chunk in ai.stream(prompt, **kwargs):
+                    chunks.append(chunk)
+                import json
+                output = {"content": "".join(chunks), "streaming": True}
+                click.echo(json.dumps(output))
+            else:
+                for chunk in ai.stream(prompt, **kwargs):
+                    click.echo(chunk, nl=False)
+                click.echo()  # Final newline
+        else:
+            # Regular response
+            response = ai.ask(prompt, **kwargs)
+            
+            if json_output:
+                import json
+                output = {
+                    "content": str(response),
+                    "model": response.model,
+                    "backend": response.backend,
+                    "time": response.time,
+                    "streaming": False
+                }
+                if hasattr(response, 'tokens_in') and response.tokens_in:
+                    output["tokens_in"] = response.tokens_in
+                    output["tokens_out"] = response.tokens_out
+                click.echo(json.dumps(output))
+            else:
+                click.echo(str(response))
+                
+                if verbose:
+                    click.echo(f"\nModel: {response.model}", err=True)
+                    click.echo(f"Backend: {response.backend}", err=True)
+                    click.echo(f"Time: {response.time:.2f}s", err=True)
+                    if hasattr(response, 'tokens_in') and response.tokens_in:
+                        click.echo(f"Tokens: {response.tokens_in} in, {response.tokens_out} out", err=True)
+                    
+    except Exception as e:
+        if json_output:
+            import json
+            error_output = {"error": str(e)}
+            click.echo(json.dumps(error_output))
+        else:
+            click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+
+
+
 
 
 # Helper functions
@@ -708,16 +714,4 @@ def set_config_key(key, value):
 
 
 if __name__ == "__main__":
-    # Preprocess sys.argv to inject 'ask' command when needed
-    # This allows 'ai "prompt"' to work without explicit 'ask'
-    known_commands = ['ask', 'chat', 'status', 'models', 'tools', 'config']
-    
-    # Check if we have args and first arg is not a known command or flag
-    if len(sys.argv) > 1:
-        first_arg = sys.argv[1]
-        # If first arg is not a flag (--something) and not a known command
-        if not first_arg.startswith('-') and first_arg not in known_commands:
-            # Inject 'ask' command
-            sys.argv.insert(1, 'ask')
-    
     main()

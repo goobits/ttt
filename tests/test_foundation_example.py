@@ -156,13 +156,13 @@ class TestCLIFoundation:
     def test_backend_status_command(self):
         """Test status command invocation."""
         with patch('ai.cli.show_backend_status') as mock_status:
-            result = self.runner.invoke(main, ["status"])
+            result = self.runner.invoke(main, ["--status"])
             
             assert result.exit_code == 0
             mock_status.assert_called_once()
 
     def test_ask_command_argument_parsing(self):
-        """Test ask command parses arguments correctly."""
+        """Test direct prompt parses arguments correctly."""
         with patch('ai.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = lambda x: "Mock response"
@@ -172,7 +172,7 @@ class TestCLIFoundation:
             mock_ask.return_value = mock_response
             
             result = self.runner.invoke(main, [
-                "ask", "What is Python?",
+                "What is Python?",
                 "--model", "gpt-4",
                 "--verbose"
             ])
@@ -192,9 +192,9 @@ class TestCLIFoundation:
         
         assert result.exit_code == 0
         assert "AI Library - Unified AI Interface" in result.stdout
-        assert "ask" in result.stdout
-        assert "chat" in result.stdout
-        assert "status" in result.stdout
+        assert "--chat" in result.stdout
+        assert "--status" in result.stdout
+        assert "--models" in result.stdout
 
     def test_invalid_command_handling(self):
         """Test handling of invalid commands."""

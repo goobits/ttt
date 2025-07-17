@@ -100,12 +100,42 @@ class InputSanitizer:
 
     # Patterns that are dangerous specifically in code execution contexts
     CODE_DANGEROUS_PATTERNS = [
+        # OS module execution methods
         r"os\.system\s*\(",
-        r"subprocess\.(run|call|Popen)",
+        r"os\.popen\s*\(",
+        r"os\.execv\s*\(",
+        r"os\.execve\s*\(",
+        r"os\.execl\s*\(",
+        r"os\.execlp\s*\(",
+        r"os\.execvp\s*\(",
+        r"os\.spawn\w*\s*\(",  # Generic spawn pattern
+        # Subprocess module execution methods
+        r"subprocess\.(run|call|Popen|check_output|check_call|getoutput|getstatusoutput)\s*\(",
+        # Dynamic code execution
         r"eval\s*\(",
         r"exec\s*\(",
+        r"compile\s*\(",
         r"__import__\s*\(",
+        # String concatenation bypasses for critical functions
+        r'getattr\s*\(\s*os\s*,\s*["\']\s*sys\s*["\']\s*\+',
+        r'getattr\s*\(\s*os\s*,\s*["\']sys["\']\s*\+',
+        r'getattr\s*\(\s*os\s*,\s*["\']\s*system\s*["\']',
+        r'getattr\s*\(\s*subprocess\s*,',
+        r'getattr\s*\(\s*__import__\s*\(',
+        # Import bypasses
+        r'from\s+subprocess\s+import\s+(check_output|check_call|getoutput|getstatusoutput|run|call|Popen)',
+        r'from\s+os\s+import\s+(system|popen|exec)',
+        r'import\s+subprocess\s+as\s+\w+',
+        r'import\s+os\s+as\s+\w+',
+        # File system access
         r'open\s*\(\s*["\'][/\\]',  # Opening system files
+        # Globals and builtins access
+        r'globals\s*\(\s*\)\s*\[',
+        r'__builtins__\s*\[',
+        r'locals\s*\(\s*\)\s*\[',
+        # Type and reflection-based bypasses
+        r'type\s*\(\s*lambda\s*:',
+        r'chr\s*\(\s*\d+\s*\)\s*\+.*chr\s*\(',  # Character concatenation
     ]
 
     @classmethod
@@ -149,9 +179,16 @@ class InputSanitizer:
         if not path or path.isspace():
             raise ValueError("Path cannot be empty")
 
-        # Check for path traversal
-        if ".." in path:
+        # URL decode the path to prevent encoding bypasses
+        import urllib.parse
+        decoded_path = urllib.parse.unquote(path)
+        
+        # Check for path traversal in both original and decoded paths
+        if ".." in path or ".." in decoded_path:
             raise ValueError("Path traversal detected")
+            
+        # Use the decoded path for further processing
+        path = decoded_path
 
         # Resolve and validate
         try:

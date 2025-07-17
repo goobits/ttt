@@ -29,7 +29,7 @@ class TestJSONInputOutput:
         with patch('ai.ask') as mock_ask:
             mock_ask.return_value = self.mock_response
             
-            result = self.runner.invoke(main, ['ask', 'test prompt', '--json'])
+            result = self.runner.invoke(main, ['test prompt', '--json'])
             
             assert result.exit_code == 0
             
@@ -145,7 +145,7 @@ class TestJSONInputOutput:
         with patch('ai.ask') as mock_ask:
             mock_ask.side_effect = Exception("Test error message")
             
-            result = self.runner.invoke(main, ['ask', 'test prompt', '--json'])
+            result = self.runner.invoke(main, ['test prompt', '--json'])
             
             assert result.exit_code == 1
             output_data = json.loads(result.output.strip())
@@ -157,7 +157,7 @@ class TestJSONInputOutput:
         with patch('ai.stream') as mock_stream:
             mock_stream.return_value = ["Hello", " ", "world", "!"]
             
-            result = self.runner.invoke(main, ['ask', 'test prompt', '--stream', '--json'])
+            result = self.runner.invoke(main, ['test prompt', '--stream', '--json'])
             
             assert result.exit_code == 0
             output_data = json.loads(result.output.strip())
@@ -179,7 +179,7 @@ class TestJSONInputOutput:
         with patch('ai.ask') as mock_ask:
             mock_ask.return_value = mock_response_no_tokens
             
-            result = self.runner.invoke(main, ['ask', 'test', '--json'])
+            result = self.runner.invoke(main, ['test', '--json'])
             
             assert result.exit_code == 0
             output_data = json.loads(result.output.strip())
@@ -198,7 +198,7 @@ class TestDefaultAskBehavior:
         self.runner = CliRunner()
 
     def test_command_line_argument_defaults_to_ask(self):
-        """Test that providing an argument defaults to ask command."""
+        """Test that providing an argument defaults to direct prompt."""
         with patch('ai.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = Mock(return_value="Response")
@@ -207,7 +207,7 @@ class TestDefaultAskBehavior:
             mock_response.time = 0.5
             mock_ask.return_value = mock_response
             
-            result = self.runner.invoke(main, ['ask', 'what is Python?'])
+            result = self.runner.invoke(main, ['what is Python?'])
             
             assert result.exit_code == 0
             assert "Response" in result.output
@@ -215,7 +215,7 @@ class TestDefaultAskBehavior:
             assert call_args[0] == "what is Python?"
 
     def test_stdin_input_defaults_to_ask(self):
-        """Test that stdin input defaults to ask command."""
+        """Test that stdin input defaults to direct prompt."""
         with patch('ai.ask') as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = Mock(return_value="Stdin response")

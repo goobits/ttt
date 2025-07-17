@@ -32,21 +32,40 @@ detect_shell() {
     fi
 }
 
-# Print colored output
+# Print friendly output
 print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    echo -e "${BLUE}🔄 $1${NC}"
 }
 
 print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    echo -e "${GREEN}✅ $1${NC}"
 }
 
 print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    echo -e "${RED}❌ $1${NC}"
 }
 
 print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
+
+# Spinner for long operations
+with_spinner() {
+    local pid=$!
+    local delay=0.1
+    local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    local temp
+    printf "${BLUE}%s${NC}" "$1"
+    while ps -p $pid > /dev/null 2>&1; do
+        temp=${spinstr#?}
+        printf " [%c]" "$spinstr"
+        spinstr=$temp${spinstr%"$temp"}
+        sleep $delay
+        printf "\b\b\b\b"
+    done
+    printf "    \b\b\b\b"
+    wait $pid
+    return $?
 }
 
 # Check if command exists
@@ -71,46 +90,44 @@ has_active_api_keys() {
 
 # Create virtual environment
 create_venv() {
-    print_status "Creating Python virtual environment..."
+    printf "${BLUE}🔄 Setting up Python environment${NC}"
     if ! command_exists python3; then
+        printf "\n"
         print_error "Python3 is required but not installed"
         exit 1
     fi
     
-    python3 -m venv "$VENV_DIR"
-    source "$VENV_DIR/bin/activate"
-    pip install --upgrade pip
-    print_success "Virtual environment created"
+    (python3 -m venv "$VENV_DIR" && source "$VENV_DIR/bin/activate" && pip install --upgrade pip --quiet) >/dev/null 2>&1 &
+    with_spinner "Setting up Python environment"
+    printf "\n"
+    print_success "Python environment ready"
 }
 
 # Install AI library
 install_ai() {
-    print_status "Installing AI library..."
+    printf "${BLUE}🔄 Installing AI library${NC}"
     source "$VENV_DIR/bin/activate"
     
     # Install dependencies from pyproject.toml
     if command_exists poetry; then
-        print_status "Using Poetry for dependency management..."
-        poetry install
+        poetry install >/dev/null 2>&1 &
     else
-        print_status "Installing dependencies manually..."
         # Install core dependencies
-        pip install pydantic "litellm>=1.0.0" "rich>=13.0.0" "click>=8.0.0" "python-dotenv>=1.0.0" "pyyaml>=6.0" "bleach>=6.0.0" "validators>=0.22.0" "httpx"
-        
-        # Install the library in development mode
-        pip install -e .
+        (pip install --quiet pydantic "litellm>=1.0.0" "rich>=13.0.0" "click>=8.0.0" "python-dotenv>=1.0.0" "pyyaml>=6.0" "bleach>=6.0.0" "validators>=0.22.0" "httpx" && pip install --quiet -e .) >/dev/null 2>&1 &
     fi
     
+    with_spinner "Installing AI library"
+    printf "\n"
     print_success "AI library installed"
 }
 
-# Setup shell integration
+# Setup shell integration (fallback only)
 setup_shell() {
-    print_status "Setting up shell integration..."
+    print_status "Configuring shell integration"
     detect_shell
     
-    # Create function instead of alias for better compatibility
-    local ai_function="function ai() { source $VENV_DIR/bin/activate && python -m ai \"\$@\"; }"
+    # Create function with subshell to avoid persistent venv activation
+    local ai_function="function ai() { (cd $AI_DIR && source .venv/bin/activate && python -m ai \"\$@\"); }"
     local ai_path_export="export PATH=\"$VENV_DIR/bin:\$PATH\""
     local ai_comment="# AI Library Integration"
     
@@ -123,30 +140,12 @@ setup_shell() {
     echo "$ai_path_export" >> "$SHELL_RC"
     echo "$ai_function" >> "$SHELL_RC"
     
-    # Also create a global binary for better compatibility
-    local bin_dir="$HOME/.local/bin"
-    mkdir -p "$bin_dir"
-    
-    cat > "$bin_dir/ai" << EOF
-#!/bin/bash
-# AI Library Global Command
-
-# Change to the AI library directory
-cd $AI_DIR
-
-# Activate virtual environment and run the AI CLI
-source .venv/bin/activate && python -m ai "\$@"
-EOF
-    
-    chmod +x "$bin_dir/ai"
-    
-    print_success "Shell integration added to $SHELL_RC"
-    print_success "Global 'ai' command created in $bin_dir/ai"
+    print_success "Shell integration configured"
 }
 
 # Setup environment variables
 setup_env() {
-    print_status "Setting up environment variables..."
+    print_status "Setting up API configuration"
     
     # Check for existing .env file or create template
     if [[ ! -f "$API_KEY_FILE" ]]; then
@@ -165,15 +164,12 @@ setup_env() {
 # Local Ollama configuration (optional)
 # OLLAMA_BASE_URL=http://localhost:11434
 EOF
-        print_warning "Created $API_KEY_FILE - please edit it with your API keys"
+        print_warning "Created $API_KEY_FILE - add your API keys here"
     else
-        print_success "Environment file already exists at $API_KEY_FILE - preserving existing API keys"
-        
-        # Check if any API keys are actually set
         if has_active_api_keys; then
-            print_success "Found existing API keys in $API_KEY_FILE"
+            print_success "Found existing API keys"
         else
-            print_warning "No active API keys found in $API_KEY_FILE (all lines are commented)"
+            print_warning "No active API keys found"
         fi
     fi
     
@@ -182,115 +178,129 @@ EOF
     
     if ! grep -q "$API_KEY_FILE" "$SHELL_RC" 2>/dev/null; then
         echo "$env_source" >> "$SHELL_RC"
-        print_success "Environment file sourcing added to shell"
     fi
 }
 
 # Install function
 install() {
-    print_status "Installing AI Library..."
+    local dev_mode=${1:-false}
     
-    # Check if already installed
-    if [[ -d "$VENV_DIR" ]]; then
-        print_warning "AI library appears to be already installed"
-        
-        # Check for existing .env file with keys
-        if has_active_api_keys; then
-            print_warning "Existing .env file with ACTIVE API KEYS detected!"
-            print_success "Your API keys are safe - install will preserve them"
-        fi
-        
-        echo -n "Continue with reinstall? [y/N]: "
-        read -r response
-        if [[ ! "$response" =~ ^[Yy]$ ]]; then
-            print_status "Installation cancelled"
-            exit 0
-        fi
-        
-        # Only remove venv, not config files
-        rm -rf "$VENV_DIR"
-        print_status "Removed old virtual environment"
-    fi
-    
-    create_venv
-    install_ai
-    setup_shell
-    setup_env
-    
-    print_success "Installation complete!"
     echo
-    echo -e "${GREEN}✅ AI Library Successfully Installed${NC}"
+    if [[ "$dev_mode" == "true" ]]; then
+        echo -e "${BLUE}🚀 AI Library Installer (Development Mode)${NC}"
+    else
+        echo -e "${BLUE}🚀 AI Library Installer${NC}"
+    fi
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo
-    echo -e "${YELLOW}NEXT STEPS:${NC}"
-    echo "1. ${GREEN}Restart your terminal${NC} or run: ${YELLOW}source $SHELL_RC${NC}"
-    echo "2. ${GREEN}Configure API keys${NC} in: ${YELLOW}$API_KEY_FILE${NC}"
-    echo "3. ${GREEN}Test installation${NC}: ${YELLOW}ai 'What is 2+2?'${NC}"
+    
+    # Check for pipx (recommended)
+    if command_exists pipx; then
+        print_status "Using pipx for clean installation"
+        
+        # Check if already installed via pipx
+        if pipx list | grep -q "^  package ai "; then
+            if [[ "$dev_mode" == "true" ]]; then
+                print_warning "AI library already installed. Development mode requires clean reinstall."
+                pipx uninstall ai 2>/dev/null || true
+            else
+                print_warning "AI library already installed via pipx"
+                echo -n "Reinstall? [y/N]: "
+                read -r response
+                if [[ ! "$response" =~ ^[Yy]$ ]]; then
+                    echo "Installation cancelled"
+                    exit 0
+                fi
+                pipx uninstall ai 2>/dev/null || true
+            fi
+        fi
+        
+        # Install with pipx
+        if [[ "$dev_mode" == "true" ]]; then
+            print_status "Installing with pipx in editable mode..."
+            pipx install --editable . || {
+                print_error "pipx development installation failed"
+                exit 1
+            }
+        else
+            print_status "Installing with pipx..."
+            pipx install . || {
+                print_error "pipx installation failed"
+                exit 1
+            }
+        fi
+        
+        echo
+        echo -e "${GREEN}🎉 Installation Complete!${NC}"
+        echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo
+        echo -e "${YELLOW}Next Steps:${NC}"
+        echo -e "1. 🔑 Set your API key: ${YELLOW}export OPENROUTER_API_KEY=your-key-here${NC}"
+        echo -e "2. 🧪 Test it out: ${YELLOW}ai 'What is 2+2?'${NC}"
+        echo
+        if [[ "$dev_mode" == "true" ]]; then
+            echo -e "${GREEN}Development mode:${NC}"
+            echo "  ✅ Live file editing (changes reflect immediately)"
+            echo "  ✅ No need to reinstall after code changes"
+        else
+            echo -e "${GREEN}pipx provides:${NC}"
+            echo "  ✅ Isolated virtual environment"
+        fi
+        echo "  ✅ Global 'ai' command"
+        echo "  ✅ Easy updates with 'pipx upgrade ai'"
+        echo "  ✅ Clean uninstall with 'pipx uninstall ai'"
+        
+    else
+        print_error "pipx is required for installation"
+        echo "Install pipx first:"
+        echo "  sudo apt install pipx"
+        echo "  pipx ensurepath"
+        exit 1
+    fi
+    
     echo
-    echo -e "${BLUE}COMMANDS AVAILABLE:${NC}"
-    echo "  ${YELLOW}ai${NC}                               # Show help menu"
-    echo "  ${YELLOW}ai${NC} 'Your question here'           # Basic usage"
-    echo "  ${YELLOW}echo 'text' | ai${NC}                 # Pipe text to AI"
-    echo "  ${YELLOW}ai${NC} status                         # Check system status"
-    echo "  ${YELLOW}ai${NC} models                         # List available models"
-    echo "  ${YELLOW}ai${NC} --help                         # Show all options"
-    echo
-    echo -e "${BLUE}EXAMPLE USAGE:${NC}"
-    echo "  ${YELLOW}ai${NC} 'Explain quantum computing'"
-    echo "  ${YELLOW}ai${NC} 'Write Python code' --model claude-3-sonnet"
-    echo "  ${YELLOW}echo 'Hello world' | ai${NC}          # NEW: Direct pipe support"
-    echo "  ${YELLOW}cat file.txt | ai 'Review this'${NC}  # Pipe with additional prompt"
-    echo "  ${YELLOW}git diff | ai 'Explain changes'${NC}  # Pipe git output"
-    echo "  ${YELLOW}ai${NC} 'Question' --verbose           # Show metadata"
-    echo
-    echo -e "${GREEN}FEATURES:${NC}"
-    echo "  ✅ Unified interface for multiple AI providers"
-    echo "  ✅ OpenRouter integration (100+ models)"
-    echo "  ✅ Direct pipe support (no dash needed!)"
-    echo "  ✅ Clean output with minimal logging"
-    echo "  ✅ Global command available from any directory"
-    echo "  ✅ Professional error handling and diagnostics"
+    echo -e "${BLUE}Quick Examples:${NC}"
+    echo -e "  ${YELLOW}ai${NC} 'Explain quantum computing'"
+    echo -e "  ${YELLOW}echo 'Hello world' | ai${NC}"
+    echo -e "  ${YELLOW}git diff | ai 'Explain changes'${NC}"
+    echo -e "  ${YELLOW}ai${NC} status"
     echo
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${GREEN}Ready for professional AI assistance!${NC}"
+    echo -e "${GREEN}Ready to chat with AI! 🤖${NC}"
     
-    echo
-    echo -e "${BLUE}TROUBLESHOOTING:${NC}"
-    echo "If you see 'model not found' errors:"
-    echo "  ${YELLOW}ai config backend cloud${NC}         # Switch to cloud backend"
-    echo "  ${YELLOW}ai config openai_key sk-...${NC}     # Add your API key"
-    echo "  ${YELLOW}ai status${NC}                       # Check configuration"
-    echo
-    echo "For local models (requires Ollama):"
-    echo "  ${YELLOW}curl https://ollama.ai/install.sh | sh${NC}"
-    echo "  ${YELLOW}ollama pull mistral${NC}             # Pull a model"
-    echo "  ${YELLOW}ai config model mistral${NC}         # Set default model"
-    
-    # Offer to test in current session
-    echo
-    echo -n "Test AI in current session? [y/N]: "
-    read -r response
-    if [[ "$response" =~ ^[Yy]$ ]]; then
-        test_current_session
-    fi
 }
 
 # Uninstall function
 uninstall() {
-    print_status "Uninstalling AI Library..."
+    echo
+    echo -e "${YELLOW}🗑️  Uninstalling AI Library${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo
     
-    # Remove virtual environment
-    if [[ -d "$VENV_DIR" ]]; then
-        rm -rf "$VENV_DIR"
-        print_success "Removed virtual environment"
-    fi
-    
-    # Remove shell integration
-    detect_shell
-    if [[ -f "$SHELL_RC" ]]; then
-        print_status "Removing shell integration..."
-        clean_shell_rc
-        print_success "Removed shell integration"
+    # Check if installed via pipx
+    if command_exists pipx && pipx list | grep -q "^  package ai "; then
+        print_status "Removing pipx installation..."
+        pipx uninstall ai
+        print_success "Removed pipx installation"
+    else
+        # Legacy removal - virtual environment and shell integration
+        if [[ -d "$VENV_DIR" ]]; then
+            rm -rf "$VENV_DIR"
+            print_success "Removed virtual environment"
+        fi
+        
+        # Remove shell integration
+        detect_shell
+        if [[ -f "$SHELL_RC" ]]; then
+            clean_shell_rc
+            print_success "Removed shell integration"
+        fi
+        
+        # Remove global binary
+        if [[ -f "$HOME/.local/bin/ai" ]]; then
+            rm -f "$HOME/.local/bin/ai"
+            print_success "Removed global binary"
+        fi
     fi
     
     # Ask about .env file
@@ -308,42 +318,69 @@ uninstall() {
             # Create backup first
             backup_file="${API_KEY_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
             cp "$API_KEY_FILE" "$backup_file"
-            print_status "Created backup at $backup_file"
+            echo "💾 Created backup at $backup_file"
             
             rm -f "$API_KEY_FILE"
             print_success "Removed API key file (backup saved)"
         else
-            print_status "Kept API key file"
+            echo "📁 Kept API key file"
         fi
     fi
     
+    echo
     print_success "Uninstallation complete!"
-    echo "Please restart your terminal to complete the removal."
 }
 
 
-# Test in current session
-test_current_session() {
-    print_status "Testing AI in current session..."
-    source "$VENV_DIR/bin/activate"
+# Fallback pip installation
+install_with_pip() {
+    # Check if already installed
+    if [[ -d "$VENV_DIR" ]]; then
+        print_warning "AI library appears to be already installed"
+        
+        # Check for existing .env file with keys
+        if has_active_api_keys; then
+            print_success "Your API keys will be preserved"
+        fi
+        
+        echo -n "Continue with reinstall? [y/N]: "
+        read -r response
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+            echo "Installation cancelled"
+            exit 0
+        fi
+        
+        # Only remove venv, not config files
+        rm -rf "$VENV_DIR"
+        echo "🗑️  Removed old environment"
+    fi
+    
+    create_venv
+    install_ai
+    setup_shell
+    setup_env
+    
+    echo
+    echo -e "${GREEN}🎉 Installation Complete!${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo
+    echo -e "${YELLOW}Next Steps:${NC}"
+    echo -e "1. 🔄 Restart your terminal or run: ${YELLOW}source $SHELL_RC${NC}"
+    echo -e "2. 🔑 Add your API keys to: ${YELLOW}$API_KEY_FILE${NC}"
+    echo -e "3. 🧪 Test it out: ${YELLOW}ai 'What is 2+2?'${NC}"
+}
+
+# Test installation
+test_installation() {
+    print_status "Testing AI installation..."
     
     if [[ -f "$API_KEY_FILE" ]]; then
         source "$API_KEY_FILE" 2>/dev/null || true
     fi
     
-    echo "Running: python -m ai status"
-    python -m ai status || {
-        print_warning "CLI test failed, trying Python API..."
-        python -c "
-from ai.api import ask
-try:
-    print('Testing basic functionality...')
-    response = ask('Hello!', max_tokens=10)
-    print(f'✅ Success: {str(response)[:50]}...')
-except Exception as e:
-    print(f'❌ Error: {e}')
-    print('Make sure to add API keys to $API_KEY_FILE')
-"
+    echo "Running: ai status"
+    ai status || {
+        print_warning "CLI test failed - make sure to add API keys to $API_KEY_FILE"
     }
 }
 
@@ -352,12 +389,13 @@ except Exception as e:
 usage() {
     echo "AI Library Setup Script"
     echo
-    echo "Usage: $0 {install|uninstall|help}"
+    echo "Usage: $0 {install|install --dev|uninstall|help}"
     echo
     echo "Commands:"
-    echo "  install     Install the AI library and CLI"
-    echo "  uninstall   Remove the AI library and CLI"
-    echo "  help        Show this help message"
+    echo "  install        Install the AI library and CLI"
+    echo "  install --dev  Install in development mode (editable)"
+    echo "  uninstall      Remove the AI library and CLI"
+    echo "  help           Show this help message"
     echo
     echo "After installation, use:"
     echo "  ai 'Your question here'  # Clean output with minimal logging"
@@ -373,7 +411,11 @@ usage() {
 # Main script logic
 case "${1:-}" in
     install)
-        install
+        if [[ "${2:-}" == "--dev" ]]; then
+            install true
+        else
+            install false
+        fi
         ;;
     uninstall)
         uninstall
