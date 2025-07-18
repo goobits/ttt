@@ -2,7 +2,8 @@
 # This file configures the generic setup framework for the TTT project
 
 # Package information
-package_name: ttt
+package_name: goobits-ttt
+command_name: ttt
 display_name: "TTT - Terminal Tools for Thoughts"
 description: "A powerful AI assistant for your terminal"
 
@@ -23,7 +24,7 @@ dependencies:
 # Installation settings
 installation:
   # Name on PyPI
-  pypi_name: ttt
+  pypi_name: goobits-ttt
   # Relative to project root
   development_path: "."
   
@@ -31,7 +32,7 @@ installation:
 shell_integration:
   enabled: true
   # Short alias for the command
-  alias: "t"
+  alias: "ttt"
   
 # Post-installation messages
 messages:

@@ -38,10 +38,8 @@ else
     # Default projects list - using relative paths from script location
     # You can customize this array for your specific setup
     PROJECTS=(
-        "."  # Current directory (the project containing this script)
-        # Add relative paths to other projects here:
-        # "../another-project"
-        # "../../different-project"
+        "."           # TTT (current)
+        "../tts"      # TTS project
     )
     
     # Convert relative paths to absolute paths
