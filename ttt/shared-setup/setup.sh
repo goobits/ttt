@@ -494,22 +494,28 @@ uninstall_with_pipx() {
         return 1
     fi
     
-    # Check if installed
-    if ! pipx list | grep -q "${CONFIG_package_name}"; then
-        log_warning "${CONFIG_package_name} is not installed with pipx"
+    # Check for both production and development package names
+    local package_to_uninstall=""
+    if pipx list | grep -q "${CONFIG_package_name}"; then
+        package_to_uninstall="${CONFIG_package_name}"
+    elif pipx list | grep -q "${CONFIG_command_name}"; then
+        package_to_uninstall="${CONFIG_command_name}"
+        log_info "Found development installation: ${CONFIG_command_name}"
+    else
+        log_warning "Neither ${CONFIG_package_name} nor ${CONFIG_command_name} is installed with pipx"
         return 0
     fi
     
     # Uninstall
-    if ! pipx uninstall "${CONFIG_package_name}"; then
-        log_error "Failed to uninstall ${CONFIG_package_name}"
+    if ! pipx uninstall "${package_to_uninstall}"; then
+        log_error "Failed to uninstall ${package_to_uninstall}"
         return 1
     fi
     
-    log_success "${CONFIG_package_name} uninstalled successfully!"
+    log_success "${package_to_uninstall} uninstalled successfully!"
     echo
     echo "=== Uninstall Complete ==="
-    echo "Package '${CONFIG_package_name}' has been removed."
+    echo "Package '${package_to_uninstall}' has been removed."
     echo "=========================="
     
     # Remove shell integration if configured
@@ -609,11 +615,12 @@ remove_shell_integration() {
 verify_installation() {
     log_info "Verifying installation..."
     
-    # Test command availability
-    if ! command -v "${CONFIG_package_name}" &> /dev/null; then
+    # Test command availability using the actual command name
+    local command_name="${CONFIG_command_name:-${CONFIG_package_name}}"
+    if ! command -v "${command_name}" &> /dev/null; then
         echo
         echo "=== PATH Configuration Required ==="
-        log_warning "Installation succeeded, but '${CONFIG_package_name}' command is not yet available"
+        log_warning "Installation succeeded, but '${command_name}' command is not yet available"
         echo
         echo "This is because pipx's bin directory is not in your PATH."
         echo
@@ -631,10 +638,10 @@ verify_installation() {
     fi
     
     # Test basic functionality if version check is available
-    if "${CONFIG_package_name}" --version &> /dev/null; then
-        local version=$("${CONFIG_package_name}" --version 2>/dev/null | head -1)
+    if "${command_name}" --version &> /dev/null; then
+        local version=$("${command_name}" --version 2>/dev/null | head -1)
         log_success "Installation verified - version: ${version}"
-    elif "${CONFIG_package_name}" --help &> /dev/null; then
+    elif "${command_name}" --help &> /dev/null; then
         log_success "Installation verified - help command works"
     else
         log_warning "Command found but basic functionality test failed"
@@ -693,19 +700,21 @@ cmd_status() {
         log_success "${CONFIG_package_name} is installed via pipx"
         
         # Get version if available
-        if command -v "${CONFIG_package_name}" &> /dev/null; then
-            local version=$("${CONFIG_package_name}" --version 2>/dev/null || echo "unknown")
+        local command_name="${CONFIG_command_name:-${CONFIG_package_name}}"
+        if command -v "${command_name}" &> /dev/null; then
+            local version=$("${command_name}" --version 2>/dev/null || echo "unknown")
             log_info "Version: $version"
         fi
     else
         log_info "${CONFIG_package_name} is not installed via pipx"
     fi
     
-    # Check command availability
-    if command -v "${CONFIG_package_name}" &> /dev/null; then
-        log_success "Command '${CONFIG_package_name}' is available in PATH"
+    # Check command availability using the actual command name
+    local command_name="${CONFIG_command_name:-${CONFIG_package_name}}"
+    if command -v "${command_name}" &> /dev/null; then
+        log_success "Command '${command_name}' is available in PATH"
     else
-        log_warning "Command '${CONFIG_package_name}' is not in PATH"
+        log_warning "Command '${command_name}' is not in PATH"
     fi
 }
 
