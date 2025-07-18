@@ -234,6 +234,10 @@ class CloudBackend(BaseBackend):
             logger.debug(f"Parameters: max_tokens={params.get('max_tokens')}, temperature={params.get('temperature')}")
 
             # Use LiteLLM's completion function
+            # Add API key explicitly for OpenRouter models
+            if used_model.startswith("openrouter/") and os.getenv("OPENROUTER_API_KEY"):
+                params["api_key"] = os.getenv("OPENROUTER_API_KEY")
+            
             response = await self.litellm.acompletion(**params)
 
             # Extract response content
@@ -467,6 +471,10 @@ class CloudBackend(BaseBackend):
             logger.debug(f"Stream parameters: max_tokens={params.get('max_tokens')}, temperature={params.get('temperature')}")
 
             # Use LiteLLM's streaming completion
+            # Add API key explicitly for OpenRouter models
+            if used_model.startswith("openrouter/") and os.getenv("OPENROUTER_API_KEY"):
+                params["api_key"] = os.getenv("OPENROUTER_API_KEY")
+            
             response = await self.litellm.acompletion(**params)
 
             async for chunk in response:

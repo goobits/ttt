@@ -282,6 +282,24 @@ install_with_pipx() {
     else
         log_info "Installing from PyPI"
         
+        # First check if package exists on PyPI
+        log_info "Checking if '${CONFIG_package_name}' is available on PyPI..."
+        
+        # Use pip index to check if package exists
+        if ! pip index versions "${CONFIG_package_name}" &>/dev/null; then
+            log_warning "Package '${CONFIG_package_name}' not found on PyPI"
+            echo
+            echo "This package hasn't been published to PyPI yet."
+            echo "For local development, use:"
+            echo
+            echo "    ./setup.sh install --dev"
+            echo
+            echo "This will install from your local source code in editable mode."
+            return 1
+        fi
+        
+        log_success "Package found on PyPI"
+        
         # Run pipx and capture both output and exit code
         pipx_output_file="/tmp/pipx_install_$$.log"
         pipx install "${CONFIG_package_name}" 2>&1 | tee "$pipx_output_file"

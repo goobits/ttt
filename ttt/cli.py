@@ -13,22 +13,55 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file in project directory
 from pathlib import Path
-env_paths = [
-    Path(__file__).parent.parent / ".env",  # Relative to ttt package (installed location)
-    Path.cwd() / ".env",  # Current working directory
-]
+import os
 
-# Also search up the directory tree from current working directory
+# Try multiple strategies to find .env file
+env_paths = []
+
+# 1. Current working directory
+env_paths.append(Path.cwd() / ".env")
+
+# 2. Walk up from current directory to find .env
 current_path = Path.cwd()
-for parent in [current_path] + list(current_path.parents):
+for parent in [current_path] + list(current_path.parents)[:5]:  # Limit to 5 levels up
     env_path = parent / ".env"
     if env_path not in env_paths:
         env_paths.append(env_path)
 
+# 3. If in development (installed with --editable), check the source directory
+# This handles the pipx --editable case
+try:
+    import ttt
+    if hasattr(ttt, '__file__'):
+        package_dir = Path(ttt.__file__).parent
+        # Go up to find project root (where .env typically lives)
+        project_root = package_dir.parent
+        env_paths.append(project_root / ".env")
+        # Also check one more level up in case of nested structure
+        env_paths.append(project_root.parent / ".env")
+except:
+    pass
+
+# 4. Common locations
+env_paths.extend([
+    Path.home() / ".env",
+    Path("/workspace") / ".env",  # For development environments
+])
+
+# Load the first .env file found
 for env_path in env_paths:
     if env_path.exists():
-        load_dotenv(env_path)
+        load_dotenv(env_path, override=True)
+        # Debug: Show which .env was loaded
+        if os.getenv("TTT_DEBUG"):
+            print(f"Loaded .env from: {env_path}")
         break
+else:
+    # No .env file found - check if we should warn
+    if not any(os.getenv(key) for key in ["OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"]):
+        # Only warn if no API keys are set at all
+        if os.getenv("TTT_DEBUG"):
+            print("Warning: No .env file found and no API keys in environment")
 
 console = Console()
 
