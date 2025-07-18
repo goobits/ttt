@@ -10,7 +10,19 @@ export LANG=C
 
 # Core configuration
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"  # Go up two levels: shared-setup -> ttt -> project root
+
+# Support being called from wrapper script or directly
+if [[ -f "$SCRIPT_DIR/../../setup-config.yaml" ]]; then
+    # Called from shared-setup directory
+    readonly PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"  # Go up two levels: shared-setup -> ttt -> project root
+elif [[ -f "$(pwd)/setup-config.yaml" ]]; then
+    # Called from project root via wrapper
+    readonly PROJECT_DIR="$(pwd)"
+else
+    # Fallback to calculated path
+    readonly PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+fi
+
 readonly CONFIG_FILE="$PROJECT_DIR/setup-config.yaml"
 readonly CACHE_DIR="$HOME/.cache/setup-framework"
 readonly CACHE_FILE="$CACHE_DIR/system-info.cache"
@@ -23,21 +35,51 @@ readonly YELLOW='\033[1;33m'
 readonly BLUE='\033[0;34m'
 readonly NC='\033[0m' # No Color
 
+# Check if terminal supports colors
+if [[ -t 1 ]] && [[ "$(tput colors 2>/dev/null)" -ge 8 ]]; then
+    USE_COLOR=true
+else
+    USE_COLOR=false
+fi
+
 # Logging functions
 log_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
+    if [[ "$USE_COLOR" == "true" ]]; then
+        echo -e "${BLUE}ℹ️  $1${NC}"
+    else
+        echo "[INFO] $1"
+    fi
 }
 
 log_success() {
-    echo -e "${GREEN}✅ $1${NC}"
+    if [[ "$USE_COLOR" == "true" ]]; then
+        echo -e "${GREEN}✅ $1${NC}"
+    else
+        echo "[SUCCESS] $1"
+    fi
 }
 
 log_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
+    if [[ "$USE_COLOR" == "true" ]]; then
+        echo -e "${YELLOW}⚠️  $1${NC}"
+    else
+        echo "[WARNING] $1"
+    fi
 }
 
 log_error() {
-    echo -e "${RED}❌ $1${NC}"
+    if [[ "$USE_COLOR" == "true" ]]; then
+        echo -e "${RED}❌ $1${NC}"
+    else
+        echo "[ERROR] $1"
+    fi
+}
+
+log_debug() {
+    if [[ "${DEBUG:-}" == "1" ]]; then
+        echo -e "${NC}🔍 DEBUG: $1${NC}" >&2
+    fi
+    return 0
 }
 
 # Create cache directory if it doesn't exist
@@ -81,19 +123,29 @@ parse_yaml() {
     # Use a simple grep/sed approach for basic YAML parsing
     # This avoids complex Python escaping issues
     
+    log_debug "Starting parse_yaml for file: $yaml_file"
+    
     # Parse top-level key-value pairs
     while IFS= read -r line; do
-        if [[ "$line" =~ ^([a-zA-Z_][a-zA-Z0-9_]*):\ *\"?([^\"]*)\"?$ ]]; then
+        if [[ "$line" =~ ^([a-zA-Z_][a-zA-Z0-9_]*):' '*\"?([^\"]*)\"?$ ]]; then
             key="${BASH_REMATCH[1]}"
             value="${BASH_REMATCH[2]}"
             value="${value%\"}"  # Remove trailing quote if present
             value="${value#\"}"  # Remove leading quote if present
             
+            # Skip multiline values (they end with |)
+            if [[ "$value" == "|" ]]; then
+                log_debug "Skipping multiline value for key: $key"
+                continue
+            fi
+            
             if [[ -n "$value" && ! "$value" =~ ^[[:space:]]*$ ]]; then
                 if [[ -n "$prefix" ]]; then
                     export "${prefix}_${key}=${value}"
+                    log_debug "Exported: ${prefix}_${key}=${value}"
                 else
                     export "${key}=${value}"
+                    log_debug "Exported: ${key}=${value}"
                 fi
             fi
         fi
@@ -106,7 +158,7 @@ parse_yaml() {
         if [[ "$line" =~ ^([a-zA-Z_][a-zA-Z0-9_]*):$ ]]; then
             in_section="${BASH_REMATCH[1]}"
         # Check for indented key-value pairs
-        elif [[ -n "$in_section" && "$line" =~ ^[[:space:]]+([a-zA-Z_][a-zA-Z0-9_]*):\ *\"?([^\"]*)\"?$ ]]; then
+        elif [[ -n "$in_section" && "$line" =~ ^[[:space:]]+([a-zA-Z_][a-zA-Z0-9_]*):' '*\"?([^\"]*)\"?$ ]]; then
             key="${BASH_REMATCH[1]}"
             value="${BASH_REMATCH[2]}"
             value="${value%\"}"  # Remove trailing quote if present
@@ -134,9 +186,22 @@ load_config() {
     fi
     
     log_info "Loading configuration from $CONFIG_FILE"
+    log_debug "Config file path: $CONFIG_FILE"
     
     # Parse YAML and export variables
-    parse_yaml "$CONFIG_FILE" "CONFIG"
+    parse_yaml "$CONFIG_FILE" "CONFIG" || {
+        log_error "Failed to parse configuration file"
+        exit 1
+    }
+    
+    # Debug: Show loaded configuration
+    if [[ "${DEBUG:-}" == "1" ]]; then
+        log_debug "Loaded configuration variables:"
+        # Use grep with || true to prevent exit on no matches
+        env | grep "^CONFIG_" 2>/dev/null | while read -r var; do
+            log_debug "  $var"
+        done || true
+    fi
     
     # Validate required configuration
     if [[ -z "${CONFIG_package_name:-}" ]]; then
@@ -218,6 +283,33 @@ check_git() {
     return 0
 }
 
+check_disk_space() {
+    local required_mb="${CONFIG_validation_minimum_disk_space_mb:-100}"
+    
+    if [[ "${CONFIG_validation_check_disk_space:-true}" != "true" ]]; then
+        return 0
+    fi
+    
+    log_info "Checking disk space (required: ${required_mb}MB)"
+    
+    # Get available space in KB, handle both GNU and BSD stat
+    local available_kb
+    if available_kb=$(df . 2>/dev/null | tail -1 | awk '{print $4}'); then
+        local available_mb=$((available_kb / 1024))
+        
+        if [[ $available_mb -lt $required_mb ]]; then
+            log_error "Insufficient disk space: ${available_mb}MB available, ${required_mb}MB required"
+            return 1
+        fi
+        
+        log_success "Sufficient disk space: ${available_mb}MB available"
+    else
+        log_warning "Could not check disk space - continuing anyway"
+    fi
+    
+    return 0
+}
+
 # Installation functions
 install_with_pipx() {
     local dev_mode="${1:-false}"
@@ -230,8 +322,15 @@ install_with_pipx() {
     
     # Check if already installed
     if pipx list | grep -q "${CONFIG_package_name}"; then
+        echo
+        echo "=== Package Already Installed ==="
         log_warning "${CONFIG_package_name} is already installed with pipx"
-        log_info "Use '$0 upgrade' to upgrade or '$0 uninstall' first"
+        echo
+        echo "Available options:"
+        echo "  • To upgrade:   $0 upgrade"
+        echo "  • To reinstall: $0 uninstall && $0 install"
+        echo "  • To check status: $0 status"
+        echo "================================="
         return 1
     fi
     
@@ -344,6 +443,16 @@ install_with_pipx() {
         
         rm -f "$pipx_output_file"
         log_success "${CONFIG_package_name} installed successfully!"
+    echo
+    echo "=== Installation Complete ==="
+    echo "Package: ${CONFIG_package_name}"
+    if [[ "$dev_mode" == "true" ]]; then
+        echo "Mode: Development (editable)"
+        echo "Location: $install_dir"
+    else
+        echo "Mode: Production (from PyPI)"
+    fi
+    echo "============================"
     fi
     
     # Setup shell integration if configured
@@ -398,6 +507,10 @@ uninstall_with_pipx() {
     fi
     
     log_success "${CONFIG_package_name} uninstalled successfully!"
+    echo
+    echo "=== Uninstall Complete ==="
+    echo "Package '${CONFIG_package_name}' has been removed."
+    echo "=========================="
     
     # Remove shell integration if configured
     if [[ "${CONFIG_shell_integration_enabled:-true}" == "true" ]]; then
@@ -492,6 +605,45 @@ remove_shell_integration() {
     fi
 }
 
+# Post-installation verification
+verify_installation() {
+    log_info "Verifying installation..."
+    
+    # Test command availability
+    if ! command -v "${CONFIG_package_name}" &> /dev/null; then
+        echo
+        echo "=== PATH Configuration Required ==="
+        log_warning "Installation succeeded, but '${CONFIG_package_name}' command is not yet available"
+        echo
+        echo "This is because pipx's bin directory is not in your PATH."
+        echo
+        echo "To fix this, run:"
+        echo "  pipx ensurepath"
+        echo
+        echo "Then either:"
+        echo "  • Open a new terminal window, OR"
+        echo "  • Run: source ~/.bashrc (or ~/.zshrc for zsh)"
+        echo
+        echo "For this session only, you can run:"
+        echo "  export PATH=\"\$PATH:\$HOME/.local/bin\""
+        echo "===================================="
+        return 1
+    fi
+    
+    # Test basic functionality if version check is available
+    if "${CONFIG_package_name}" --version &> /dev/null; then
+        local version=$("${CONFIG_package_name}" --version 2>/dev/null | head -1)
+        log_success "Installation verified - version: ${version}"
+    elif "${CONFIG_package_name}" --help &> /dev/null; then
+        log_success "Installation verified - help command works"
+    else
+        log_warning "Command found but basic functionality test failed"
+        log_info "Installation may still be functional"
+    fi
+    
+    return 0
+}
+
 # Command handlers
 cmd_install() {
     local dev_mode=false
@@ -514,9 +666,15 @@ cmd_install() {
     # Run system checks
     check_python_version || exit 1
     check_git || exit 1
+    check_disk_space || exit 1
     
     # Perform installation
-    install_with_pipx "$dev_mode"
+    if install_with_pipx "$dev_mode"; then
+        # Verify installation worked
+        verify_installation
+    else
+        exit 1
+    fi
 }
 
 cmd_upgrade() {
@@ -554,19 +712,23 @@ cmd_status() {
 # Show usage information
 show_usage() {
     cat << EOF
-Usage: ./setup.sh [COMMAND] [OPTIONS]
+Usage: ./setup.sh [OPTIONS] [COMMAND] [COMMAND_OPTIONS]
+
+Global Options:
+    --debug, --verbose    Enable debug mode with detailed output
 
 Commands:
-    install       Install ${CONFIG_package_name:-the package} with pipx
-    install --dev Install in development mode (editable)
-    upgrade       Upgrade to the latest version
-    uninstall     Remove the installation
-    status        Check installation status
-    help          Show this help message
+    install               Install ${CONFIG_package_name:-the package} with pipx
+    install --dev         Install in development mode (editable)
+    upgrade               Upgrade to the latest version
+    uninstall             Remove the installation
+    status                Check installation status
+    help                  Show this help message
 
 Examples:
     ./setup.sh install              # Install from PyPI
     ./setup.sh install --dev        # Install in development mode
+    ./setup.sh --debug install      # Install with debug output
     ./setup.sh upgrade              # Upgrade to latest version
     ./setup.sh uninstall            # Remove installation
     ./setup.sh status               # Check if installed
@@ -576,14 +738,32 @@ EOF
 
 # Main execution
 main() {
+    # Parse global options first
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --debug|--verbose)
+                export DEBUG=1
+                log_debug "Debug mode enabled"
+                shift
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+    
     # Load configuration first
     load_config
+    
+    log_debug "Configuration loaded successfully"
     
     # Default to showing usage if no command given
     if [[ $# -eq 0 ]]; then
         show_usage
         exit 0
     fi
+    
+    log_debug "Running command: $1 with args: ${*:2}"
     
     # Parse command
     case "$1" in

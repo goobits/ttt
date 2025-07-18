@@ -421,7 +421,6 @@ def ask_command(prompt, model, system, temperature, max_tokens,
             else:
                 for chunk in ttt.stream(prompt, **kwargs):
                     click.echo(chunk, nl=False)
-                click.echo()  # Final newline
         else:
             # Regular response
             response = ttt.ask(prompt, **kwargs)

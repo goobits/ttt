@@ -22,13 +22,16 @@ dependencies:
 
 # Installation settings
 installation:
-  pypi_name: ttt  # Name on PyPI
-  development_path: "."  # Relative to project root
+  # Name on PyPI
+  pypi_name: ttt
+  # Relative to project root
+  development_path: "."
   
 # Shell integration
 shell_integration:
   enabled: true
-  alias: "t"  # Short alias for the command
+  # Short alias for the command
+  alias: "t"
   
 # Post-installation messages
 messages:
@@ -60,6 +63,7 @@ messages:
 
 # Validation rules
 validation:
-  check_api_keys: false  # Don't require API keys during setup
+  # Don't require API keys during setup
+  check_api_keys: false
   check_disk_space: true
   minimum_disk_space_mb: 100
