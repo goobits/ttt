@@ -30,8 +30,8 @@ installation:
   
 # Shell integration
 shell_integration:
-  enabled: true
-  # Short alias for the command
+  enabled: false
+  # Short alias for the command (disabled since we provide actual ttt command)
   alias: "ttt"
   
 # Post-installation messages
