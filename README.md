@@ -61,7 +61,8 @@ CLI Interface / Python API
 
 ```bash
 # Install in one command
-./setup.sh install
+./setup.sh install        # For end users (from PyPI)
+./setup.sh install --dev  # For developers (local source)
 
 # Restart terminal or reload shell
 source ~/.bashrc
@@ -700,7 +701,7 @@ export ANTHROPIC_API_KEY="your-key-here"
 
 ```bash
 # Install in development mode
-pip install -e .
+./setup.sh install --dev  # Recommended: uses pipx with editable install
 
 # Install development dependencies
 pip install -r requirements-dev.txt

@@ -1,0 +1,65 @@
+# Setup Configuration for TTT
+# This file configures the generic setup framework for the TTT project
+
+# Package information
+package_name: ttt
+display_name: "TTT - Terminal Tools for Thoughts"
+description: "A powerful AI assistant for your terminal"
+
+# Python requirements
+python:
+  minimum_version: "3.8"
+  maximum_version: ""  # Empty means no maximum
+
+# Dependencies
+dependencies:
+  required:
+    - git
+    - pipx
+  optional:
+    - curl  # For downloading models
+    - wget  # Alternative to curl
+
+# Installation settings
+installation:
+  pypi_name: ttt  # Name on PyPI
+  development_path: "."  # Relative to project root
+  
+# Shell integration
+shell_integration:
+  enabled: true
+  alias: "t"  # Short alias for the command
+  
+# Post-installation messages
+messages:
+  install_success: |
+    TTT has been installed successfully!
+    You can now use 'ttt' or 't' (if shell integration is enabled) from your terminal.
+    
+    Quick start:
+      ttt "Hello, how can I help you today?"
+      ttt status
+      ttt models
+  
+  install_dev_success: |
+    TTT has been installed in development mode!
+    Your local changes will be reflected immediately.
+    
+    Development tips:
+      - Run tests with: ./test.sh
+      - Format code with: ruff format ttt/
+      - Check types with: mypy ttt/
+  
+  upgrade_success: |
+    TTT has been upgraded successfully!
+    Check out the latest features with: ttt --version
+  
+  uninstall_success: |
+    TTT has been uninstalled.
+    Thank you for using TTT!
+
+# Validation rules
+validation:
+  check_api_keys: false  # Don't require API keys during setup
+  check_disk_space: true
+  minimum_disk_space_mb: 100
