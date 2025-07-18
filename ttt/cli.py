@@ -439,7 +439,7 @@ def ask_command(prompt, model, system, temperature, max_tokens,
                     output["tokens_out"] = response.tokens_out
                 click.echo(json.dumps(output))
             else:
-                click.echo(str(response))
+                click.echo(str(response).rstrip())
                 
                 if verbose:
                     click.echo(f"\nModel: {response.model}", err=True)
