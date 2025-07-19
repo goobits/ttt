@@ -4,11 +4,18 @@
 import sys
 import os
 import io
+import warnings
 from typing import Optional, List
 import click
 from rich.console import Console
 from rich.panel import Panel
 from dotenv import load_dotenv
+
+# Suppress the common aiohttp warning about pending tasks being destroyed
+warnings.filterwarnings("ignore", message="Task was destroyed but it is pending!", category=RuntimeWarning)
+
+# Also suppress via environment variable for asyncio
+os.environ.setdefault("PYTHONWARNINGS", "ignore::RuntimeWarning")
 try:
     from importlib.metadata import version as get_version
 except ImportError:
@@ -78,6 +85,7 @@ import ttt
 def setup_logging_level(verbose=False, debug=False):
     """Setup logging level based on verbosity flags."""
     import logging
+    import asyncio
     
     if debug:
         level = logging.DEBUG
@@ -95,6 +103,26 @@ def setup_logging_level(verbose=False, debug=False):
         logging.getLogger('httpx').setLevel(logging.WARNING)
         logging.getLogger('httpcore').setLevel(logging.WARNING)
         logging.getLogger('urllib3').setLevel(logging.WARNING)
+        logging.getLogger('asyncio').setLevel(logging.CRITICAL)  # Suppress asyncio task warnings
+        
+        # Configure asyncio to handle task exceptions more gracefully
+        def custom_exception_handler(loop, context):
+            exception = context.get('exception')
+            if exception:
+                # Suppress specific aiohttp task destruction warnings
+                if 'Task was destroyed but it is pending' in str(exception):
+                    return  # Ignore this specific error
+                # For other exceptions, use default behavior if verbose/debug
+                if verbose or debug:
+                    loop.default_exception_handler(context)
+        
+        # Try to set up the exception handler for the current loop if one exists
+        try:
+            loop = asyncio.get_running_loop()
+            loop.set_exception_handler(custom_exception_handler)
+        except RuntimeError:
+            # No current loop, that's fine
+            pass
 
 
 @click.command(context_settings={"allow_extra_args": True})

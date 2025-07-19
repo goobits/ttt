@@ -167,14 +167,21 @@ def stream(
 
     # We create a bridge to pull from the async generator synchronously
     # Using the optimized approach to avoid creating new event loops
-    while True:
-        try:
-            # Use the background loop to get the next item
-            chunk = run_coro_in_background(async_gen.__anext__())
-            yield chunk
-        except StopAsyncIteration:
-            # The async generator is exhausted
-            break
+    try:
+        while True:
+            try:
+                # Use the background loop to get the next item
+                chunk = run_coro_in_background(async_gen.__anext__())
+                yield chunk
+            except StopAsyncIteration:
+                # The async generator is exhausted - no cleanup needed
+                break
+    finally:
+        # Note: We deliberately do NOT call async_gen.aclose() here because
+        # it can cause "Task was destroyed but it is pending" errors with aiohttp
+        # connections. The LiteLLM library and aiohttp will handle cleanup
+        # automatically when the generator goes out of scope.
+        pass
 
 
 

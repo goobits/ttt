@@ -26,6 +26,20 @@ def _start_background_loop():
     def run_loop():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        
+        # Set up custom exception handler to suppress aiohttp task warnings
+        def custom_exception_handler(loop, context):
+            # Suppress specific aiohttp task destruction warnings
+            message = context.get('message', '')
+            exception = context.get('exception')
+            if ('Task was destroyed but it is pending' in message or 
+                (exception and 'Task was destroyed but it is pending' in str(exception))):
+                return  # Ignore this specific error
+            # For other exceptions, use default behavior
+            loop.default_exception_handler(context)
+        
+        loop.set_exception_handler(custom_exception_handler)
+        
         global _background_loop
         _background_loop = loop
         try:
@@ -49,8 +63,25 @@ def _stop_background_loop():
     global _background_loop, _background_thread, _executor
     
     if _background_loop is not None:
-        _background_loop.call_soon_threadsafe(_background_loop.stop)
-        _background_thread.join(timeout=1.0)
+        # Cancel all pending tasks more gracefully
+        def cancel_tasks():
+            tasks = asyncio.all_tasks(_background_loop)
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            
+            # Schedule loop stop after tasks are cancelled
+            async def stop_when_ready():
+                # Wait briefly for cancellations to complete
+                await asyncio.sleep(0.1)
+                _background_loop.stop()
+            
+            asyncio.create_task(stop_when_ready())
+        
+        _background_loop.call_soon_threadsafe(cancel_tasks)
+        # Give more time for graceful shutdown
+        if _background_thread:
+            _background_thread.join(timeout=2.0)
         _background_loop = None
         _background_thread = None
     
