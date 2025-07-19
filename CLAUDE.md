@@ -18,10 +18,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `mypy ai/` - Type checking (install with: `pip install mypy`)
 
 ### Installation and Setup
-- `./setup.sh install` - Install with pipx (recommended)
-- `./setup.sh install --dev` - Install in development mode with pipx --editable
+- `./setup.sh install` - Install with pipx (for end users)
+- `./setup.sh install --dev` - Install in development mode with pipx --editable (RECOMMENDED FOR DEVELOPMENT)
 - `./setup.sh upgrade` - Upgrade to latest version  
 - `./setup.sh uninstall` - Remove the AI library
+
+**IMPORTANT FOR DEVELOPMENT**: Always use `./setup.sh install --dev` for development work. This creates an editable installation where code changes are immediately reflected without needing to reinstall or upgrade.
 
 ### CLI Testing
 - `ttt` - Show help menu

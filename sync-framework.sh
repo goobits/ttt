@@ -40,6 +40,7 @@ else
     PROJECTS=(
         "."           # TTT (current)
         "../tts"      # TTS project
+        "../stt"      # STT project
     )
     
     # Convert relative paths to absolute paths
@@ -101,8 +102,18 @@ for project_path in "${PROJECTS[@]}"; do
     
     echo "  - 📋 Syncing to: $project_path"
     
+    # Auto-detect target directory structure
+    # Check for existing shared-setup in different locations
+    if [[ -d "$project_path/ttt/shared-setup" ]]; then
+        target_dir="$project_path/ttt/shared-setup"
+    elif [[ -d "$project_path/src/shared-setup" ]]; then
+        target_dir="$project_path/src/shared-setup"
+    else
+        # Default to ttt/shared-setup for new projects
+        target_dir="$project_path/ttt/shared-setup"
+    fi
+    
     # Create the target directory if it doesn't exist
-    target_dir="$project_path/ttt/shared-setup"
     mkdir -p "$(dirname "$target_dir")"
     
     # Use rsync to efficiently copy, updating only changed files and removing deleted ones.

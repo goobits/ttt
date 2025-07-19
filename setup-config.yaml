@@ -47,12 +47,16 @@ messages:
   
   install_dev_success: |
     TTT has been installed in development mode!
-    Your local changes will be reflected immediately.
+    ✅ Your local changes will be reflected immediately - no reinstalling needed!
     
-    Development tips:
+    Development workflow:
+      - Edit code in ttt/ directory
+      - Test immediately with: ttt --stream "test"  
       - Run tests with: ./test.sh
       - Format code with: ruff format ttt/
       - Check types with: mypy ttt/
+      
+    💡 No need to run ./setup.sh upgrade after code changes!
   
   upgrade_success: |
     TTT has been upgraded successfully!
