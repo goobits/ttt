@@ -9,6 +9,10 @@ import click
 from rich.console import Console
 from rich.panel import Panel
 from dotenv import load_dotenv
+try:
+    from importlib.metadata import version as get_version
+except ImportError:
+    from importlib_metadata import version as get_version
 
 
 # Load environment variables from .env file in project directory
@@ -152,7 +156,17 @@ def main(ctx, version, model, system, temperature, max_tokens,
     setup_logging_level(verbose, debug)
     
     if version:
-        click.echo(f"TTT Library v{getattr(ttt, '__version__', '0.4.0')}")
+        try:
+            # Try the actual package name first
+            pkg_version = get_version('goobits-ttt')
+        except Exception:
+            try:
+                # Try the module name as fallback
+                pkg_version = get_version('ttt')
+            except Exception:
+                # Last resort: use __version__ if available
+                pkg_version = getattr(ttt, '__version__', 'unknown')
+        click.echo(f"TTT Library v{pkg_version}")
         return
     
     # Handle special commands first
@@ -177,17 +191,23 @@ def main(ctx, version, model, system, temperature, max_tokens,
     
     # If no prompt, show help (unless reading from pipe)
     if prompt is None:
-        # Check if there's actual stdin content by attempting a non-blocking read
-        import select
-        try:
-            if sys.stdin.isatty() or not select.select([sys.stdin], [], [], 0)[0]:
-                # Interactive terminal or no stdin data available - show help
-                click.echo(ctx.get_help())
-                return
-        except (OSError, io.UnsupportedOperation):
-            # Fallback: assume interactive if no clear pipe input
+        # Check if we're in a pipeline (stdin is not a tty)
+        if sys.stdin.isatty():
+            # Interactive terminal - show help immediately
             click.echo(ctx.get_help())
             return
+        else:
+            # We're in a pipeline - wait a reasonable amount of time for input
+            import select
+            try:
+                # Wait up to 30 seconds for input (for STT processing time)
+                if not select.select([sys.stdin], [], [], 30)[0]:
+                    # Still no input after 30 seconds - show help
+                    click.echo(ctx.get_help())
+                    return
+            except (OSError, io.UnsupportedOperation):
+                # Fallback: assume we should wait for stdin
+                pass
     
     ask_command(prompt, model, system, temperature, max_tokens, 
                tools, stream, verbose, code, json_output, allow_empty=False)
