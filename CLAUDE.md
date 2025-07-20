@@ -30,7 +30,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `ttt "test question"` - Basic functionality test (direct prompt syntax)
 - `ttt status` - Check backend connectivity
 - `ttt models` - List available models
-- `ttt tools` - List available tools
 - `ttt config` - Show configuration settings
 
 ## Architecture Overview
@@ -48,32 +47,32 @@ CLI Interface / Python API
 
 ### Key Components
 
-**API Layer** (`ai/api.py`): Main interface with `ask()` and `stream()` functions
+**API Layer** (`ttt/api.py`): Main interface with `ask()` and `stream()` functions
 - Synchronous and asynchronous APIs
 - Unified interface across all providers
 - Response objects with metadata
 
-**Backend System** (`ai/backends/`):
+**Backend System** (`ttt/backends/`):
 - `cloud.py` - Cloud provider backend using LiteLLM
 - `local.py` - Local Ollama backend for privacy
 - `base.py` - Abstract backend interface
 
-**Routing System** (`ai/routing.py`):
+**Routing System** (`ttt/routing.py`):
 - Automatic backend selection based on model patterns
 - Model registry with provider mappings
 - Fallback mechanisms between providers
 
-**Tool System** (`ai/tools/`):
+**Tool System** (`ttt/tools/`):
 - Function calling with automatic schema generation
 - Built-in tools (web_search, file operations, code execution)
 - Custom tool registration via decorators
 
-**CLI Interface** (`ai/cli.py`):
+**CLI Interface** (`ttt/cli.py`):
 - Direct command execution: `ttt "question"`
 - Pipe support: `echo "text" | ttt`
 - Rich terminal output with error handling
 
-**Configuration System** (`ai/config.py`, `ai/config_loader.py`):
+**Configuration System** (`ttt/config.py`, `ttt/config_loader.py`):
 - Hierarchical config loading (env vars, YAML files)
 - Default configuration in `config.yaml`
 - Runtime configuration management
@@ -81,15 +80,15 @@ CLI Interface / Python API
 ### Key Files
 
 **Entry Points:**
-- `ai/__main__.py` - CLI entry point
-- `ai/__init__.py` - Public API exports
-- `ai/cli.py` - CLI command definitions
+- `ttt/__main__.py` - CLI entry point
+- `ttt/__init__.py` - Public API exports
+- `ttt/cli.py` - CLI command definitions
 
 **Core Logic:**
-- `ai/api.py` - Main ask/stream/chat functions
-- `ai/routing.py` - Model/backend routing logic
-- `ai/models.py` - Model definitions and metadata
-- `ai/exceptions.py` - Custom exception classes
+- `ttt/api.py` - Main ask/stream/chat functions
+- `ttt/routing.py` - Model/backend routing logic
+- `ttt/models.py` - Model definitions and metadata
+- `ttt/exceptions.py` - Custom exception classes
 
 **Supporting:**
 - `ttt/chat.py` - Chat session management  
@@ -178,7 +177,7 @@ Integration tests use special fixtures (`delayed_ask`, `delayed_stream`, `delaye
 
 ### Configuration Files
 - `config.yaml` - Default configuration
-- `~/.config/ai/config.yaml` - User configuration
+- `~/.config/ttt/config.yaml` - User configuration
 - `.env` - Environment variables and API keys
 
 ## Development Guidelines
@@ -190,7 +189,7 @@ Integration tests use special fixtures (`delayed_ask`, `delayed_stream`, `delaye
 - Follow existing patterns in similar files
 
 ### Error Handling
-- Custom exceptions in `ai/exceptions.py`
+- Custom exceptions in `ttt/exceptions.py`
 - User-friendly error messages with actionable suggestions
 - Graceful degradation with provider fallbacks
 
@@ -201,10 +200,10 @@ Integration tests use special fixtures (`delayed_ask`, `delayed_stream`, `delaye
 - Test edge cases and error conditions
 
 ### Tool Development
-- Use `@tool` decorator from `ai/tools/base.py`
+- Use `@tool` decorator from `ttt/tools/base.py`
 - Include comprehensive docstrings for schema generation
 - Test security implications for code execution tools
-- Follow existing patterns in `ai/tools/builtins.py`
+- Follow existing patterns in `ttt/tools/builtins.py`
 
 ### Temporary Files
 When creating temporary debug or test scripts, use `/tmp` directory to keep the project clean.

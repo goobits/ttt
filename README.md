@@ -111,27 +111,27 @@ ttt chat --id SESSION_ID           # Resume specific session
 ttt config
 
 # Set API keys (masked when displayed)
-ttt config openai_key sk-your-key-here
-ttt config anthropic_key sk-ant-your-key-here
-ttt config openrouter_key sk-or-v1-your-key-here
+ttt config set openai_key sk-your-key-here
+ttt config set anthropic_key sk-ant-your-key-here
+ttt config set openrouter_key sk-or-v1-your-key-here
 
 # Configure behavior
-ttt config model gpt-4                     # Default model
-ttt config backend local                   # Backend (local/cloud/auto)
-ttt config timeout 60                      # Request timeout
-ttt config retries 3                       # Max retry attempts
+ttt config set models.default gpt-4         # Default model
+ttt config set backends.default local       # Backend (local/cloud/auto)
+ttt config set timeout 60                   # Request timeout
+ttt config set retries 3                    # Max retry attempts
 ```
 
 ### Common Configurations
 
 | Use Case | Configuration |
 |----------|---------------|
-| **Privacy-First** | `ttt config backend local && ttt config model qwen2.5:32b` |
-| **Fast Responses** | `ttt config model gpt-3.5-turbo` |
-| **Coding Assistant** | `ttt config model claude-3-sonnet && ttt config backend cloud` |
-| **Cost-Effective** | `ttt config openrouter_key sk-or-... && ttt config model google/gemini-flash` |
+| **Privacy-First** | `ttt config set backends.default local && ttt config set models.default qwen2.5:32b` |
+| **Fast Responses** | `ttt config set models.default gpt-3.5-turbo` |
+| **Coding Assistant** | `ttt config set models.default claude-3-sonnet && ttt config set backends.default cloud` |
+| **Cost-Effective** | `ttt config set openrouter_key sk-or-... && ttt config set models.default google/gemini-flash` |
 
-All settings saved to `~/.config/ai/config.yaml`
+All settings saved to `~/.config/ttt/config.yaml`
 
 ## Migration from Other AI Tools
 
@@ -146,8 +146,8 @@ ttt "question" --code             # Coding-optimized responses
 ttt "question" --verbose          # Show detailed metadata
 
 # Easy configuration management (NEW):
-ttt config model qwen2.5:32b     # Set default model for Qwen users
-ttt config backend local          # Set default to local for privacy
+ttt config set models.default qwen2.5:32b     # Set default model for Qwen users
+ttt config set backends.default local          # Set default to local for privacy
 ttt config                        # View all current settings
 
 # Flexible flag positioning (all equivalent):
@@ -201,8 +201,8 @@ The AI library includes a comprehensive set of built-in tools that are ready to 
 #### Built-in Tools
 
 ```python
-from ai import ask
-from ai.tools.builtins import web_search, read_file, calculate, get_current_time
+from ttt import ask
+from ttt.tools.builtins import web_search, read_file, calculate, get_current_time
 
 # Use built-in tools directly
 response = ask(
@@ -231,8 +231,8 @@ response = ask(
 #### Using Built-in Tools
 
 ```python
-from ai import ask
-from ai.tools import list_tools
+from ttt import ask
+from ttt.tools import list_tools
 
 # List all available tools
 all_tools = list_tools()
@@ -259,7 +259,7 @@ response = ask(
 
 ```python
 # Define custom tools using the @tool decorator
-from ai.tools import tool
+from ttt.tools import tool
 
 @tool
 def get_weather(city: str, units: str = "fahrenheit") -> str:
@@ -528,7 +528,7 @@ The AI library provides both synchronous and asynchronous APIs for integration i
 ### Synchronous API (Recommended for most use cases)
 
 ```python
-from ai import ask, stream, chat
+from ttt import ask, stream, chat
 
 # Simple question
 response = ask("What is Python?")
@@ -557,7 +557,7 @@ For applications that need to handle many concurrent requests or integrate with 
 
 ```python
 import asyncio
-from ai import ask_async, stream_async, achat
+from ttt import ask_async, stream_async, achat
 
 async def main():
     # Async ask - non-blocking
@@ -596,8 +596,8 @@ asyncio.run(main())
 All features work with both sync and async APIs:
 
 ```python
-from ai import ask, chat
-from ai.tools.builtins import web_search, calculate
+from ttt import ask, chat
+from ttt.tools.builtins import web_search, calculate
 
 # Function calling with built-in tools
 response = ask(
@@ -606,7 +606,7 @@ response = ask(
 )
 
 # Custom tools
-from ai.tools import tool
+from ttt.tools import tool
 
 @tool
 def get_user_data(user_id: int) -> dict:
@@ -616,7 +616,7 @@ def get_user_data(user_id: int) -> dict:
 response = ask("Get user 123's information", tools=[get_user_data])
 
 # Persistent chat with save/load
-from ai.chat import PersistentChatSession
+from ttt.chat import PersistentChatSession
 
 session = PersistentChatSession()
 session.ask("Remember: my name is Alice")
@@ -656,7 +656,7 @@ GOOGLE_API_KEY=AI...
 
 ```
 agents/
-├── ai/                     # Core library package
+├── ttt/                    # Core library package
 │   ├── __init__.py        # Public API exports
 │   ├── api.py             # Main API interface
 │   ├── chat.py            # Chat session management
@@ -670,7 +670,7 @@ agents/
 │   │   ├── registry.py    # Tool registration system
 │   │   └── execution.py   # Tool execution engine
 │   └── exceptions.py      # Custom exceptions
-├── ai/__main__.py         # CLI entry point
+├── ttt/__main__.py        # CLI entry point
 ├── setup.sh               # Installation script
 ├── pyproject.toml         # Package configuration
 └── tests/                 # Test suite
@@ -679,8 +679,8 @@ agents/
 ### Architecture
 
 **Core Components:**
-- **API Layer** (`ai/api.py`): Main interface with `ask()` and `stream()` functions
-- **Tool System** (`ai/tools/`): Function calling with automatic schema generation
+- **API Layer** (`ttt/api.py`): Main interface with `ask()` and `stream()` functions
+- **Tool System** (`ttt/tools/`): Function calling with automatic schema generation
 - **Backend System**: Pluggable backends for different AI providers
 - **CLI Interface**: Clean, simple argument parsing with rich output formatting
 - **Session Management**: Support for persistent chat sessions (upcoming)
@@ -749,8 +749,8 @@ export ANTHROPIC_API_KEY="your-key-here"
 pip install -r requirements-dev.txt
 
 # Run linting
-flake8 ai/ tests/
-black ai/ tests/
+flake8 ttt/ tests/
+black ttt/ tests/
 ```
 
 ## Troubleshooting
@@ -769,7 +769,7 @@ ls -la ~/.local/bin/ttt
 **API Key errors:**
 ```bash
 # Check configuration
-ttt backend-status
+ttt status
 
 # Verify .env file
 cat .env
@@ -787,8 +787,8 @@ curl http://localhost:11434/api/tags
 ### Error Codes
 
 - `APIKeyError`: Missing or invalid API key - shows which env var to set
-- `ModelNotFoundError`: Specified model not available - suggests using models-list
-- `BackendNotAvailableError`: Backend service unreachable - suggests checking backend-status
+- `ModelNotFoundError`: Specified model not available - suggests using 'ttt models'
+- `BackendNotAvailableError`: Backend service unreachable - suggests checking 'ttt status'
 - `RateLimitError`: API rate limit exceeded - shows retry time
 - `EmptyResponseError`: Model returned empty response - suggests rephrasing
 
@@ -819,7 +819,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - **Documentation**: This README covers all features
 - **Issues**: Report bugs or request features via GitHub issues
-- **Setup Problems**: Use `ttt backend-status` for diagnostics
+- **Setup Problems**: Use `ttt status` for diagnostics
 
 ---
 
