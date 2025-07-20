@@ -440,6 +440,7 @@ class TTT:
 
     def _get_help(self) -> str:
         """Generate help text."""
+        from ttt.cli import get_ttt_version
         return f"""🚀 TTT {get_ttt_version()} - Transform any text with intelligent AI processing
 
 TTT empowers developers, writers, and creators to process text with precision.
