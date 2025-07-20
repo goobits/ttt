@@ -41,8 +41,8 @@ class ToolDefinition:
 
     def to_openai_schema(self) -> Dict[str, Any]:
         """Convert to OpenAI function calling schema."""
-        properties = {}
-        required = []
+        properties: Dict[str, Any] = {}
+        required: List[str] = []
 
         for param in self.parameters:
             properties[param.name] = {
@@ -69,7 +69,7 @@ class ToolDefinition:
 
     def to_anthropic_schema(self) -> Dict[str, Any]:
         """Convert to Anthropic function calling schema."""
-        input_schema = {"type": "object", "properties": {}, "required": []}
+        input_schema: Dict[str, Any] = {"type": "object", "properties": {}, "required": []}
 
         for param in self.parameters:
             input_schema["properties"][param.name] = {
