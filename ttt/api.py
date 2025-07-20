@@ -90,7 +90,7 @@ def ask(
         **kwargs,
     )
 
-    async def _ask_wrapper():
+    async def _ask_wrapper() -> AIResponse:
         return await backend_instance.ask(
             prompt,
             model=resolved_model,

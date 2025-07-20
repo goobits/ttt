@@ -173,16 +173,16 @@ def extract_parameter_info(func: Callable) -> List[ToolParameter]:
         # Determine type
         param_type = ToolParameterType.STRING  # default
         if param.annotation != inspect.Parameter.empty:
-            if param.annotation == int:
+            if param.annotation is int:
                 param_type = ToolParameterType.INTEGER
-            elif param.annotation == float:
+            elif param.annotation is float:
                 param_type = ToolParameterType.NUMBER
-            elif param.annotation == bool:
+            elif param.annotation is bool:
                 param_type = ToolParameterType.BOOLEAN
             elif hasattr(param.annotation, "__origin__"):
-                if param.annotation.__origin__ == list:
+                if param.annotation.__origin__ is list:
                     param_type = ToolParameterType.ARRAY
-                elif param.annotation.__origin__ == dict:
+                elif param.annotation.__origin__ is dict:
                     param_type = ToolParameterType.OBJECT
 
         # Determine if required

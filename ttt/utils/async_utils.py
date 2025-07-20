@@ -16,19 +16,19 @@ _executor = None
 _lock = threading.Lock()
 
 
-def _start_background_loop():
+def _start_background_loop() -> None:
     """Start the background event loop in a dedicated thread."""
     global _background_loop, _background_thread, _executor
 
     if _background_loop is not None:
         return  # Already started
 
-    def run_loop():
+    def run_loop() -> None:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
         # Set up custom exception handler to suppress aiohttp task warnings
-        def custom_exception_handler(loop, context):
+        def custom_exception_handler(loop: asyncio.AbstractEventLoop, context: dict) -> None:
             # Suppress specific aiohttp task destruction warnings
             message = context.get("message", "")
             exception = context.get("exception")
@@ -59,20 +59,20 @@ def _start_background_loop():
     _executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
 
-def _stop_background_loop():
+def _stop_background_loop() -> None:
     """Stop the background event loop and cleanup resources."""
     global _background_loop, _background_thread, _executor
 
     if _background_loop is not None:
         # Cancel all pending tasks more gracefully
-        def cancel_tasks():
+        def cancel_tasks() -> None:
             tasks = asyncio.all_tasks(_background_loop)
             for task in tasks:
                 if not task.done():
                     task.cancel()
 
             # Schedule loop stop after tasks are cancelled
-            async def stop_when_ready():
+            async def stop_when_ready() -> None:
                 # Wait briefly for cancellations to complete
                 await asyncio.sleep(0.1)
                 _background_loop.stop()

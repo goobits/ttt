@@ -510,7 +510,7 @@ def http_request(
             try:
                 parsed = json.loads(content)
                 return json.dumps(parsed, indent=2)
-            except:
+            except json.JSONDecodeError:
                 return content
 
     except urllib.error.HTTPError as e:

@@ -414,7 +414,7 @@ class ToolExecutor:
                     from .registry import unregister_tool
 
                     unregister_tool(tool_name)
-                except:
+                except Exception:
                     pass
 
 

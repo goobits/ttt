@@ -209,7 +209,7 @@ class InputSanitizer:
 
             return resolved_path
         except Exception as e:
-            raise ValueError(f"Invalid path: {e}")
+            raise ValueError(f"Invalid path: {e}") from e
 
     @classmethod
     def sanitize_url(cls, url: str) -> str:
@@ -259,7 +259,7 @@ class InputSanitizer:
 
             return sanitize_recursive(data)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON: {e}")
+            raise ValueError(f"Invalid JSON: {e}") from e
 
 
 class ErrorRecoverySystem:
@@ -589,7 +589,7 @@ class ErrorRecoverySystem:
                         sanitized[key] = value
 
             except ValueError as e:
-                raise ValueError(f"Invalid argument '{key}': {e}")
+                raise ValueError(f"Invalid argument '{key}': {e}") from e
 
         return sanitized
 
