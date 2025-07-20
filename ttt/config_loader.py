@@ -1,5 +1,6 @@
 """Configuration loader utility for easy access to project config values."""
 
+import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -58,8 +59,15 @@ def get_project_config() -> Dict[str, Any]:
     # Check suppress warnings both from variable and environment
     import os
     json_mode = os.environ.get('TTT_JSON_MODE', '').lower() == 'true'
-    if not _suppress_warnings and not json_mode:
+    
+    # Debug: Always suppress this warning in any JSON-related context
+    # The warning will be included in the JSON response instead
+    if '--json' in getattr(sys, 'argv', []) or json_mode or _suppress_warnings:
+        # Suppress the warning - it will be included in JSON response
+        pass
+    else:
         logger.warning("Project config.yaml not found")
+    
     _project_config_cache = {}
     return _project_config_cache
 
