@@ -15,6 +15,8 @@ logger = get_logger(__name__)
 
 # Global configuration instance
 _config: Optional[ConfigModel] = None
+# Cache for project defaults to avoid multiple warnings
+_project_defaults_cache: Optional[Dict[str, Any]] = None
 
 
 def load_project_defaults() -> Dict[str, Any]:
@@ -24,27 +26,23 @@ def load_project_defaults() -> Dict[str, Any]:
     Returns:
         Dictionary containing default configuration values
     """
-    # Try to find the project config.yaml
-    config_paths = [
-        Path(__file__).parent.parent / "config.yaml",  # Relative to ai package
-        Path.cwd() / "config.yaml",  # Current working directory
-    ]
-
-    for config_path in config_paths:
-        if config_path.exists():
-            try:
-                with open(config_path) as f:
-                    defaults = yaml.safe_load(f)
-                    logger.debug(f"Loaded project defaults from {config_path}")
-                    return defaults or {}
-            except Exception as e:
-                logger.warning(
-                    f"Failed to load project defaults from {config_path}: {e}"
-                )
-
+    global _project_defaults_cache
+    
+    # Return cached value if available
+    if _project_defaults_cache is not None:
+        return _project_defaults_cache
+    
+    # Use the centralized config loader to avoid duplicate warnings
+    from .config_loader import get_project_config
+    
+    config = get_project_config()
+    if config:
+        _project_defaults_cache = config
+        return config
+    
     # Fallback to minimal defaults if config.yaml not found
-    logger.warning("Project config.yaml not found, using minimal defaults")
-    return {
+    # No need to warn again - get_project_config already warned
+    _project_defaults_cache = {
         "models": {"default": "openrouter/google/gemini-flash-1.5", "available": {}},
         "backends": {
             "default": "cloud",
@@ -71,6 +69,7 @@ def load_project_defaults() -> Dict[str, Any]:
             "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         },
     }
+    return _project_defaults_cache
 
 
 def get_config() -> ConfigModel:
@@ -431,11 +430,16 @@ class ModelRegistry:
                 self.add_model(model_info)
                 logger.debug(f"Loaded model from config: {model_name}")
             except Exception as e:
-                logger.warning(f"Failed to load model {model_name} from config: {e}")
+                import os
+                if os.environ.get('TTT_JSON_MODE', '').lower() != 'true':
+                    logger.warning(f"Failed to load model {model_name} from config: {e}")
 
         # If no models loaded from config, use minimal hardcoded defaults
         if not self.models:
-            logger.warning("No models loaded from config, using minimal defaults")
+            # Check if warnings are suppressed (JSON mode) - double check environment
+            import os
+            if os.environ.get('TTT_JSON_MODE', '').lower() != 'true':
+                logger.warning("No models loaded from config, using minimal defaults")
             # Minimal fallback models
             self.add_model(
                 ModelInfo(
@@ -502,5 +506,19 @@ class ModelRegistry:
         return dict(self.aliases)
 
 
-# Global model registry
-model_registry = ModelRegistry()
+# Global model registry - lazy initialization
+_model_registry: Optional[ModelRegistry] = None
+
+def get_model_registry() -> ModelRegistry:
+    """Get the global model registry, creating it if needed."""
+    global _model_registry
+    if _model_registry is None:
+        _model_registry = ModelRegistry()
+    return _model_registry
+
+# Backward compatibility - this will be lazily initialized when accessed
+class LazyModelRegistry:
+    def __getattr__(self, name):
+        return getattr(get_model_registry(), name)
+
+model_registry = LazyModelRegistry()

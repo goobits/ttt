@@ -12,6 +12,15 @@ logger = get_logger(__name__)
 # Cache for project config
 _project_config_cache: Optional[Dict[str, Any]] = None
 
+# Check if we should suppress warnings (JSON mode)
+import os
+_suppress_warnings = os.environ.get('TTT_JSON_MODE', '').lower() == 'true'
+
+def set_suppress_warnings(suppress: bool) -> None:
+    """Set whether to suppress warnings (used in JSON mode)."""
+    global _suppress_warnings
+    _suppress_warnings = suppress
+
 
 def get_project_config() -> Dict[str, Any]:
     """
@@ -41,10 +50,16 @@ def get_project_config() -> Dict[str, Any]:
                     logger.debug(f"Loaded project config from {config_path}")
                     return _project_config_cache
             except Exception as e:
-                logger.warning(f"Failed to load project config from {config_path}: {e}")
+                import os
+                if os.environ.get('TTT_JSON_MODE', '').lower() != 'true':
+                    logger.warning(f"Failed to load project config from {config_path}: {e}")
 
     # Return empty dict if no config found
-    logger.warning("Project config.yaml not found")
+    # Check suppress warnings both from variable and environment
+    import os
+    json_mode = os.environ.get('TTT_JSON_MODE', '').lower() == 'true'
+    if not _suppress_warnings and not json_mode:
+        logger.warning("Project config.yaml not found")
     _project_config_cache = {}
     return _project_config_cache
 

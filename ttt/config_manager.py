@@ -35,7 +35,10 @@ class ConfigManager:
 
         # If no config found, use empty dict
         if self.default_config_path is None:
-            console.print("[yellow]Warning: Default config.yaml not found, using minimal defaults[/yellow]")
+            # Only show warning if not in JSON mode
+            import os
+            if os.environ.get('TTT_JSON_MODE', '').lower() != 'true':
+                console.print("[yellow]Warning: Default config.yaml not found, using minimal defaults[/yellow]")
 
         # Ensure user config directory exists
         self.user_config_path.parent.mkdir(parents=True, exist_ok=True)

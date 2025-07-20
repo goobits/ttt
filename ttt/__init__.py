@@ -7,7 +7,18 @@ A single, elegant interface for local and cloud AI models.
 from .api import ChatSession, achat, ask, ask_async, chat, stream, stream_async
 from .backends import CloudBackend, LocalBackend
 from .chat import PersistentChatSession
-from .config import configure, model_registry
+from .config import configure
+# Import model_registry lazily to avoid import-time initialization
+def _get_model_registry():
+    from .config import model_registry
+    return model_registry
+
+# Create a lazy proxy for model_registry
+class _ModelRegistryProxy:
+    def __getattr__(self, name):
+        return getattr(_get_model_registry(), name)
+
+model_registry = _ModelRegistryProxy()
 from .exceptions import (
     AIError,
     APIKeyError,

@@ -12,7 +12,18 @@ import click
 from dotenv import load_dotenv
 from rich.console import Console
 
+# Handle early warnings for JSON mode
+early_warnings = []
+if '--json' in sys.argv:
+    from ttt.utils.warning_capture import EarlyWarningCapture
+    early_capture = EarlyWarningCapture()
+    early_capture.start()
+    
 import ttt
+
+if '--json' in sys.argv:
+    early_capture.stop()
+    early_warnings = early_capture.get_warnings()
 
 # Suppress the common aiohttp warning about pending tasks being destroyed
 warnings.filterwarnings(
@@ -111,8 +122,11 @@ def setup_logging_level(verbose: bool = False, debug: bool = False, json_output:
     from rich.logging import RichHandler
 
     if json_output:
-        # Suppress ALL logging in JSON mode
-        level = logging.CRITICAL
+        # Set to WARNING level instead of CRITICAL so we can capture warnings
+        level = logging.WARNING
+        # Clear existing handlers and set level - we'll capture warnings later
+        logging.getLogger().handlers = []
+        logging.getLogger().setLevel(level)
     elif debug:
         level = logging.DEBUG
     elif verbose:
@@ -129,8 +143,8 @@ def setup_logging_level(verbose: bool = False, debug: bool = False, json_output:
             datefmt="[%X]",
             handlers=[RichHandler(console=console, rich_tracebacks=True)],
         )
-    else:
-        # Set root logger level
+    elif not json_output:
+        # Set root logger level for non-JSON mode
         logging.getLogger().setLevel(level)
 
     # Suppress third-party library logging unless debug mode
@@ -706,6 +720,10 @@ def ask_command(
     allow_empty: bool = False,
 ) -> None:
     """Internal function to handle AI questions."""
+    
+    # Import warning capture if we're in JSON mode
+    if json_output:
+        from ttt.utils.warning_capture import WarningCapture
 
     # Handle missing prompt in interactive mode first
     if prompt is None and sys.stdin.isatty() and not allow_empty:
@@ -806,6 +824,13 @@ def ask_command(
     if code:
         apply_coding_optimization(kwargs)
 
+    # Wrap execution in warning capture if JSON mode
+    if json_output:
+        capture = WarningCapture()
+        capture.__enter__()
+        # Include any early warnings captured at import time
+        warnings = early_warnings.copy() if 'early_warnings' in globals() else []
+    
     try:
         if stream:
             # Stream response
@@ -817,6 +842,12 @@ def ask_command(
                 import json
 
                 output = {"content": "".join(chunks), "streaming": True}
+                # Get warnings before outputting
+                capture.__exit__(None, None, None)
+                runtime_warnings = capture.get_warnings()
+                all_warnings = warnings + runtime_warnings
+                if all_warnings:
+                    output["warnings"] = all_warnings
                 click.echo(json.dumps(output))
             else:
                 for chunk in ttt.stream(prompt, **kwargs):
@@ -851,6 +882,12 @@ def ask_command(
                 if hasattr(response, "tokens_in") and response.tokens_in:
                     output["tokens_in"] = response.tokens_in
                     output["tokens_out"] = response.tokens_out
+                # Get warnings before outputting
+                capture.__exit__(None, None, None)
+                runtime_warnings = capture.get_warnings()
+                all_warnings = warnings + runtime_warnings
+                if all_warnings:
+                    output["warnings"] = all_warnings
                 click.echo(json.dumps(output, separators=(',', ':')))
             else:
                 click.echo(str(response).rstrip())
@@ -870,10 +907,23 @@ def ask_command(
             import json
 
             error_output = {"error": str(e)}
+            # Get warnings before outputting error
+            capture.__exit__(None, None, None)
+            runtime_warnings = capture.get_warnings()
+            all_warnings = warnings + runtime_warnings
+            if all_warnings:
+                error_output["warnings"] = all_warnings
             click.echo(json.dumps(error_output))
         else:
             click.echo(f"Error: {e}", err=True)
         sys.exit(1)
+    finally:
+        # Ensure warning capture is cleaned up for JSON mode
+        if json_output and 'capture' in locals():
+            try:
+                capture.__exit__(None, None, None)
+            except:
+                pass
 
 
 # Helper functions

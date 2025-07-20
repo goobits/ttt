@@ -7,14 +7,31 @@ from rich.console import Console
 from rich.logging import RichHandler
 from rich.traceback import install
 
-# Install rich traceback handler
-install(show_locals=True)
+# Check for JSON mode early and configure accordingly
+import os
+_json_mode = os.environ.get('TTT_JSON_MODE', '').lower() == 'true'
+
+if not _json_mode:
+    # Only install rich traceback handler if not in JSON mode
+    install(show_locals=True)
 
 # Create console instance
 console = Console()
 
-# Don't configure logging at import time - let the CLI handle it
-# This was causing logging to appear even with --json flag
+# Configure root logger for JSON mode if needed
+if _json_mode:
+    import logging
+    # Completely disable all logging
+    logging.disable(logging.CRITICAL)
+    # Also configure root logger to suppress everything
+    root_logger = logging.getLogger()
+    root_logger.handlers.clear()
+    # Add a null handler to suppress all output
+    root_logger.addHandler(logging.NullHandler())
+    # Ensure no propagation
+    root_logger.propagate = False
+    # Set high level to suppress everything
+    root_logger.setLevel(logging.CRITICAL + 1)
 
 
 def get_logger(name: Optional[str] = None) -> logging.Logger:
@@ -37,7 +54,16 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
         else:
             name = "ai"
 
-    return logging.getLogger(name)
+    logger = logging.getLogger(name)
+    
+    # Configure logger for JSON mode if not already configured
+    import os
+    if os.environ.get('TTT_JSON_MODE', '').lower() == 'true' and not logger.handlers:
+        # In JSON mode, use a null handler to suppress all output
+        logger.addHandler(logging.NullHandler())
+        logger.propagate = False
+    
+    return logger
 
 
 def set_log_level(level: str) -> None:

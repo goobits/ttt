@@ -5,7 +5,7 @@ import os
 import time
 from typing import Any, AsyncIterator, Dict, List, Optional, Union, cast
 
-from ..config import model_registry  # Import the central registry
+# Import model_registry lazily to avoid import-time config loading
 from ..exceptions import (
     APIKeyError,
     BackendConnectionError,
@@ -541,6 +541,7 @@ class CloudBackend(BaseBackend):
             List of model names available on cloud providers
         """
         # Get all model definitions from the registry
+        from ..config import model_registry
         all_model_info = model_registry.models.values()
 
         # Filter for models that are NOT from the 'local' provider
@@ -563,6 +564,7 @@ class CloudBackend(BaseBackend):
             List of model names or detailed model information
         """
         # Get all non-local models from the registry
+        from ..config import model_registry
         all_model_info = [
             model
             for model in model_registry.models.values()
