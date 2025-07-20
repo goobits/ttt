@@ -103,7 +103,7 @@ class Router:
             BaseBackend instance
         """
         # Check default backend preference
-        if self.config.default_backend != "auto":
+        if self.config.default_backend and self.config.default_backend != "auto":
             try:
                 backend = self.get_backend(self.config.default_backend)
                 if backend.is_available:
@@ -112,8 +112,8 @@ class Router:
                     )
                     return backend
             except Exception as e:
-                logger.warning(
-                    f"Default backend {self.config.default_backend} failed: {e}"
+                logger.debug(
+                    f"Default backend {self.config.default_backend} not available: {e}"
                 )
 
         # Try cloud first (always available)
@@ -123,7 +123,7 @@ class Router:
                 logger.debug("Using cloud backend")
                 return backend
         except Exception as e:
-            logger.warning(f"Cloud backend failed: {e}")
+            logger.debug(f"Cloud backend not available: {e}")
 
         # Fallback to local if available
         if HAS_LOCAL_BACKEND:

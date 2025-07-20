@@ -13,13 +13,8 @@ install(show_locals=True)
 # Create console instance
 console = Console()
 
-# Configure logging with rich
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    datefmt="[%X]",
-    handlers=[RichHandler(console=console, rich_tracebacks=True)],
-)
+# Don't configure logging at import time - let the CLI handle it
+# This was causing logging to appear even with --json flag
 
 
 def get_logger(name: Optional[str] = None) -> logging.Logger:

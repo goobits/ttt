@@ -82,20 +82,35 @@ import ttt
 
 
 
-def setup_logging_level(verbose=False, debug=False):
+def setup_logging_level(verbose=False, debug=False, json_output=False):
     """Setup logging level based on verbosity flags."""
     import logging
     import asyncio
+    from rich.logging import RichHandler
+    from rich.console import Console
     
-    if debug:
+    if json_output:
+        # Suppress ALL logging in JSON mode
+        level = logging.CRITICAL
+    elif debug:
         level = logging.DEBUG
     elif verbose:
         level = logging.INFO
     else:
         level = logging.WARNING
     
-    # Set root logger level
-    logging.getLogger().setLevel(level)
+    # Configure logging with Rich handler (unless in JSON mode)
+    if not json_output and not logging.getLogger().handlers:
+        console = Console()
+        logging.basicConfig(
+            level=level,
+            format="%(message)s",
+            datefmt="[%X]",
+            handlers=[RichHandler(console=console, rich_tracebacks=True)],
+        )
+    else:
+        # Set root logger level
+        logging.getLogger().setLevel(level)
     
     # Suppress third-party library logging unless debug mode
     if not debug:
@@ -181,7 +196,7 @@ def main(ctx, version, model, system, temperature, max_tokens,
     """
     
     # Setup logging based on verbosity
-    setup_logging_level(verbose, debug)
+    setup_logging_level(verbose, debug, json_output)
     
     if version:
         try:
