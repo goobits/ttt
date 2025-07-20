@@ -246,9 +246,9 @@ def main(ctx, version, model, system, temperature, max_tokens,
     \b
     💡 Quick Examples:
       ttt "Fix grammar in this text"           # Instant text cleanup
-      ttt @claude "Summarize this article"     # Use Claude model
+      ttt @claude "Summarize this article"     # Use Claude model  
       echo "data.txt" | ttt "Convert to JSON"  # Pipeline integration
-      ttt chat                                 # Interactive AI assistant
+      ttt chat                                 # Interactive AI conversation
     
     \b
     🎯 Subcommands:
@@ -926,5 +926,23 @@ def ask_cmd(ctx, prompt):
 main.add_command(ask_cmd, name='ask')
 
 
-if __name__ == "__main__":
+def cli_entry():
+    """Entry point that handles both subcommands and direct prompts."""
+    import sys
+    
+    # Check if we need to add 'ask' for direct prompt usage
+    if len(sys.argv) > 1:
+        first_arg = sys.argv[1]
+        # Get list of available commands dynamically
+        available_commands = list(main.commands.keys())
+        # If first arg is not a flag and not a known subcommand, treat as direct prompt
+        if not first_arg.startswith('-') and first_arg not in available_commands:
+            # Insert 'ask' command to make it work as direct prompt
+            sys.argv.insert(1, 'ask')
+    
+    # Run the main CLI
     main()
+
+
+if __name__ == "__main__":
+    cli_entry()

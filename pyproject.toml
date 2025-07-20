@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "goobits-ttt"
-version = "1.0.0rc1"
+version = "1.0.0rc2"
 description = "The Unified AI Library - A single, elegant interface for local and cloud AI models"
 authors = ["Goobits Team <team@goobits.com>"]
 readme = "README.md"
@@ -50,8 +50,8 @@ sphinx = "^7.0.0"
 sphinx-rtd-theme = "^1.3.0"
 
 [tool.poetry.scripts]
-goobits-ttt = "ttt.cli:main"  # TTT - Text-to-Text processing (branded name)
-ttt = "ttt.cli:main"          # TTT - Text-to-Text processing (convenient alias)
+goobits-ttt = "ttt.cli:cli_entry"  # TTT - Text-to-Text processing (branded name)
+ttt = "ttt.cli:cli_entry"          # TTT - Text-to-Text processing (convenient alias)
 
 [build-system]
 requires = ["poetry-core"]
