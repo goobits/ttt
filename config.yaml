@@ -1,6 +1,6 @@
 # Goobits TTT Default Configuration
 # This file contains all default configuration values for the AI library
-# User configuration can override these values via ~/.config/ai/config.yaml
+# User configuration can override these values via ~/.config/ttt/config.yaml
 
 # Model configuration
 models:
@@ -197,13 +197,13 @@ paths:
     - "./ai.yml"
     - "./.ai.yaml"
     - "./.ai.yml"
-    - "~/.config/ai/config.yaml"
-    - "~/.config/ai/config.yml"
+    - "~/.config/ttt/config.yaml"
+    - "~/.config/ttt/config.yml"
     - "~/.ai.yaml"
     - "~/.ai.yml"
     
   # Default save location for user config
-  default_config_save: "~/.config/ai/config.yaml"
+  default_config_save: "~/.config/ttt/config.yaml"
 
 # Environment variable mappings
 env_mappings:

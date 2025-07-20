@@ -291,7 +291,7 @@ def save_config(
         # Get default save path from project config
         project_defaults = load_project_defaults()
         default_save_path = project_defaults.get("paths", {}).get(
-            "default_config_save", "~/.config/ai/config.yaml"
+            "default_config_save", "~/.config/ttt/config.yaml"
         )
         
         # Expand home directory

@@ -13,15 +13,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `./test.sh --markers "not slow"` - Skip slow tests
 
 ### Linting and Code Quality
-- `ruff ai/ tests/` - Run ruff linter (install with: `pip install ruff`)
-- `black ai/ tests/` - Format code with black (install with: `pip install black`)
-- `mypy ai/` - Type checking (install with: `pip install mypy`)
+- `ruff ttt/ tests/` - Run ruff linter (install with: `pip install ruff`)
+- `black ttt/ tests/` - Format code with black (install with: `pip install black`)
+- `mypy ttt/` - Type checking (install with: `pip install mypy`)
 
 ### Installation and Setup
 - `./setup.sh install` - Install with pipx (for end users)
 - `./setup.sh install --dev` - Install in development mode with pipx --editable (RECOMMENDED FOR DEVELOPMENT)
 - `./setup.sh upgrade` - Upgrade to latest version  
-- `./setup.sh uninstall` - Remove the AI library
+- `./setup.sh uninstall` - Remove the TTT library
 
 **IMPORTANT FOR DEVELOPMENT**: Always use `./setup.sh install --dev` for development work. This creates an editable installation where code changes are immediately reflected without needing to reinstall or upgrade.
 

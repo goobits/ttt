@@ -655,9 +655,10 @@ GOOGLE_API_KEY=AI...
 ### Project Structure
 
 ```
-agents/
+.
 ├── ttt/                    # Core library package
 │   ├── __init__.py        # Public API exports
+│   ├── __main__.py        # CLI entry point
 │   ├── api.py             # Main API interface
 │   ├── chat.py            # Chat session management
 │   ├── cli.py             # Command-line interface
@@ -668,9 +669,8 @@ agents/
 │   │   ├── __init__.py    # Tool decorator and exports
 │   │   ├── base.py        # Core tool classes
 │   │   ├── registry.py    # Tool registration system
-│   │   └── execution.py   # Tool execution engine
+│   │   └── executor.py    # Tool execution engine
 │   └── exceptions.py      # Custom exceptions
-├── ttt/__main__.py        # CLI entry point
 ├── setup.sh               # Installation script
 ├── pyproject.toml         # Package configuration
 └── tests/                 # Test suite
