@@ -89,7 +89,7 @@ To create a custom backend plugin:
 ## Plugin Discovery
 
 Plugins are automatically discovered from these locations:
-- `~/.config/ai/plugins/`
+- `~/.config/ttt/plugins/`
 - `~/.ai/plugins/`
 - `./ai_plugins/`
 - Built-in plugins directory

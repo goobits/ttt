@@ -26,7 +26,7 @@ The library loads configuration from multiple sources with the following precede
 The library searches for configuration files in these locations:
 - `./ttt.yaml` or `./ttt.yml` (current directory)
 - `./.ttt.yaml` or `./.ttt.yml` (hidden file in current directory)
-- `~/.config/ai/config.yaml` or `~/.config/ai/config.yml`
+- `~/.config/ttt/config.yaml` or `~/.config/ttt/config.yml`
 - `~/.ttt.yaml` or `~/.ttt.yml`
 
 ### Configuration Schema
@@ -163,7 +163,7 @@ Models can include the following metadata:
 ### Plugin Discovery
 
 Plugins are automatically discovered from:
-1. `~/.config/ai/plugins/`
+1. `~/.config/ttt/plugins/`
 2. `~/.ai/plugins/`
 3. `./ai_plugins/`
 4. Built-in plugins directory

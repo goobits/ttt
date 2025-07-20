@@ -1,5 +1,5 @@
 # AI Library Configuration Example
-# Copy this to ~/.config/ai/config.yaml or ./ai.yaml
+# Copy this to ~/.config/ttt/config.yaml or ./ttt.yaml
 
 # Default backend selection
 # Options: auto, local, cloud, or specific backend name
@@ -163,8 +163,8 @@ advanced:
   
   # Enable usage tracking
   track_usage: false
-  usage_file: ~/.config/ai/usage.json
+  usage_file: ~/.config/ttt/usage.json
   
   # Enable model performance monitoring
   track_performance: false
-  performance_file: ~/.config/ai/performance.json
+  performance_file: ~/.config/ttt/performance.json
