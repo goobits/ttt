@@ -105,7 +105,7 @@ class TestAskFunction:
 
     def test_ask_with_all_parameters(self, mock_backend, mock_router):
         """Test ask with all parameters."""
-        response = ask(
+        ask(
             "Test prompt",
             model="specific-model",
             system="System prompt",
@@ -128,9 +128,7 @@ class TestAskFunction:
 
     def test_ask_with_images(self, mock_backend, mock_router):
         """Test ask with image inputs."""
-        response = ask(
-            ["What's in this image?", ImageInput(b"fake_image_data_for_testing")]
-        )
+        ask(["What's in this image?", ImageInput(b"fake_image_data_for_testing")])
 
         # Verify prompt was passed correctly
         assert isinstance(mock_backend.last_prompt, list)
@@ -152,7 +150,7 @@ class TestStreamFunction:
 
     def test_stream_with_parameters(self, mock_backend, mock_router):
         """Test streaming with all parameters."""
-        chunks = list(
+        list(
             stream(
                 "Test prompt",
                 model="specific-model",
@@ -252,7 +250,7 @@ class TestChatSession:
 
         # Second exchange
         mock_backend.response_text = "I'm doing well"
-        response = session.ask("How are you?")
+        session.ask("How are you?")
 
         # Check that the latest prompt was passed
         # (The conversation context is now handled differently)
@@ -412,7 +410,7 @@ class TestErrorHandling:
 
         # Should get partial results before failure
         chunks = []
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             for chunk in stream("Test"):
                 chunks.append(chunk)
 
@@ -429,7 +427,7 @@ class TestBackendSelection:
         with patch("ttt.api.router") as mock_router:
             mock_router.smart_route.return_value = (custom_backend, "model")
 
-            response = ask("Test", backend=custom_backend)
+            ask("Test", backend=custom_backend)
 
             # Router should receive the backend instance
             call_args = mock_router.smart_route.call_args

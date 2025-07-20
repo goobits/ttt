@@ -160,7 +160,7 @@ class ChatSessionManager:
         for session_file in self.sessions_dir.glob("*.json"):
             try:
                 # Get basic info without loading full session
-                stat = session_file.stat()
+                session_file.stat()
                 session_id = session_file.stem
 
                 # Load just enough to get message count and last message
@@ -224,7 +224,7 @@ class ChatSessionManager:
                 try:
                     dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
                     created = dt.strftime("%Y-%m-%d %H:%M")
-                except:
+                except Exception:
                     pass
 
             table.add_row(

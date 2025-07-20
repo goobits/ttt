@@ -28,7 +28,7 @@ class Router:
     - Smart routing based on query type
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.config = get_config()
         self._backends: Dict[str, BaseBackend] = {}
         self._local_models_cache: Optional[List[str]] = None
@@ -82,7 +82,7 @@ class Router:
         if hasattr(backend, "_mock_name") or str(type(backend)).startswith(
             "<class 'unittest.mock"
         ):
-            return backend
+            return backend  # type: ignore[return-value]
 
         if isinstance(backend, str):
             return self.get_backend(backend)
@@ -223,12 +223,12 @@ class Router:
             else:
                 # Use backend-specific default
                 if backend and hasattr(backend, "default_model"):
-                    return backend.default_model
+                    return str(backend.default_model)
 
                 # Get fallback from config
                 from .config_loader import get_config_value
 
-                return get_config_value("models.default", "gpt-3.5-turbo")
+                return str(get_config_value("models.default", "gpt-3.5-turbo"))
 
         # Try to resolve alias
         resolved = model_registry.resolve_model_name(model)

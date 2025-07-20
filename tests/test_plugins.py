@@ -134,20 +134,20 @@ class FileMockTestBackend(BaseBackend):
     @property
     def name(self):
         return "file-test"
-    
+
     @property
     def is_available(self):
         return True
-    
+
     async def ask(self, prompt, **kwargs):
         return AIResponse("File plugin response", model="file-model", backend=self.name)
-    
+
     async def astream(self, prompt, **kwargs):
         yield "File plugin response"
-    
+
     async def models(self):
         return ["file-model"]
-    
+
     async def status(self):
         return {"backend": self.name, "available": True}
 
@@ -197,20 +197,20 @@ class PackageBackend(BaseBackend):
     @property
     def name(self):
         return "package-test"
-    
+
     @property
     def is_available(self):
         return True
-    
+
     async def ask(self, prompt, **kwargs):
         return AIResponse("Package response", model="package-model", backend=self.name)
-    
+
     async def astream(self, prompt, **kwargs):
         yield "Package response"
-    
+
     async def models(self):
         return ["package-model"]
-    
+
     async def status(self):
         return {"backend": self.name, "available": True}
 
@@ -243,20 +243,20 @@ class DiscoveredBackend(BaseBackend):
     @property
     def name(self):
         return "discovered"
-    
+
     @property
     def is_available(self):
         return True
-    
+
     async def ask(self, prompt, **kwargs):
         return AIResponse("Discovered", model="discovered-model", backend=self.name)
-    
+
     async def astream(self, prompt, **kwargs):
         yield "Discovered"
-    
+
     async def models(self):
         return ["discovered-model"]
-    
+
     async def status(self):
         return {"backend": self.name, "available": True}
 

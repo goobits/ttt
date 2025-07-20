@@ -317,7 +317,6 @@ class TestPersistentChatSessionAdvanced:
         session = PersistentChatSession(backend=mock_backend)
 
         # Test JSON detection
-        json_path = Path("test.json")
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             session.save(f.name)
             loaded = PersistentChatSession.load(f.name)  # Auto-detect JSON

@@ -137,9 +137,7 @@ class TestCloudBackendAsk:
         mock_response = MockLiteLLM.MockResponse("Response")
         mock_litellm.acompletion.return_value = mock_response
 
-        response = await cloud_backend.ask(
-            "User prompt", system="You are a helpful assistant"
-        )
+        await cloud_backend.ask("User prompt", system="You are a helpful assistant")
 
         # Check that system message was added
         call_args = mock_litellm.acompletion.call_args
@@ -156,7 +154,7 @@ class TestCloudBackendAsk:
         mock_response = MockLiteLLM.MockResponse("I see an image")
         mock_litellm.acompletion.return_value = mock_response
 
-        response = await cloud_backend.ask(
+        await cloud_backend.ask(
             ["What's in this image?", ImageInput(b"fake_image_data_for_testing")]
         )
 
@@ -366,7 +364,7 @@ class TestCloudBackendErrorHandling:
         # Mock timeout by raising TimeoutError directly
         mock_litellm.acompletion.side_effect = asyncio.TimeoutError("Mocked timeout")
 
-        with pytest.raises(Exception):  # Should timeout
+        with pytest.raises(Exception):  # noqa: B017  # Should timeout
             await cloud_backend.ask("Test", timeout=0.1)
 
 

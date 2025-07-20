@@ -5,8 +5,8 @@ from typing import List
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from ai import ask
 
+from ttt import ask
 from ttt.backends.cloud import CloudBackend
 from ttt.models import AIResponse
 from ttt.tools import (

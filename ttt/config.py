@@ -36,7 +36,7 @@ def load_project_defaults() -> Dict[str, Any]:
                 with open(config_path) as f:
                     defaults = yaml.safe_load(f)
                     logger.debug(f"Loaded project defaults from {config_path}")
-                    return defaults
+                    return defaults or {}
             except Exception as e:
                 logger.warning(
                     f"Failed to load project defaults from {config_path}: {e}"
@@ -127,7 +127,7 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
 
     # Load from config file if specified or found
     if config_file:
-        config_path = Path(config_file)
+        config_path: Optional[Path] = Path(config_file)
     else:
         config_path = find_config_file()
 
@@ -150,9 +150,9 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
                 config_data.update(file_config)
                 logger.debug(f"Loaded config from {config_path}")
         except yaml.YAMLError as e:
-            raise ConfigFileError(str(config_path), f"YAML parsing error: {e}")
+            raise ConfigFileError(str(config_path), f"YAML parsing error: {e}") from e
         except Exception as e:
-            raise ConfigFileError(str(config_path), str(e))
+            raise ConfigFileError(str(config_path), str(e)) from e
 
     # Override with environment variables
 
@@ -196,7 +196,7 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
     merged_config = {}
 
     # Deep merge defaults and config_data
-    def deep_merge(base, override):
+    def deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
         """Deep merge two dictionaries."""
         result = base.copy()
         for key, value in override.items():
@@ -326,7 +326,7 @@ def save_config(
             yaml.safe_dump(config_dict, f, default_flow_style=False)
         logger.info(f"Saved config to {config_path}")
     except Exception as e:
-        raise ConfigFileError(str(config_path), f"Failed to save: {e}")
+        raise ConfigFileError(str(config_path), f"Failed to save: {e}") from e
 
 
 def configure(
@@ -340,7 +340,7 @@ def configure(
     default_model: Optional[str] = None,
     timeout: Optional[int] = None,
     max_retries: Optional[int] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
     """
     Configure the AI library programmatically.
@@ -366,7 +366,7 @@ def configure(
     current_config = get_config()
 
     # Build update dict
-    updates = {}
+    updates: Dict[str, Any] = {}
 
     if openai_api_key is not None:
         updates["openai_api_key"] = openai_api_key
@@ -403,7 +403,7 @@ class ModelRegistry:
     Registry for managing model information and aliases.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.models: Dict[str, ModelInfo] = {}
         self.aliases: Dict[str, str] = {}
         self._load_default_models()

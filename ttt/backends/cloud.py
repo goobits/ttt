@@ -45,11 +45,11 @@ class CloudBackend(BaseBackend):
             import litellm
 
             self.litellm = litellm
-        except ImportError:
+        except ImportError as e:
             raise BackendNotAvailableError(
                 "cloud",
                 "LiteLLM is required for cloud backend. Install with: pip install litellm",
-            )
+            ) from e
 
         # Get cloud-specific config
         cloud_config = self.backend_config.get("cloud", {})
@@ -138,8 +138,8 @@ class CloudBackend(BaseBackend):
         system: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        tools: Optional[List] = None,
-        **kwargs,
+        tools: Optional[List[Any]] = None,
+        **kwargs: Any,
     ) -> AIResponse:
         """
         Send a single prompt to a cloud provider and get a complete response.
@@ -172,7 +172,7 @@ class CloudBackend(BaseBackend):
                 messages.append({"role": "user", "content": prompt})
             else:
                 # Build content array for multi-modal input
-                content = []
+                content: List[Dict[str, Any]] = []
                 for item in prompt:
                     if isinstance(item, str):
                         content.append({"type": "text", "text": item})
@@ -180,7 +180,10 @@ class CloudBackend(BaseBackend):
                         # Format image for the provider
                         if item.is_url:
                             content.append(
-                                {"type": "image_url", "image_url": {"url": item.source}}
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": str(item.source)},
+                                }
                             )
                         else:
                             # Base64 encode for non-URL images
@@ -208,7 +211,7 @@ class CloudBackend(BaseBackend):
             params["max_tokens"] = max_tokens
 
         # Add tools if provided
-        tool_definitions = []
+        tool_definitions: List[Dict[str, Any]] = []
         tool_result = None
         if tools:
             # Import tools here to avoid circular imports
@@ -250,7 +253,7 @@ class CloudBackend(BaseBackend):
             if not response.choices:
                 raise EmptyResponseError(used_model, self.name)
 
-            content = response.choices[0].message.content or ""
+            response_content = response.choices[0].message.content or ""
 
             # Handle tool calls if present
             message = response.choices[0].message
@@ -297,11 +300,11 @@ class CloudBackend(BaseBackend):
                                 results_summary.append(
                                     f"{call.name}: Error - {call.error}"
                                 )
-                        content = "Tool execution completed:\n" + "\n".join(
+                        response_content = "Tool execution completed:\n" + "\n".join(
                             results_summary
                         )
 
-            if not content:
+            if not response_content:
                 raise EmptyResponseError(used_model, self.name)
 
             time_taken = time.time() - start_time
@@ -325,7 +328,7 @@ class CloudBackend(BaseBackend):
                     pass
 
             return AIResponse(
-                content,
+                response_content,
                 model=used_model,
                 backend=self.name,
                 tokens_in=tokens_in,
@@ -359,25 +362,25 @@ class CloudBackend(BaseBackend):
                     "google": "GOOGLE_API_KEY",
                     "openrouter": "OPENROUTER_API_KEY",
                 }
-                raise APIKeyError(provider, env_vars.get(provider))
+                raise APIKeyError(provider, env_vars.get(provider)) from e
             elif "rate limit" in error_msg.lower():
                 provider = self._get_provider_from_model(used_model)
-                raise RateLimitError(provider)
+                raise RateLimitError(provider) from e
             elif "quota" in error_msg.lower():
                 provider = self._get_provider_from_model(used_model)
-                raise QuotaExceededError(provider)
+                raise QuotaExceededError(provider) from e
             elif (
                 "model_not_found" in error_msg.lower()
                 or "does not exist" in error_msg.lower()
                 or "not found" in error_msg.lower()
             ):
-                raise ModelNotFoundError(used_model, self.name)
+                raise ModelNotFoundError(used_model, self.name) from e
             elif "timeout" in error_msg.lower():
-                raise BackendTimeoutError(self.name, self.timeout)
+                raise BackendTimeoutError(self.name, self.timeout) from e
             else:
-                raise BackendConnectionError(self.name, e)
+                raise BackendConnectionError(self.name, e) from e
 
-    async def astream(
+    async def astream(  # type: ignore[override]
         self,
         prompt: Union[str, List[Union[str, ImageInput]]],
         *,
@@ -385,8 +388,8 @@ class CloudBackend(BaseBackend):
         system: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        tools: Optional[List] = None,
-        **kwargs,
+        tools: Optional[List[Any]] = None,
+        **kwargs: Any,
     ) -> AsyncIterator[str]:
         """
         Stream a response from a cloud provider token by token.
@@ -422,7 +425,7 @@ class CloudBackend(BaseBackend):
                     # Format image for the provider
                     if item.is_url:
                         content.append(
-                            {"type": "image_url", "image_url": {"url": item.source}}
+                            {"type": "image_url", "image_url": {"url": str(item.source)}}
                         )
                     else:
                         # Base64 encode for non-URL images
@@ -510,23 +513,23 @@ class CloudBackend(BaseBackend):
                     "google": "GOOGLE_API_KEY",
                     "openrouter": "OPENROUTER_API_KEY",
                 }
-                raise APIKeyError(provider, env_vars.get(provider))
+                raise APIKeyError(provider, env_vars.get(provider)) from e
             elif "rate limit" in error_msg.lower():
                 provider = self._get_provider_from_model(used_model)
-                raise RateLimitError(provider)
+                raise RateLimitError(provider) from e
             elif "quota" in error_msg.lower():
                 provider = self._get_provider_from_model(used_model)
-                raise QuotaExceededError(provider)
+                raise QuotaExceededError(provider) from e
             elif (
                 "model_not_found" in error_msg.lower()
                 or "does not exist" in error_msg.lower()
                 or "not found" in error_msg.lower()
             ):
-                raise ModelNotFoundError(used_model, self.name)
+                raise ModelNotFoundError(used_model, self.name) from e
             elif "timeout" in error_msg.lower():
-                raise BackendTimeoutError(self.name, self.timeout)
+                raise BackendTimeoutError(self.name, self.timeout) from e
             else:
-                raise BackendConnectionError(self.name, e)
+                raise BackendConnectionError(self.name, e) from e
 
     async def models(self) -> List[str]:
         """
@@ -566,10 +569,11 @@ class CloudBackend(BaseBackend):
         ]
 
         if not detailed:
-            return sorted([model.name for model in all_model_info])
+            result: List[Union[str, Dict[str, Any]]] = sorted([model.name for model in all_model_info])
+            return result
 
         # Return detailed information directly from the model info objects
-        detailed_models = []
+        detailed_models: List[Union[str, Dict[str, Any]]] = []
         for model in sorted(all_model_info, key=lambda m: m.name):
             detailed_models.append(
                 {
@@ -596,7 +600,7 @@ class CloudBackend(BaseBackend):
         Returns:
             Dictionary containing status information
         """
-        providers = {}
+        providers: Dict[str, Dict[str, Any]] = {}
 
         # Check OpenAI
         if os.getenv("OPENAI_API_KEY"):

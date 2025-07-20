@@ -69,7 +69,11 @@ class ToolDefinition:
 
     def to_anthropic_schema(self) -> Dict[str, Any]:
         """Convert to Anthropic function calling schema."""
-        input_schema: Dict[str, Any] = {"type": "object", "properties": {}, "required": []}
+        input_schema: Dict[str, Any] = {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        }
 
         for param in self.parameters:
             input_schema["properties"][param.name] = {

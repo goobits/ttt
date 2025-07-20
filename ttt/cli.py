@@ -5,11 +5,14 @@ import io
 import os
 import sys
 import warnings
-from typing import List, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import click
 from dotenv import load_dotenv
 from rich.console import Console
+
+import ttt
 
 # Suppress the common aiohttp warning about pending tasks being destroyed
 warnings.filterwarnings(
@@ -18,15 +21,8 @@ warnings.filterwarnings(
 
 # Also suppress via environment variable for asyncio
 os.environ.setdefault("PYTHONWARNINGS", "ignore::RuntimeWarning")
-try:
-    from importlib.metadata import version as get_version
-except ImportError:
-    pass
-
 
 # Load environment variables from .env file in project directory
-import os
-from pathlib import Path
 
 # Try multiple strategies to find .env file
 env_paths = []
@@ -53,7 +49,7 @@ try:
         env_paths.append(project_root / ".env")
         # Also check one more level up in case of nested structure
         env_paths.append(project_root.parent / ".env")
-except:
+except Exception:
     pass
 
 # 4. Common locations
@@ -89,11 +85,8 @@ else:
 
 console = Console()
 
-# Import TTT library modules
-import ttt
 
-
-def get_ttt_version():
+def get_ttt_version() -> str:
     """Get the TTT version dynamically."""
     try:
         # Try the actual package name first
@@ -110,7 +103,7 @@ def get_ttt_version():
             return getattr(ttt, "__version__", "unknown")
 
 
-def setup_logging_level(verbose=False, debug=False, json_output=False):
+def setup_logging_level(verbose: bool = False, debug: bool = False, json_output: bool = False) -> None:
     """Setup logging level based on verbosity flags."""
     import asyncio
     import logging
@@ -152,7 +145,7 @@ def setup_logging_level(verbose=False, debug=False, json_output=False):
         )  # Suppress asyncio task warnings
 
         # Configure asyncio to handle task exceptions more gracefully
-        def custom_exception_handler(loop, context):
+        def custom_exception_handler(loop: Any, context: Dict[str, Any]) -> None:
             exception = context.get("exception")
             if exception:
                 # Suppress specific aiohttp task destruction warnings
@@ -187,7 +180,7 @@ def resolve_model_alias(model: str) -> str:
             # Check aliases (includes both default and user-defined)
             aliases = merged_config.get("models", {}).get("aliases", {})
             if alias in aliases:
-                return aliases[alias]
+                return str(aliases[alias])
 
             # Also check model names that have aliases
             available_models = merged_config.get("models", {}).get("available", {})
@@ -195,7 +188,7 @@ def resolve_model_alias(model: str) -> str:
                 if isinstance(model_info, dict):
                     model_aliases = model_info.get("aliases", [])
                     if alias in model_aliases:
-                        return model_name
+                        return str(model_name)
 
             # If not found, return original without @
             console.print(
@@ -255,7 +248,7 @@ def parse_tools_arg(tools: Optional[str]) -> Optional[str]:
 class VersionAwareGroup(click.Group):
     """Custom group that adds version to help text."""
 
-    def get_help(self, ctx):
+    def get_help(self, ctx: click.Context) -> str:
         # Get the original help text
         original_help = super().get_help(ctx)
 
@@ -326,19 +319,19 @@ class VersionAwareGroup(click.Group):
     help="📦 Export results as JSON for automation and scripting",
 )
 def main(
-    ctx,
-    version,
-    model,
-    system,
-    temperature,
-    max_tokens,
-    tools,
-    stream,
-    verbose,
-    debug,
-    code,
-    json_output,
-):
+    ctx: click.Context,
+    version: bool,
+    model: Optional[str],
+    system: Optional[str],
+    temperature: Optional[float],
+    max_tokens: Optional[int],
+    tools: Optional[str],
+    stream: bool,
+    verbose: bool,
+    debug: bool,
+    code: bool,
+    json_output: bool,
+) -> None:
     """🚀 TTT - Transform any text with intelligent AI processing
 
     TTT empowers developers, writers, and creators to process text with precision.
@@ -433,7 +426,7 @@ def main(
 @click.option("--system", "-s", help="🎭 Set system prompt for the session")
 @click.option("--tools", help="🔧 Enable tools for this session")
 @click.pass_context
-def chat(ctx, resume, session_id, list_sessions, model, system, tools):
+def chat(ctx: click.Context, resume: bool, session_id: Optional[str], list_sessions: bool, model: Optional[str], system: Optional[str], tools: Optional[str]) -> None:
     """💬 Launch interactive conversation mode with memory."""
     from ttt.chat_sessions import ChatSessionManager
 
@@ -450,12 +443,13 @@ def chat(ctx, resume, session_id, list_sessions, model, system, tools):
         model = resolve_model_alias(model)
 
     # Parse tools
+    parsed_tools: Optional[List[str]] = None
     if tools:
-        tools = parse_tools_arg(tools)
-        if tools == "all":
-            tools = None  # Will enable all tools
-        elif tools:
-            tools = [t.strip() for t in tools.split(",")]
+        parsed_tools_str = parse_tools_arg(tools)
+        if parsed_tools_str == "all":
+            parsed_tools = None  # Will enable all tools
+        elif parsed_tools_str:
+            parsed_tools = [t.strip() for t in parsed_tools_str.split(",")]
 
     # Load or create session
     if resume:
@@ -465,7 +459,7 @@ def chat(ctx, resume, session_id, list_sessions, model, system, tools):
                 "[yellow]No previous session found. Starting new session.[/yellow]"
             )
             session = session_manager.create_session(
-                model=model, system_prompt=system, tools=tools
+                model=model, system_prompt=system, tools=parsed_tools
             )
         else:
             console.print(f"[green]Resuming session: {session.id}[/green]")
@@ -474,8 +468,8 @@ def chat(ctx, resume, session_id, list_sessions, model, system, tools):
                 session.model = model
             if system:
                 session.system_prompt = system
-            if tools:
-                session.tools = tools
+            if parsed_tools is not None:
+                session.tools = parsed_tools
     elif session_id:
         session = session_manager.load_session(session_id)
         if not session:
@@ -487,12 +481,12 @@ def chat(ctx, resume, session_id, list_sessions, model, system, tools):
             session.model = model
         if system:
             session.system_prompt = system
-        if tools:
-            session.tools = tools
+        if parsed_tools is not None:
+            session.tools = parsed_tools
     else:
         # Create new session
         session = session_manager.create_session(
-            model=model, system_prompt=system, tools=tools
+            model=model, system_prompt=system, tools=parsed_tools
         )
         console.print(f"[green]Started new session: {session.id}[/green]")
 
@@ -517,7 +511,7 @@ def chat(ctx, resume, session_id, list_sessions, model, system, tools):
         console.print()
 
     # Build kwargs for chat session
-    chat_kwargs = {}
+    chat_kwargs: Dict[str, Any] = {}
     if session.model:
         chat_kwargs["model"] = session.model
     if session.system_prompt:
@@ -526,7 +520,7 @@ def chat(ctx, resume, session_id, list_sessions, model, system, tools):
         chat_kwargs["tools"] = resolve_tools(session.tools)
 
     # Create chat session with context from previous messages
-    messages = []
+    messages: List[Dict[str, str]] = []
     if session.system_prompt:
         messages.append({"role": "system", "content": session.system_prompt})
     for msg in session.messages:
@@ -602,13 +596,13 @@ def chat(ctx, resume, session_id, list_sessions, model, system, tools):
 
 
 @main.command()
-def status():
+def status() -> None:
     """⚡ Verify system health and API connectivity."""
     show_backend_status()
 
 
 @main.command()
-def models():
+def models() -> None:
     """🤖 Browse all available AI models and their capabilities."""
     show_models_list()
 
@@ -618,7 +612,7 @@ def models():
 @click.argument("key", required=False)
 @click.argument("value", required=False)
 @click.option("--reset", is_flag=True, help="Reset configuration to defaults")
-def config(action, key, value, reset):
+def config(action: Optional[str], key: Optional[str], value: Optional[str], reset: bool) -> None:
     """⚙️ Access configuration management and preferences.
 
     \b
@@ -673,18 +667,18 @@ def config(action, key, value, reset):
 
 
 def ask_command(
-    prompt,
-    model,
-    system,
-    temperature,
-    max_tokens,
-    tools,
-    stream,
-    verbose,
-    code,
-    json_output,
-    allow_empty=False,
-):
+    prompt: Optional[str],
+    model: Optional[str],
+    system: Optional[str],
+    temperature: Optional[float],
+    max_tokens: Optional[int],
+    tools: Optional[str],
+    stream: bool,
+    verbose: bool,
+    code: bool,
+    json_output: bool,
+    allow_empty: bool = False,
+) -> None:
     """Internal function to handle AI questions."""
 
     # Handle missing prompt in interactive mode first
@@ -770,7 +764,7 @@ def ask_command(
             tools_list = resolve_tools(tools_list)
 
     # Build request parameters
-    kwargs = {}
+    kwargs: Dict[str, Any] = {}
     if model:
         kwargs["model"] = model
     if system:
@@ -844,7 +838,7 @@ def ask_command(
 
 
 # Helper functions
-def show_backend_status():
+def show_backend_status() -> None:
     """Show backend status."""
     console.print("[bold blue]Backend Status:[/bold blue]")
     console.print()
@@ -895,7 +889,7 @@ def show_backend_status():
         console.print(f"❌ [red]Cloud Backend:[/red] Error - {e}")
 
 
-def show_models_list():
+def show_models_list() -> None:
     """Show available models."""
     console.print("[bold blue]Available Models:[/bold blue]")
     console.print()
@@ -942,7 +936,7 @@ def show_models_list():
         aliases = config.get("models", {}).get("aliases", {})
 
         # Group by provider
-        providers = {}
+        providers: Dict[str, List[str]] = {}
         for model_name, model_info in available_models.items():
             if isinstance(model_info, dict):
                 provider = model_info.get("provider", "unknown")
@@ -985,7 +979,7 @@ def show_models_list():
     console.print("  • And many more via OpenRouter...")
 
 
-def show_tools_list():
+def show_tools_list() -> None:
     """Show available tools."""
     console.print("[bold blue]Available Tools:[/bold blue]")
     console.print()
@@ -1005,9 +999,9 @@ def show_tools_list():
         console.print(f"Error listing tools: {e}")
 
 
-def resolve_tools(tool_specs: List[str]) -> List:
+def resolve_tools(tool_specs: List[str]) -> List[Any]:
     """Resolve tool specifications to actual tool functions."""
-    tools = []
+    tools: List[Any] = []
 
     try:
         from ttt.tools import get_tool, list_tools
@@ -1073,7 +1067,7 @@ def is_coding_request(prompt: str) -> bool:
     return any(keyword in prompt_lower for keyword in coding_keywords)
 
 
-def apply_coding_optimization(kwargs):
+def apply_coding_optimization(kwargs: Dict[str, Any]) -> None:
     """Apply optimizations for coding requests."""
     # Lower temperature for more deterministic code
     if "temperature" not in kwargs:
@@ -1083,12 +1077,20 @@ def apply_coding_optimization(kwargs):
 @main.command(name="ask", hidden=True)
 @click.argument("prompt", nargs=-1, required=True)
 @click.pass_context
-def ask_cmd(ctx, prompt):
+def ask_cmd(ctx: click.Context, prompt: tuple) -> None:
     """Direct AI prompt (hidden default command)."""
     prompt_text = " ".join(prompt)
 
     # Get parent context for options
     parent_ctx = ctx.parent
+    if parent_ctx is None:
+        # No parent context, use defaults
+        ask_command(
+            prompt_text,
+            None, None, None, None, None, False, False, False, False,
+            allow_empty=False,
+        )
+        return
 
     # Resolve model alias
     model = parent_ctx.params.get("model")
@@ -1102,10 +1104,10 @@ def ask_cmd(ctx, prompt):
         parent_ctx.params.get("temperature"),
         parent_ctx.params.get("max_tokens"),
         parent_ctx.params.get("tools"),
-        parent_ctx.params.get("stream"),
-        parent_ctx.params.get("verbose"),
-        parent_ctx.params.get("code"),
-        parent_ctx.params.get("json_output"),
+        parent_ctx.params.get("stream", False),
+        parent_ctx.params.get("verbose", False),
+        parent_ctx.params.get("code", False),
+        parent_ctx.params.get("json_output", False),
         allow_empty=False,
     )
 
@@ -1114,7 +1116,7 @@ def ask_cmd(ctx, prompt):
 main.add_command(ask_cmd, name="ask")
 
 
-def cli_entry():
+def cli_entry() -> None:
     """Entry point that handles both subcommands and direct prompts."""
     import sys
 

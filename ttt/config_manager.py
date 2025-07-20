@@ -16,7 +16,7 @@ console = Console()
 class ConfigManager:
     """Manages TTT configuration with read/write capabilities."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the config manager."""
         self.user_config_path = Path.home() / ".config" / "ttt" / "config.yaml"
         self.default_config_path = Path(__file__).parent.parent / "config.yaml"

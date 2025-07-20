@@ -62,13 +62,14 @@ class LocalBackend(BaseBackend):
         """Check if Ollama is running and available."""
         try:
             # Create a simple sync check
-            async def check():
+            async def check() -> bool:
                 async with httpx.AsyncClient(timeout=5) as client:
                     response = await client.get(f"{self.base_url}/api/tags")
                     return response.status_code == 200
 
             # Use run_async to handle the event loop properly
-            return run_async(check())
+            result = run_async(check())
+            return bool(result)
         except Exception as e:
             logger.debug(f"Ollama availability check failed: {e}")
             return False
@@ -81,8 +82,8 @@ class LocalBackend(BaseBackend):
         system: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        tools: Optional[List] = None,
-        **kwargs,
+        tools: Optional[List[Any]] = None,
+        **kwargs: Any,
     ) -> AIResponse:
         """
         Send a single prompt to Ollama and get a complete response.
@@ -174,16 +175,16 @@ class LocalBackend(BaseBackend):
             # Check for specific error types
             if e.response.status_code == 404:
                 if "model" in e.response.text.lower():
-                    raise ModelNotFoundError(used_model, self.name)
+                    raise ModelNotFoundError(used_model, self.name) from e
 
-            raise BackendConnectionError(self.name, e)
+            raise BackendConnectionError(self.name, e) from e
         except httpx.TimeoutException:
-            raise BackendTimeoutError(self.name, self.timeout)
+            raise BackendTimeoutError(self.name, self.timeout) from None
         except Exception as e:
             logger.error(f"Ollama request failed: {str(e)}")
-            raise BackendConnectionError(self.name, e)
+            raise BackendConnectionError(self.name, e) from e
 
-    async def astream(
+    async def astream(  # type: ignore[override]
         self,
         prompt: Union[str, List[Union[str, ImageInput]]],
         *,
@@ -191,8 +192,8 @@ class LocalBackend(BaseBackend):
         system: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        tools: Optional[List] = None,
-        **kwargs,
+        tools: Optional[List[Any]] = None,
+        **kwargs: Any,
     ) -> AsyncIterator[str]:
         """
         Stream a response from Ollama token by token.
@@ -263,21 +264,21 @@ class LocalBackend(BaseBackend):
                                 if data.get("done", False):
                                     break
 
-                            except json.JSONDecodeError:
+                            except json.JSONDecodeError as e:
                                 logger.warning(f"Failed to parse JSON line: {line}")
                                 raise ResponseParsingError(
                                     f"Invalid JSON in stream: {line[:100]}", line
-                                )
+                                ) from e
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404 and "model" in e.response.text.lower():
-                raise ModelNotFoundError(used_model, self.name)
-            raise BackendConnectionError(self.name, e)
+                raise ModelNotFoundError(used_model, self.name) from e
+            raise BackendConnectionError(self.name, e) from e
         except httpx.TimeoutException:
-            raise BackendTimeoutError(self.name, self.timeout)
+            raise BackendTimeoutError(self.name, self.timeout) from None
         except Exception as e:
             logger.error(f"Streaming request failed: {str(e)}")
-            raise BackendConnectionError(self.name, e)
+            raise BackendConnectionError(self.name, e) from e
 
     async def models(self) -> List[str]:
         """
@@ -298,10 +299,10 @@ class LocalBackend(BaseBackend):
                 return models
 
         except httpx.TimeoutException:
-            raise BackendTimeoutError(self.name, 10.0)
+            raise BackendTimeoutError(self.name, 10.0) from None
         except Exception as e:
             logger.error(f"Failed to fetch models: {str(e)}")
-            raise BackendConnectionError(self.name, e)
+            raise BackendConnectionError(self.name, e) from e
 
     async def status(self) -> Dict[str, Any]:
         """

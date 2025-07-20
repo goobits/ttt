@@ -57,7 +57,7 @@ def tool(
     description: Optional[str] = None,
     category: str = "general",
     register: bool = True,
-) -> Union[Callable, ToolDefinition]:
+) -> Callable:
     """
     Decorator to mark a function as a tool.
 
@@ -95,32 +95,32 @@ def tool(
                 pass
 
         # Add tool metadata to the function
-        f._tool_definition = tool_def
-        f._is_tool = True
+        f._tool_definition = tool_def  # type: ignore[attr-defined]
+        f._is_tool = True  # type: ignore[attr-defined]
 
         # Create appropriate wrapper based on function type
         if asyncio.iscoroutinefunction(f):
 
             @wraps(f)
-            async def async_wrapper(*args, **kwargs):
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 # Async function still works normally
                 return await f(*args, **kwargs)
 
             # Preserve tool metadata on wrapper
-            async_wrapper._tool_definition = tool_def
-            async_wrapper._is_tool = True
+            async_wrapper._tool_definition = tool_def  # type: ignore[attr-defined]
+            async_wrapper._is_tool = True  # type: ignore[attr-defined]
 
             return async_wrapper
         else:
 
             @wraps(f)
-            def wrapper(*args, **kwargs):
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
                 # Function still works normally
                 return f(*args, **kwargs)
 
             # Preserve tool metadata on wrapper
-            wrapper._tool_definition = tool_def
-            wrapper._is_tool = True
+            wrapper._tool_definition = tool_def  # type: ignore[attr-defined]
+            wrapper._is_tool = True  # type: ignore[attr-defined]
 
             return wrapper
 

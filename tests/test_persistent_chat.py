@@ -5,7 +5,7 @@ import pickle
 from datetime import datetime
 from unittest.mock import AsyncMock, Mock, patch
 
-from ai import AIResponse, PersistentChatSession, chat
+from ttt import AIResponse, PersistentChatSession, chat
 
 
 class TestPersistentChatSession:
@@ -52,7 +52,7 @@ class TestPersistentChatSession:
 
         # Create session with the mock backend directly
         session = PersistentChatSession(backend=mock_backend, model="gpt-3.5-turbo")
-        response = session.ask("Hello, my name is Bob")
+        session.ask("Hello, my name is Bob")
 
         # Check history
         assert len(session.history) == 2
@@ -309,7 +309,7 @@ class TestPersistentChatSession:
         session = PersistentChatSession(backend=mock_backend)
 
         # Ask with image
-        response = session.ask(["What's in this image?", ImageInput("test.jpg")])
+        session.ask(["What's in this image?", ImageInput("test.jpg")])
 
         # Check history stores the multi-modal content
         assert len(session.history) == 2

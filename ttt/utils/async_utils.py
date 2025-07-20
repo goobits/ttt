@@ -3,9 +3,8 @@
 import asyncio
 import atexit
 import concurrent.futures
-import sys
 import threading
-from typing import Awaitable, TypeVar
+from typing import Awaitable, TypeVar, cast
 
 T = TypeVar("T")
 
@@ -28,7 +27,9 @@ def _start_background_loop() -> None:
         asyncio.set_event_loop(loop)
 
         # Set up custom exception handler to suppress aiohttp task warnings
-        def custom_exception_handler(loop: asyncio.AbstractEventLoop, context: dict) -> None:
+        def custom_exception_handler(
+            loop: asyncio.AbstractEventLoop, context: dict
+        ) -> None:
             # Suppress specific aiohttp task destruction warnings
             message = context.get("message", "")
             exception = context.get("exception")
@@ -75,7 +76,8 @@ def _stop_background_loop() -> None:
             async def stop_when_ready() -> None:
                 # Wait briefly for cancellations to complete
                 await asyncio.sleep(0.1)
-                _background_loop.stop()
+                if _background_loop is not None:
+                    _background_loop.stop()
 
             asyncio.create_task(stop_when_ready())
 
@@ -113,8 +115,23 @@ def run_coro_in_background(coro: Awaitable[T]) -> T:
             _start_background_loop()
 
     # Submit the coroutine to the background loop
-    future = asyncio.run_coroutine_threadsafe(coro, _background_loop)
-    return future.result()
+    if _background_loop is None:
+        raise RuntimeError("Background loop not initialized")
+
+    # Convert Awaitable to coroutine if needed
+    if asyncio.iscoroutine(coro):
+        future: concurrent.futures.Future[T] = asyncio.run_coroutine_threadsafe(
+            coro, _background_loop
+        )
+    else:
+        # If it's not a coroutine but an awaitable, we need to wrap it
+        async def _wrapper() -> T:
+            return await coro
+
+        future = asyncio.run_coroutine_threadsafe(_wrapper(), _background_loop)
+
+    result = future.result()
+    return result
 
 
 def optimized_run_async(coro: Awaitable[T]) -> T:
@@ -133,8 +150,13 @@ def optimized_run_async(coro: Awaitable[T]) -> T:
     except RuntimeError:
         # No running loop, so we can create and run a new one
         # For the main thread, still use asyncio.run for simplicity
-        if sys.version_info >= (3, 7):
-            return asyncio.run(coro)
+        # Convert Awaitable to coroutine if needed
+        if asyncio.iscoroutine(coro):
+            result = asyncio.run(coro)
+            return cast(T, result)
         else:
-            # For Python 3.6 compatibility
-            return asyncio.run(coro)
+            # If it's not a coroutine but an awaitable, wrap it
+            async def _wrapper() -> T:
+                return await coro
+
+            return asyncio.run(_wrapper())

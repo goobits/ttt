@@ -40,7 +40,7 @@ class PluginRegistry:
     Registry for managing backend plugins.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.plugins: Dict[str, BackendPlugin] = {}
         self._plugin_paths: List[Path] = []
         self._setup_default_paths()
@@ -74,7 +74,7 @@ class PluginRegistry:
         logger.info(f"Registered plugin: {plugin.name} v{plugin.version}")
 
     def register_backend(
-        self, name: str, backend_class: Type[BaseBackend], **metadata
+        self, name: str, backend_class: Type[BaseBackend], **metadata: Any
     ) -> None:
         """
         Convenience method to register a backend class directly.
@@ -121,7 +121,9 @@ class PluginRegistry:
             try:
                 return backend_class(config)
             except Exception as e:
-                raise PluginValidationError(name, f"Failed to instantiate backend: {e}")
+                raise PluginValidationError(
+                    name, f"Failed to instantiate backend: {e}"
+                ) from e
         return None
 
     def discover_plugins(self) -> None:
@@ -189,11 +191,11 @@ class PluginRegistry:
             else:
                 raise PluginLoadError(str(file_path), "Failed to create module spec")
         except ImportError as e:
-            raise PluginLoadError(str(file_path), f"Import error: {e}")
+            raise PluginLoadError(str(file_path), f"Import error: {e}") from e
         except Exception as e:
             if isinstance(e, (PluginLoadError, PluginValidationError)):
                 raise
-            raise PluginLoadError(str(file_path), str(e))
+            raise PluginLoadError(str(file_path), str(e)) from e
 
     def _load_plugin_from_package(self, package_path: Path) -> None:
         """
@@ -262,7 +264,9 @@ def discover_plugins() -> None:
     plugin_registry.discover_plugins()
 
 
-def register_backend(name: str, backend_class: Type[BaseBackend], **metadata) -> None:
+def register_backend(
+    name: str, backend_class: Type[BaseBackend], **metadata: Any
+) -> None:
     """
     Register a custom backend.
 

@@ -37,7 +37,7 @@ class TestChatSessionTools:
             mock_route.return_value = (backend_instance, "test-model")
 
             session = ChatSession(tools=[test_tool])
-            response = session.ask("Test prompt")
+            session.ask("Test prompt")
 
             # Verify tools were passed to backend
             backend_instance.ask.assert_called_once()
@@ -101,7 +101,7 @@ class TestPersistentChatSessionTools:
             mock_smart_route.return_value = (backend_instance, "test-model")
 
             session = PersistentChatSession(tools=[test_tool])
-            result = session.ask("Use the tool")
+            session.ask("Use the tool")
 
             # Check tool usage was tracked
             assert "test_tool" in session.metadata["tools_used"]

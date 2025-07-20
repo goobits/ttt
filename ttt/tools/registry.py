@@ -9,7 +9,7 @@ from .base import ToolDefinition, create_tool_definition
 class ToolRegistry:
     """Thread-safe registry for managing tools."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._tools: Dict[str, ToolDefinition] = {}
         self._categories: Dict[str, Set[str]] = {}
         self._lock = threading.Lock()

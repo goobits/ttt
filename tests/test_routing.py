@@ -113,7 +113,7 @@ class TestRouter:
         with patch.object(router, "_auto_select_backend") as mock_auto:
             mock_auto.return_value = MockBackend()
 
-            resolved = router.resolve_backend(None)
+            router.resolve_backend(None)
             mock_auto.assert_called_once()
 
     def test_resolve_model_with_alias(self):

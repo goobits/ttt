@@ -26,7 +26,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Callable, Dict, Optional, Union
 
 import zoneinfo
 
@@ -40,34 +40,34 @@ recovery_system = ErrorRecoverySystem(RetryConfig())
 
 
 # Get configuration settings
-def _get_max_file_size():
+def _get_max_file_size() -> int:
     """Get maximum file size from configuration."""
     try:
         config = get_config()
-        return config.tools_config.get("max_file_size", 10 * 1024 * 1024)
+        return int(config.tools_config.get("max_file_size", 10 * 1024 * 1024))
     except Exception:
         return 10 * 1024 * 1024  # Fallback to default
 
 
-def _get_code_timeout():
+def _get_code_timeout() -> int:
     """Get code execution timeout from configuration."""
     try:
         config = get_config()
-        return config.tools_config.get("code_execution_timeout", 30)
+        return int(config.tools_config.get("code_execution_timeout", 30))
     except Exception:
         return 30  # Fallback to default
 
 
-def _get_web_timeout():
+def _get_web_timeout() -> int:
     """Get web request timeout from configuration."""
     try:
         config = get_config()
-        return config.tools_config.get("web_request_timeout", 10)
+        return int(config.tools_config.get("web_request_timeout", 10))
     except Exception:
         return 10  # Fallback to default
 
 
-def _safe_execute(func_name: str, func: callable, **kwargs):
+def _safe_execute(func_name: str, func: Callable[..., Any], **kwargs: Any) -> str:
     """Execute a function with error recovery and input sanitization."""
     try:
         # Sanitize arguments
@@ -99,7 +99,7 @@ def _safe_execute(func_name: str, func: callable, **kwargs):
 
         # Execute with enhanced error handling
         result = func(**sanitized_kwargs)
-        return result
+        return str(result)
 
     except Exception as e:
         # Classify error and provide helpful message
@@ -313,7 +313,7 @@ def write_file(
 @tool(
     category="code", description="Execute Python code safely in a sandboxed environment"
 )
-def run_python(code: str, timeout: int = None) -> str:
+def run_python(code: str, timeout: Optional[int] = None) -> str:
     """Execute Python code safely.
 
     Args:
@@ -324,7 +324,7 @@ def run_python(code: str, timeout: int = None) -> str:
         Output of the code execution or error message
     """
 
-    def _run_python_impl(code: str, timeout: int = None) -> str:
+    def _run_python_impl(code: str, timeout: Optional[int] = None) -> str:
         if timeout is None:
             timeout = _get_code_timeout()
 
@@ -429,7 +429,7 @@ def http_request(
     method: str = "GET",
     headers: Optional[Dict[str, str]] = None,
     data: Optional[Union[str, Dict[str, Any]]] = None,
-    timeout: int = None,
+    timeout: Optional[int] = None,
 ) -> str:
     """Make HTTP requests.
 
@@ -511,7 +511,7 @@ def http_request(
                 parsed = json.loads(content)
                 return json.dumps(parsed, indent=2)
             except json.JSONDecodeError:
-                return content
+                return str(content)
 
     except urllib.error.HTTPError as e:
         return f"HTTP Error {e.code}: {e.reason}"
@@ -524,7 +524,7 @@ def http_request(
 class MathEvaluator(ast.NodeVisitor):
     """Safe math expression evaluator."""
 
-    def visit(self, node):
+    def visit(self, node: ast.AST) -> Any:
         if type(node) not in (
             ast.Expression,
             ast.BinOp,
@@ -536,13 +536,13 @@ class MathEvaluator(ast.NodeVisitor):
             raise ValueError(f"Unsupported operation: {type(node).__name__}")
         return super().visit(node)
 
-    def visit_Expression(self, node):
+    def visit_Expression(self, node: ast.Expression) -> Any:
         return self.visit(node.body)
 
-    def visit_Constant(self, node):
+    def visit_Constant(self, node: ast.Constant) -> Any:
         return node.value
 
-    def visit_BinOp(self, node):
+    def visit_BinOp(self, node: ast.BinOp) -> Any:
         if type(node.op) not in ALLOWED_MATH_OPERATORS:
             raise ValueError(f"Unsupported operator: {type(node.op).__name__}")
 
@@ -561,7 +561,7 @@ class MathEvaluator(ast.NodeVisitor):
 
         return ops[type(node.op)](left, right)
 
-    def visit_UnaryOp(self, node):
+    def visit_UnaryOp(self, node: ast.UnaryOp) -> Any:
         if type(node.op) not in (ast.UAdd, ast.USub):
             raise ValueError(f"Unsupported unary operator: {type(node.op).__name__}")
 
@@ -572,7 +572,7 @@ class MathEvaluator(ast.NodeVisitor):
         else:
             return -operand
 
-    def visit_Name(self, node):
+    def visit_Name(self, node: ast.Name) -> Any:
         if node.id not in ALLOWED_MATH_NAMES:
             raise ValueError(f"Unsupported name: {node.id}")
 
@@ -594,7 +594,7 @@ class MathEvaluator(ast.NodeVisitor):
         else:
             raise ValueError(f"Unsupported name: {node.id}")
 
-    def visit_Call(self, node):
+    def visit_Call(self, node: ast.Call) -> Any:
         if not isinstance(node.func, ast.Name):
             raise ValueError("Only simple function calls are supported")
 
@@ -603,6 +603,7 @@ class MathEvaluator(ast.NodeVisitor):
             raise ValueError(f"Unsupported function: {func_name}")
 
         # Get function
+        func: Callable[..., Any]
         if func_name == "abs":
             func = abs
         elif func_name == "round":
@@ -766,7 +767,7 @@ def list_directory(
         return f"Error listing directory: {str(e)}"
 
 
-def load_builtin_tools():
+def load_builtin_tools() -> None:
     """Load all built-in tools into the global registry.
 
     This function is automatically called when the module is imported,

@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from .base import ToolCall, ToolDefinition, ToolResult
 from .recovery import ErrorRecoverySystem, InputSanitizer, RetryConfig
@@ -15,13 +15,13 @@ from .registry import get_tool, list_tools, register_tool
 class ExecutionConfig:
     """Configuration for tool execution."""
 
-    max_retries: int = None
-    timeout_seconds: float = None
+    max_retries: Optional[int] = None
+    timeout_seconds: Optional[float] = None
     enable_fallbacks: bool = True
     enable_input_sanitization: bool = True
     log_level: str = "INFO"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Load defaults from config if not set."""
         from ..config_loader import get_config_value
 
@@ -129,10 +129,12 @@ class ToolExecutor:
                 self.execute_tool(call["name"], call.get("arguments", {}))
                 for call in tool_calls
             ]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+            results: List[Union[ToolCall, BaseException]] = await asyncio.gather(
+                *tasks, return_exceptions=True
+            )
 
             # Convert exceptions to error tool calls
-            processed_results = []
+            processed_results: List[ToolCall] = []
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
                     call = tool_calls[i]
@@ -145,17 +147,19 @@ class ToolExecutor:
                         )
                     )
                 else:
+                    # result should be a ToolCall
+                    assert isinstance(result, ToolCall)
                     processed_results.append(result)
 
             return ToolResult(calls=processed_results)
         else:
             # Execute tools sequentially
-            results = []
+            sequential_results: List[ToolCall] = []
             for call in tool_calls:
                 result = await self.execute_tool(
                     call["name"], call.get("arguments", {})
                 )
-                results.append(result)
+                sequential_results.append(result)
 
                 # If a critical tool fails, consider stopping execution
                 if not result.succeeded and self._is_critical_failure(result):
@@ -164,7 +168,7 @@ class ToolExecutor:
                     )
                     break
 
-            return ToolResult(calls=results)
+            return ToolResult(calls=sequential_results)
 
     async def _execute_with_recovery(
         self,
@@ -228,7 +232,7 @@ class ToolExecutor:
             )
 
     async def _try_fallbacks(
-        self, failed_tool: str, original_args: Dict[str, Any], error_pattern
+        self, failed_tool: str, original_args: Dict[str, Any], error_pattern: Any
     ) -> Optional[ToolCall]:
         """Try fallback tools when the primary tool fails."""
         suggestions = self.recovery_system.get_fallback_suggestions(
@@ -286,7 +290,9 @@ class ToolExecutor:
                 )
             elif key in ["data"] and isinstance(value, str):
                 try:
-                    sanitized[key] = InputSanitizer.sanitize_json(value)
+                    # Validate JSON but keep as string
+                    InputSanitizer.sanitize_json(value)
+                    sanitized[key] = value
                 except ValueError:
                     sanitized[key] = InputSanitizer.sanitize_string(
                         value, allow_code=False
@@ -345,7 +351,7 @@ class ToolExecutor:
 
         return False
 
-    def _update_execution_stats(self, success: bool, execution_time: float):
+    def _update_execution_stats(self, success: bool, execution_time: float) -> None:
         """Update execution statistics."""
         if success:
             self.execution_stats["successful_calls"] += 1
@@ -374,7 +380,7 @@ class ToolExecutor:
 
         return stats
 
-    def reset_stats(self):
+    def reset_stats(self) -> None:
         """Reset execution statistics."""
         self.execution_stats = {
             "total_calls": 0,
@@ -422,12 +428,14 @@ class ToolExecutor:
 global_executor = ToolExecutor()
 
 
-async def execute_tool(tool_name: str, arguments: Dict[str, Any], **kwargs) -> ToolCall:
+async def execute_tool(
+    tool_name: str, arguments: Dict[str, Any], **kwargs: Any
+) -> ToolCall:
     """Execute a tool using the global executor."""
     return await global_executor.execute_tool(tool_name, arguments, **kwargs)
 
 
-async def execute_tools(tool_calls: List[Dict[str, Any]], **kwargs) -> ToolResult:
+async def execute_tools(tool_calls: List[Dict[str, Any]], **kwargs: Any) -> ToolResult:
     """Execute multiple tools using the global executor."""
     return await global_executor.execute_tools(tool_calls, **kwargs)
 

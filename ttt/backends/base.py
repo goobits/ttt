@@ -54,8 +54,8 @@ class BaseBackend(ABC):
         system: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        tools: Optional[List] = None,
-        **kwargs,
+        tools: Optional[List[Any]] = None,
+        **kwargs: Any,
     ) -> AIResponse:
         """
         Send a single prompt and get a response.
@@ -83,8 +83,8 @@ class BaseBackend(ABC):
         system: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        tools: Optional[List] = None,
-        **kwargs,
+        tools: Optional[List[Any]] = None,
+        **kwargs: Any,
     ) -> AsyncIterator[str]:
         """
         Stream a response token by token.

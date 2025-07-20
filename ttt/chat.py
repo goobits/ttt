@@ -71,7 +71,7 @@ class PersistentChatSession:
         self.kwargs = kwargs
         self.tools = tools
         self.history: List[Dict[str, Any]] = []
-        self.metadata = {
+        self.metadata: Dict[str, Any] = {
             "session_id": session_id or self._generate_session_id(),
             "created_at": datetime.now().isoformat(),
             "total_tokens_in": 0,
@@ -367,7 +367,7 @@ class PersistentChatSession:
                     json.dump(session_data, f, indent=2, default=str)
                 logger.info(f"Saved session to {path} (JSON format)")
             except Exception as e:
-                raise SessionSaveError(str(path), str(e))
+                raise SessionSaveError(str(path), str(e)) from e
 
         elif format == "pickle":
             try:
@@ -376,7 +376,7 @@ class PersistentChatSession:
                     pickle.dump(session_data, f)
                 logger.info(f"Saved session to {path} (pickle format)")
             except Exception as e:
-                raise SessionSaveError(str(path), str(e))
+                raise SessionSaveError(str(path), str(e)) from e
 
         else:
             raise InvalidParameterError("format", format, "Must be 'json' or 'pickle'")
@@ -417,13 +417,13 @@ class PersistentChatSession:
                 with open(path, "rb") as f:
                     session_data = pickle.load(f)
         except FileNotFoundError:
-            raise SessionLoadError(str(path), "File not found")
+            raise SessionLoadError(str(path), "File not found") from None
         except json.JSONDecodeError as e:
-            raise SessionLoadError(str(path), f"Invalid JSON: {e}")
+            raise SessionLoadError(str(path), f"Invalid JSON: {e}") from e
         except pickle.UnpicklingError as e:
-            raise SessionLoadError(str(path), f"Invalid pickle data: {e}")
+            raise SessionLoadError(str(path), f"Invalid pickle data: {e}") from e
         except Exception as e:
-            raise SessionLoadError(str(path), str(e))
+            raise SessionLoadError(str(path), str(e)) from e
 
         # Create new session
         # Support session_id from top level or metadata

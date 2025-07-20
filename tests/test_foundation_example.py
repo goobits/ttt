@@ -4,8 +4,10 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 import pytest
+from click.testing import CliRunner
 
-# Example 1: Testing the calculate tool with edge cases
+from ttt.backends.local import LocalBackend
+from ttt.cli import main
 from ttt.tools.builtins import calculate
 
 
@@ -56,7 +58,6 @@ class TestCalculateToolFoundation:
 
 
 # Example 2: Testing LocalBackend with mocked HTTP client
-from ttt.backends.local import LocalBackend
 
 
 class TestLocalBackendFoundation:
@@ -145,9 +146,6 @@ class TestLocalBackendFoundation:
 
 
 # Example 3: Testing CLI with Click's CliRunner
-from click.testing import CliRunner
-
-from ttt.cli import main
 
 
 class TestCLIFoundation:

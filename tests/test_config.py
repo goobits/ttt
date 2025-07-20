@@ -103,7 +103,7 @@ class TestConfigLoading:
         model_registry.aliases.clear()
         model_registry._load_default_models()
 
-        config = load_config(config_file)
+        load_config(config_file)
 
         # Check that model was added to registry
         model = model_registry.get_model("test-model")

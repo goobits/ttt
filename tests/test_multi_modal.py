@@ -4,8 +4,8 @@ import base64
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from ai import ImageInput, ask, stream
 
+from ttt import ImageInput, ask, stream
 from ttt.backends import CloudBackend, LocalBackend
 from ttt.models import AIResponse
 

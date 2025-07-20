@@ -143,11 +143,9 @@ class TestErrorRecoverySystem:
             can_retry=True,
         )
 
-        assert recovery.should_retry(retryable_pattern, 1) == True
-        assert recovery.should_retry(retryable_pattern, 2) == True
-        assert (
-            recovery.should_retry(retryable_pattern, 3) == False
-        )  # Max attempts reached
+        assert recovery.should_retry(retryable_pattern, 1)
+        assert recovery.should_retry(retryable_pattern, 2)
+        assert not recovery.should_retry(retryable_pattern, 3)  # Max attempts reached
 
         # Non-retryable error
         non_retryable_pattern = ErrorPattern(
@@ -158,7 +156,7 @@ class TestErrorRecoverySystem:
             can_retry=False,
         )
 
-        assert recovery.should_retry(non_retryable_pattern, 1) == False
+        assert not recovery.should_retry(non_retryable_pattern, 1)
 
     def test_calculate_retry_delay(self):
         """Test retry delay calculation."""

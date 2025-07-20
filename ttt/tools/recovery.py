@@ -9,9 +9,9 @@ import time
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, cast
 
-import bleach
+import bleach  # type: ignore[import-untyped]
 import validators
 
 from .base import ToolCall
@@ -47,13 +47,13 @@ class ErrorPattern:
 class RetryConfig:
     """Configuration for retry behavior."""
 
-    max_attempts: int = None
-    base_delay: float = None
-    max_delay: float = None
+    max_attempts: Optional[int] = None
+    base_delay: Optional[float] = None
+    max_delay: Optional[float] = None
     exponential_base: float = 2.0
     jitter: bool = True
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Load defaults from config if not set."""
         from ..config_loader import get_config_value
 
@@ -166,7 +166,7 @@ class InputSanitizer:
         else:
             # For HTML/text content, use bleach for proper sanitization
             sanitized = bleach.clean(value, strip=True)
-            return sanitized
+            return str(sanitized)
 
     @classmethod
     def sanitize_path(cls, path: str) -> Path:
@@ -246,7 +246,7 @@ class InputSanitizer:
             data = json.loads(json_str)
 
             # Recursively sanitize string values with bleach
-            def sanitize_recursive(obj):
+            def sanitize_recursive(obj: Any) -> Any:
                 if isinstance(obj, dict):
                     return {k: sanitize_recursive(v) for k, v in obj.items()}
                 elif isinstance(obj, list):
@@ -257,7 +257,8 @@ class InputSanitizer:
                 else:
                     return obj
 
-            return sanitize_recursive(data)
+            result = sanitize_recursive(data)
+            return cast(Dict[str, Any], result)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON: {e}") from e
 
@@ -467,7 +468,10 @@ class ErrorRecoverySystem:
         if not error_pattern.can_retry:
             return False
 
-        if attempt >= self.retry_config.max_attempts:
+        if (
+            self.retry_config.max_attempts is not None
+            and attempt >= self.retry_config.max_attempts
+        ):
             return False
 
         # Special cases
@@ -479,7 +483,7 @@ class ErrorRecoverySystem:
 
     def calculate_retry_delay(self, attempt: int, error_pattern: ErrorPattern) -> float:
         """Calculate delay before retry attempt."""
-        base_delay = self.retry_config.base_delay
+        base_delay = self.retry_config.base_delay or 1.0
 
         # Special handling for rate limits
         if error_pattern.error_type == ErrorType.RATE_LIMIT_ERROR:
@@ -494,7 +498,8 @@ class ErrorRecoverySystem:
         delay = base_delay * (self.retry_config.exponential_base**attempt)
 
         # Cap at max delay
-        delay = min(delay, self.retry_config.max_delay)
+        if self.retry_config.max_delay is not None:
+            delay = min(delay, self.retry_config.max_delay)
 
         # Add jitter to avoid thundering herd
         if self.retry_config.jitter:
@@ -575,9 +580,11 @@ class ErrorRecoverySystem:
                     # Text content sanitization
                     sanitized[key] = InputSanitizer.sanitize_string(value)
                 elif key in ["data"] and isinstance(value, str):
-                    # JSON data sanitization
+                    # JSON data sanitization - keep as string but validate
                     try:
-                        sanitized[key] = InputSanitizer.sanitize_json(value)
+                        # Validate JSON but keep as string
+                        InputSanitizer.sanitize_json(value)
+                        sanitized[key] = value
                     except ValueError:
                         # If not valid JSON, treat as string
                         sanitized[key] = InputSanitizer.sanitize_string(value)
@@ -601,7 +608,7 @@ recovery_system = ErrorRecoverySystem()
 def with_recovery(tool_function: Callable) -> Callable:
     """Decorator to add error recovery to a tool function."""
 
-    async def wrapper(*args, **kwargs):
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
         tool_name = getattr(tool_function, "__name__", "unknown_tool")
         return await recovery_system.execute_with_recovery(
             tool_function, tool_name, kwargs

@@ -20,7 +20,7 @@ class AIResponse(str):
     while providing additional metadata about the AI response.
     """
 
-    def __new__(cls, content: str, **kwargs):
+    def __new__(cls, content: str, **kwargs: Any) -> "AIResponse":
         """Create new AIResponse instance."""
         obj = str.__new__(cls, content)
         return obj
@@ -100,7 +100,7 @@ class AIResponse(str):
         """True if all tool calls succeeded."""
         if not self.tools_called:
             return True  # No tools called means no tool failures
-        return self.tool_result.succeeded
+        return self.tool_result is not None and self.tool_result.succeeded
 
     def __repr__(self) -> str:
         """String representation showing metadata."""
@@ -119,14 +119,14 @@ class ModelInfo:
     name: str
     provider: str
     provider_name: str
-    aliases: list[str] = None
+    aliases: Optional[list[str]] = None
     speed: str = "medium"  # fast, medium, slow
     quality: str = "medium"  # low, medium, high
-    capabilities: list[str] = None
+    capabilities: Optional[list[str]] = None
     context_length: Optional[int] = None
     cost_per_token: Optional[float] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.aliases is None:
             self.aliases = []
         if self.capabilities is None:
@@ -167,7 +167,7 @@ class ConfigModel(BaseModel):
     enable_fallbacks: bool = True
     fallback_order: List[str] = Field(default_factory=lambda: ["cloud", "local"])
 
-    model_config = ConfigDict(case_sensitive=False)
+    model_config = ConfigDict(extra="forbid")
 
 
 class ImageInput:
@@ -185,7 +185,7 @@ class ImageInput:
         """
         self.source = source
         self.mime_type = mime_type
-        self._base64_cache = None
+        self._base64_cache: Optional[str] = None
 
     @property
     def is_path(self) -> bool:
@@ -210,13 +210,14 @@ class ImageInput:
             return self._base64_cache
 
         if self.is_bytes:
+            assert isinstance(self.source, bytes)
             self._base64_cache = base64.b64encode(self.source).decode("utf-8")
         elif self.is_path:
             with open(self.source, "rb") as f:
                 self._base64_cache = base64.b64encode(f.read()).decode("utf-8")
         elif self.is_url:
             # URL images typically sent as-is to APIs
-            return self.source
+            return str(self.source)
         else:
             raise ValueError("Invalid image source type")
 
@@ -228,6 +229,7 @@ class ImageInput:
             return self.mime_type
 
         if self.is_path:
+            assert isinstance(self.source, (str, Path))
             path = Path(self.source)
             ext = path.suffix.lower()
 
@@ -236,16 +238,16 @@ class ImageInput:
                 from .config import load_project_defaults
 
                 project_defaults = load_project_defaults()
-                mime_map = project_defaults.get("files", {}).get(
-                    "mime_types",
-                    {
-                        ".jpg": "image/jpeg",
-                        ".jpeg": "image/jpeg",
-                        ".png": "image/png",
-                        ".gif": "image/gif",
-                        ".webp": "image/webp",
-                        ".bmp": "image/bmp",
-                    },
+                default_mime_types = {
+                    ".jpg": "image/jpeg",
+                    ".jpeg": "image/jpeg",
+                    ".png": "image/png",
+                    ".gif": "image/gif",
+                    ".webp": "image/webp",
+                    ".bmp": "image/bmp",
+                }
+                mime_map: Dict[str, str] = project_defaults.get("files", {}).get(
+                    "mime_types", default_mime_types
                 )
             except Exception:
                 # Fallback to hardcoded if config loading fails
@@ -258,6 +260,7 @@ class ImageInput:
                     ".bmp": "image/bmp",
                 }
 
-            return mime_map.get(ext, "image/jpeg")
+            mime_type = mime_map.get(ext, "image/jpeg")
+            return mime_type
 
         return "image/jpeg"  # Default
