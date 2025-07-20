@@ -11,7 +11,7 @@ models:
   aliases:
     fast: "openrouter/openai/gpt-3.5-turbo"
     best: "openrouter/openai/gpt-4"
-    coding: "openrouter/google/gemini-1.5-pro"
+    coding: "openrouter/anthropic/claude-3-sonnet-20240229"
     local: "llama2"
     claude: "openrouter/anthropic/claude-3-sonnet-20240229"
     gpt4: "openrouter/openai/gpt-4"

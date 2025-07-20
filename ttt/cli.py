@@ -273,7 +273,7 @@ class VersionAwareGroup(click.Group):
 @click.group(
     cls=VersionAwareGroup,
     invoke_without_command=True,
-    context_settings={"allow_interspersed_args": False},
+    context_settings={"allow_interspersed_args": True},
 )
 @click.pass_context
 @click.option("--version", is_flag=True, help="📋 Show version and system information")
@@ -373,13 +373,9 @@ def main(
 
     # If no subcommand, treat remaining args as direct prompt
     if ctx.invoked_subcommand is None:
-        # Check if we have a prompt stored in context (from direct invocation)
-        if hasattr(ctx, "obj") and ctx.obj:
-            prompt_text = ctx.obj
-        else:
-            # Get remaining args after options as prompt
-            remaining_args = ctx.args
-            prompt_text = " ".join(remaining_args) if remaining_args else None
+        # Get remaining args after options as prompt
+        remaining_args = ctx.args
+        prompt_text = " ".join(remaining_args) if remaining_args else None
 
         # If no prompt, show help (unless reading from pipe)
         if prompt_text is None:
@@ -1150,158 +1146,45 @@ def apply_coding_optimization(kwargs: Dict[str, Any]) -> None:
         kwargs["temperature"] = 0.3
 
 
-@main.command(name="ask", hidden=True)
-@click.argument("prompt", nargs=-1, required=True)
-@click.pass_context
-def ask_cmd(ctx: click.Context, prompt: tuple) -> None:
-    """Direct AI prompt (hidden default command)."""
-    prompt_text = " ".join(prompt)
-
-    # Get parent context for options
-    parent_ctx = ctx.parent
-    if parent_ctx is None:
-        # No parent context, use defaults
-        ask_command(
-            prompt_text,
-            None, None, None, None, None, False, False, False, False,
-            allow_empty=False,
-        )
-        return
-
-    # Resolve model alias
-    model = parent_ctx.params.get("model")
-    if model:
-        model = resolve_model_alias(model)
-
-    ask_command(
-        prompt_text,
-        model,
-        parent_ctx.params.get("system"),
-        parent_ctx.params.get("temperature"),
-        parent_ctx.params.get("max_tokens"),
-        parent_ctx.params.get("tools"),
-        parent_ctx.params.get("stream", False),
-        parent_ctx.params.get("verbose", False),
-        parent_ctx.params.get("code", False),
-        parent_ctx.params.get("json_output", False),
-        allow_empty=False,
-    )
-
-
-# Make 'ask' the default command if no subcommand is specified
-main.add_command(ask_cmd, name="ask")
-
-
 def cli_entry() -> None:
-    """Entry point that handles both subcommands and direct prompts."""
-    import sys
-
-    # Check if we need to add 'ask' for direct prompt usage
-    if len(sys.argv) > 1:
-        # Get list of available commands dynamically
-        available_commands = list(main.commands.keys())
-
-        # Special case: ttt @model "prompt" [--options] -> ttt -m @model ask "prompt" [--options]
-        if sys.argv[1].startswith("@"):
-            if len(sys.argv) > 2:
-                # First, find any options that come after the prompt and move them
-                model_alias = sys.argv[1]
-                prompt_idx = 2  # The prompt comes after the model alias
-                options_after_prompt = []
-
-                # Collect options that come after the prompt
-                i = prompt_idx + 1
-                while i < len(sys.argv):
-                    if sys.argv[i].startswith("-"):
-                        options_after_prompt.append(sys.argv[i])
-                        # Check if this option takes a value
-                        if sys.argv[i] in ["-m", "--model", "-s", "--system", "-t", "--temperature", "--max-tokens", "--tools"]:
-                            if i + 1 < len(sys.argv):
-                                options_after_prompt.append(sys.argv[i + 1])
-                                i += 2
-                            else:
-                                i += 1
-                        else:
-                            i += 1
-                    else:
-                        i += 1
-
-                # Remove options from their current position
-                for opt in options_after_prompt:
-                    if opt in sys.argv:
-                        sys.argv.remove(opt)
-
-                # Transform: ['ttt', '@model', 'prompt'] -> ['ttt', '-m', '@model', 'ask', 'prompt']
-                # But first insert any moved options right after 'ttt'
-                insertion_point = 1
-                for opt in options_after_prompt:
-                    sys.argv.insert(insertion_point, opt)
-                    insertion_point += 1
-
-                # Now find where the model alias is (it may have moved due to insertions)
-                model_idx = sys.argv.index(model_alias)
-                # Replace @model with -m @model ask
-                sys.argv[model_idx:model_idx+1] = ["-m", model_alias, "ask"]
-            else:
-                # Just "ttt @model" - show help
-                sys.argv[1:1] = ["--help"]
-        else:
-            # Find the first non-option argument
-            first_non_option_idx = None
+    """Minimal entry point that enables direct prompts by catching Click errors."""
+    try:
+        main.main(standalone_mode=False)
+    except click.UsageError as e:
+        if "No such command" in str(e):
+            import sys
+            # Extract just the args that aren't options
+            args = sys.argv[1:]
+            prompt_args = []
+            
+            # Collect non-option arguments
             skip_next = False
-            options_after_prompt = []
-            prompt_found = False
-
-            for i, arg in enumerate(sys.argv[1:], 1):
+            for i, arg in enumerate(args):
                 if skip_next:
                     skip_next = False
                     continue
-                if arg.startswith("-"):
-                    # This is an option, check if it takes a value
-                    if arg in [
-                        "-m",
-                        "--model",
-                        "-s",
-                        "--system",
-                        "-t",
-                        "--temperature",
-                        "--max-tokens",
-                        "--tools",
-                    ]:
+                if arg.startswith('-'):
+                    if arg in {'-m', '--model', '-s', '--system', '-t', '--temperature', '--max-tokens', '--tools'}:
                         skip_next = True
-
-                    # If we already found the prompt, collect options that come after
-                    if prompt_found:
-                        options_after_prompt.append(arg)
-                        if skip_next and i < len(sys.argv) - 1:
-                            options_after_prompt.append(sys.argv[i + 1])
                 else:
-                    # This is the first non-option argument
-                    if not prompt_found and arg not in available_commands:
-                        first_non_option_idx = i
-                        prompt_found = True
-
-            # If we found a non-option arg that's not a known command, we need to restructure
-            if first_non_option_idx and sys.argv[first_non_option_idx] not in available_commands:
-                # If there are options after the prompt, move them before it
-                if options_after_prompt:
-                    # Remove options from their current position
-                    for opt in options_after_prompt:
-                        sys.argv.remove(opt)
-
-                    # Insert them before the prompt
-                    for j, opt in enumerate(options_after_prompt):
-                        sys.argv.insert(first_non_option_idx + j, opt)
-
-                    # Update the index for 'ask' insertion
-                    first_non_option_idx += len(options_after_prompt)
-
-                # Insert 'ask' command
-                sys.argv.insert(first_non_option_idx, "ask")
-
-    # Run the main CLI
-    main()
+                    prompt_args.extend(args[i:])  # Take this and all remaining args
+                    break
+            
+            if prompt_args:
+                # Manually invoke main with a context that has the prompt args
+                from click import Context
+                ctx = main.make_context('ttt', [arg for arg in args if arg not in prompt_args])
+                ctx.args = prompt_args
+                ctx.invoked_subcommand = None
+                return main.invoke(ctx)
+        
+        # Re-raise other errors
+        raise
 
 
-if __name__ == "__main__":
-    cli_entry()
+
+
+
+
+
+
