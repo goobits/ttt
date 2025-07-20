@@ -12,18 +12,11 @@ import click
 from dotenv import load_dotenv
 from rich.console import Console
 
-# Handle early warnings for JSON mode
-early_warnings = []
+# Set environment variable for JSON mode BEFORE any imports
 if '--json' in sys.argv:
-    from ttt.utils.warning_capture import EarlyWarningCapture
-    early_capture = EarlyWarningCapture()
-    early_capture.start()
+    os.environ['TTT_JSON_MODE'] = 'true'
     
 import ttt
-
-if '--json' in sys.argv:
-    early_capture.stop()
-    early_warnings = early_capture.get_warnings()
 
 # Suppress the common aiohttp warning about pending tasks being destroyed
 warnings.filterwarnings(
@@ -720,10 +713,6 @@ def ask_command(
     allow_empty: bool = False,
 ) -> None:
     """Internal function to handle AI questions."""
-    
-    # Import warning capture if we're in JSON mode
-    if json_output:
-        from ttt.utils.warning_capture import WarningCapture
 
     # Handle missing prompt in interactive mode first
     if prompt is None and sys.stdin.isatty() and not allow_empty:
@@ -824,12 +813,7 @@ def ask_command(
     if code:
         apply_coding_optimization(kwargs)
 
-    # Wrap execution in warning capture if JSON mode
-    if json_output:
-        capture = WarningCapture()
-        capture.__enter__()
-        # Include any early warnings captured at import time
-        warnings = early_warnings.copy() if 'early_warnings' in globals() else []
+    # JSON mode warnings are now handled by environment variable TTT_JSON_MODE
     
     try:
         if stream:
@@ -842,12 +826,6 @@ def ask_command(
                 import json
 
                 output = {"content": "".join(chunks), "streaming": True}
-                # Get warnings before outputting
-                capture.__exit__(None, None, None)
-                runtime_warnings = capture.get_warnings()
-                all_warnings = warnings + runtime_warnings
-                if all_warnings:
-                    output["warnings"] = all_warnings
                 click.echo(json.dumps(output))
             else:
                 for chunk in ttt.stream(prompt, **kwargs):
@@ -882,12 +860,6 @@ def ask_command(
                 if hasattr(response, "tokens_in") and response.tokens_in:
                     output["tokens_in"] = response.tokens_in
                     output["tokens_out"] = response.tokens_out
-                # Get warnings before outputting
-                capture.__exit__(None, None, None)
-                runtime_warnings = capture.get_warnings()
-                all_warnings = warnings + runtime_warnings
-                if all_warnings:
-                    output["warnings"] = all_warnings
                 click.echo(json.dumps(output, separators=(',', ':')))
             else:
                 click.echo(str(response).rstrip())
@@ -907,23 +879,10 @@ def ask_command(
             import json
 
             error_output = {"error": str(e)}
-            # Get warnings before outputting error
-            capture.__exit__(None, None, None)
-            runtime_warnings = capture.get_warnings()
-            all_warnings = warnings + runtime_warnings
-            if all_warnings:
-                error_output["warnings"] = all_warnings
             click.echo(json.dumps(error_output))
         else:
             click.echo(f"Error: {e}", err=True)
         sys.exit(1)
-    finally:
-        # Ensure warning capture is cleaned up for JSON mode
-        if json_output and 'capture' in locals():
-            try:
-                capture.__exit__(None, None, None)
-            except:
-                pass
 
 
 # Helper functions
