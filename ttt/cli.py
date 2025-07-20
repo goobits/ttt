@@ -909,8 +909,13 @@ def ask_cmd(ctx, prompt):
     # Get parent context for options
     parent_ctx = ctx.parent
     
+    # Resolve model alias
+    model = parent_ctx.params.get('model')
+    if model:
+        model = resolve_model_alias(model)
+    
     ask_command(prompt_text,
-                parent_ctx.params.get('model'),
+                model,
                 parent_ctx.params.get('system'), 
                 parent_ctx.params.get('temperature'),
                 parent_ctx.params.get('max_tokens'),
@@ -932,13 +937,39 @@ def cli_entry():
     
     # Check if we need to add 'ask' for direct prompt usage
     if len(sys.argv) > 1:
-        first_arg = sys.argv[1]
         # Get list of available commands dynamically
         available_commands = list(main.commands.keys())
-        # If first arg is not a flag and not a known subcommand, treat as direct prompt
-        if not first_arg.startswith('-') and first_arg not in available_commands:
-            # Insert 'ask' command to make it work as direct prompt
-            sys.argv.insert(1, 'ask')
+        
+        # Special case: ttt @model "prompt" -> ttt -m @model ask "prompt"
+        if sys.argv[1].startswith('@'):
+            if len(sys.argv) > 2:
+                # Transform: ['ttt', '@model', 'prompt'] -> ['ttt', '-m', '@model', 'ask', 'prompt']
+                model_alias = sys.argv[1]
+                sys.argv[1:2] = ['-m', model_alias, 'ask']
+                # Now it will be: ttt -m @model ask "prompt"
+            else:
+                # Just "ttt @model" - show help
+                sys.argv[1:1] = ['--help']
+        else:
+            # Find the first non-option argument
+            first_non_option_idx = None
+            skip_next = False
+            for i, arg in enumerate(sys.argv[1:], 1):
+                if skip_next:
+                    skip_next = False
+                    continue
+                if arg.startswith('-'):
+                    # This is an option, check if it takes a value
+                    if arg in ['-m', '--model', '-s', '--system', '-t', '--temperature', '--max-tokens']:
+                        skip_next = True
+                else:
+                    # This is the first non-option argument
+                    first_non_option_idx = i
+                    break
+            
+            # If we found a non-option arg that's not a known command, insert 'ask'
+            if first_non_option_idx and sys.argv[first_non_option_idx] not in available_commands:
+                sys.argv.insert(first_non_option_idx, 'ask')
     
     # Run the main CLI
     main()

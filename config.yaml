@@ -5,12 +5,20 @@
 # Model configuration
 models:
   default: "openrouter/google/gemini-flash-1.5"
+  # Model aliases - these use OpenRouter by default but users can override
+  # Users can also use direct provider paths if they have API keys:
+  # ttt config set alias.myclaude anthropic/claude-3-sonnet-20240229
   aliases:
-    fast: "gpt-3.5-turbo"
-    best: "gpt-4"
-    cheap: "gpt-3.5-turbo"
-    coding: "google/gemini-1.5-pro"
+    fast: "openrouter/openai/gpt-3.5-turbo"
+    best: "openrouter/openai/gpt-4"
+    cheap: "openrouter/openai/gpt-3.5-turbo"
+    coding: "openrouter/google/gemini-1.5-pro"
     local: "llama2"
+    claude: "openrouter/anthropic/claude-3-sonnet-20240229"
+    gpt4: "openrouter/openai/gpt-4"
+    gpt3: "openrouter/openai/gpt-3.5-turbo"
+    gemini: "openrouter/google/gemini-pro"
+    mixtral: "openrouter/mistralai/mixtral-8x7b-instruct"
     
   # Model registry definitions
   available:
