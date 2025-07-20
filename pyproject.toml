@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "goobits-ttt"
-version = "1.0.0rc2"
+version = "1.0.0rc3"
 description = "The Unified AI Library - A single, elegant interface for local and cloud AI models"
 authors = ["Goobits Team <team@goobits.com>"]
 readme = "README.md"
