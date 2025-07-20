@@ -13,6 +13,16 @@ from dotenv import load_dotenv
 from rich.console import Console
 
 import ttt
+from ttt.cli import (
+    ask_command,
+    get_ttt_version,
+    parse_tools_arg,
+    resolve_model_alias,
+    resolve_tools,
+    setup_logging_level,
+    show_backend_status,
+    show_models_list,
+)
 
 # Suppress the common aiohttp warning about pending tasks being destroyed
 warnings.filterwarnings(
@@ -64,31 +74,20 @@ for env_path in env_paths:
 
 console = Console()
 
-# Import helper functions from original CLI
-from ttt.cli import (
-    get_ttt_version,
-    setup_logging_level,
-    resolve_model_alias,
-    parse_tools_arg,
-    ask_command,
-    show_backend_status,
-    show_models_list,
-    resolve_tools,
-)
 
 
 class TTT:
     """Fire-based CLI for TTT - Transform any text with intelligent AI processing"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize TTT CLI."""
         pass
 
-    def __call__(self, *args, model=None, system=None, temperature=None, 
-                 max_tokens=None, tools=None, stream=False, verbose=False, 
-                 debug=False, code=False, json=False):
+    def __call__(self, *args: str, model: Optional[str] = None, system: Optional[str] = None, temperature: Optional[float] = None,
+                 max_tokens: Optional[int] = None, tools: Optional[str] = None, stream: bool = False, verbose: bool = False,
+                 debug: bool = False, code: bool = False, json: bool = False) -> None:
         """Main prompt handler - supports @model syntax and flexible flags.
-        
+
         Args:
             *args: The prompt text as positional arguments
             model: AI model to use (e.g., @claude, @gpt4, gpt-4o)
@@ -159,22 +158,22 @@ class TTT:
             allow_empty=False,
         )
 
-    def version(self):
+    def version(self) -> None:
         """Show version and system information."""
         pkg_version = get_ttt_version()
         print(f"TTT Library v{pkg_version}")
 
-    def status(self, json=False):
+    def status(self, json: bool = False) -> None:
         """Verify system health and API connectivity."""
         show_backend_status(json)
 
-    def models(self, json=False):
+    def models(self, json: bool = False) -> None:
         """Browse all available AI models and their capabilities."""
         show_models_list(json)
 
-    def config(self, action=None, key=None, value=None, reset=False, json=False):
+    def config(self, action: Optional[str] = None, key: Optional[str] = None, value: Optional[str] = None, reset: bool = False, json: bool = False) -> None:
         """Access configuration management and preferences.
-        
+
         Examples:
             ttt config                          # Show all configuration
             ttt config get models.default       # Show specific value
@@ -208,14 +207,14 @@ class TTT:
                 import json as json_lib
                 config = config_manager.get_merged_config()
                 # Navigate to the key
-                value = config
+                config_value: Any = config
                 for part in key.split('.'):
-                    if isinstance(value, dict) and part in value:
-                        value = value[part]
+                    if isinstance(config_value, dict) and part in config_value:
+                        config_value = config_value[part]
                     else:
-                        value = None
+                        config_value = None
                         break
-                print(json_lib.dumps({key: value}, indent=2))
+                print(json_lib.dumps({key: config_value}, indent=2))
             else:
                 config_manager.show_value(key)
         elif action == "set" and key and value:
@@ -243,10 +242,10 @@ class TTT:
                 console.print("  ttt config set alias.NAME MODEL     # Set a model alias")
                 console.print("  ttt config --reset                  # Reset to defaults")
 
-    def chat(self, resume=False, session_id=None, list_sessions=False, 
-             model=None, system=None, tools=None):
+    def chat(self, resume: bool = False, session_id: Optional[str] = None, list_sessions: bool = False,
+             model: Optional[str] = None, system: Optional[str] = None, tools: Optional[str] = None) -> None:
         """Launch interactive conversation mode with memory.
-        
+
         Args:
             resume: Continue the last chat session
             session_id: Use a named chat session (--id)
@@ -359,7 +358,7 @@ class TTT:
             with ttt.chat(**chat_kwargs) as chat_session:
                 # Restore message history
                 if messages:
-                    chat_session.messages = messages
+                    chat_session.history = messages
 
                 while True:
                     try:
@@ -381,7 +380,7 @@ class TTT:
                             session_manager.save_session(session)
                             console.print("[yellow]Chat history cleared.[/yellow]")
                             # Reset chat session messages
-                            chat_session.messages = (
+                            chat_session.history = (
                                 [{"role": "system", "content": session.system_prompt}]
                                 if session.system_prompt
                                 else []
@@ -421,7 +420,7 @@ class TTT:
         except Exception as e:
             console.print(f"[red]Error starting chat session: {e}[/red]")
 
-    def _get_help(self):
+    def _get_help(self) -> str:
         """Generate help text."""
         return f"""🚀 TTT {get_ttt_version()} - Transform any text with intelligent AI processing
 
@@ -459,7 +458,7 @@ From simple transformations to complex analysis - AI-powered and pipeline-ready.
 """
 
 
-def main():
+def main() -> None:
     """Entry point for Fire CLI."""
     fire.Fire(TTT)
 

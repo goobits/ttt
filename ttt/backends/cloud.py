@@ -3,7 +3,7 @@
 import json
 import os
 import time
-from typing import Any, AsyncIterator, Dict, List, Optional, Union
+from typing import Any, AsyncIterator, Dict, List, Optional, Union, cast
 
 from ..config import model_registry  # Import the central registry
 from ..exceptions import (
@@ -408,7 +408,7 @@ class CloudBackend(BaseBackend):
         used_model = model or self.default_model
 
         # Build messages
-        messages = []
+        messages: List[Dict[str, Any]] = []
         if system:
             messages.append({"role": "system", "content": system})
 
@@ -417,7 +417,7 @@ class CloudBackend(BaseBackend):
             messages.append({"role": "user", "content": prompt})
         else:
             # Build content array for multi-modal input
-            content = []
+            content: List[Dict[str, Any]] = []
             for item in prompt:
                 if isinstance(item, str):
                     content.append({"type": "text", "text": item})
@@ -494,7 +494,8 @@ class CloudBackend(BaseBackend):
                 if chunk.choices and chunk.choices[0].delta:
                     content = chunk.choices[0].delta.content
                     if content:
-                        yield content
+                        # Content should be a string in streaming responses
+                        yield str(content)
 
         except Exception as e:
             error_msg = str(e)
@@ -569,8 +570,8 @@ class CloudBackend(BaseBackend):
         ]
 
         if not detailed:
-            result: List[Union[str, Dict[str, Any]]] = sorted([model.name for model in all_model_info])
-            return result
+            result: List[str] = sorted([model.name for model in all_model_info])
+            return cast(List[Union[str, Dict[str, Any]]], result)
 
         # Return detailed information directly from the model info objects
         detailed_models: List[Union[str, Dict[str, Any]]] = []

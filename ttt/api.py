@@ -1,7 +1,7 @@
 """Core API functions providing the main user interface."""
 
 from contextlib import asynccontextmanager, contextmanager
-from typing import AsyncIterator, Iterator, List, Optional, Union
+from typing import Any, AsyncIterator, Iterator, List, Optional, Union
 
 from .backends import BaseBackend
 from .chat import PersistentChatSession
@@ -32,7 +32,7 @@ def ask(
     max_tokens: Optional[int] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
     tools: Optional[List] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> AIResponse:
     """
     Get a response from AI. The simplest way to use AI.
@@ -113,7 +113,7 @@ def stream(
     max_tokens: Optional[int] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
     tools: Optional[List] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> Iterator[str]:
     """
     Stream a response token by token.
@@ -150,16 +150,21 @@ def stream(
         **kwargs,
     )
 
-    # This is the async generator from the backend
-    async_gen = backend_instance.astream(
-        prompt,
-        model=resolved_model,
-        system=system,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        tools=tools,
-        **kwargs,
-    )
+    # This creates an async generator from the backend
+    async def _async_generator() -> AsyncIterator[str]:
+        async for chunk in backend_instance.astream(  # type: ignore[attr-defined]
+            prompt,
+            model=resolved_model,
+            system=system,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            tools=tools,
+            **kwargs,
+        ):
+            yield chunk
+
+    # Get the async generator
+    async_gen = _async_generator()
 
     # We create a bridge to pull from the async generator synchronously
     # Using the optimized approach to avoid creating new event loops
@@ -188,8 +193,8 @@ def chat(
     backend: Optional[Union[str, BaseBackend]] = None,
     session_id: Optional[str] = None,
     tools: Optional[List] = None,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> Iterator[ChatSession]:
     """
     Context manager for chat sessions.
 
@@ -261,7 +266,7 @@ async def ask_async(
     max_tokens: Optional[int] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
     tools: Optional[List] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> AIResponse:
     """
     Async version of ask().
@@ -307,7 +312,7 @@ async def stream_async(
     max_tokens: Optional[int] = None,
     backend: Optional[Union[str, BaseBackend]] = None,
     tools: Optional[List] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> AsyncIterator[str]:
     """
     Async version of stream().
@@ -333,7 +338,7 @@ async def stream_async(
         **kwargs,
     )
 
-    async for chunk in backend_instance.astream(
+    async for chunk in backend_instance.astream(  # type: ignore[attr-defined]
         prompt,
         model=resolved_model,
         system=system,
@@ -353,8 +358,8 @@ async def achat(
     backend: Optional[Union[str, BaseBackend]] = None,
     session_id: Optional[str] = None,
     tools: Optional[List] = None,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> AsyncIterator[ChatSession]:
     """
     Async context manager for chat sessions.
 

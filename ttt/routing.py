@@ -1,6 +1,6 @@
 """Unified routing logic for selecting backends and models."""
 
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from .backends import HAS_LOCAL_BACKEND, BaseBackend, CloudBackend
 from .models import AIResponse, ImageInput
@@ -151,7 +151,7 @@ class Router:
             error_msg += " For local models: pip install ai[local]"
         raise BackendNotAvailableError("auto", error_msg)
 
-    def _is_local_model(self, model: str, local_backend) -> bool:
+    def _is_local_model(self, model: str, local_backend: Optional[Any]) -> bool:
         """
         Check if a model is available locally with caching.
 
@@ -180,8 +180,10 @@ class Router:
 
             from .utils import run_async
 
-            async def fetch_local_models():
+            async def fetch_local_models() -> List[str]:
                 try:
+                    if local_backend is None:
+                        return []
                     async with httpx.AsyncClient(timeout=3) as client:
                         response = await client.get(
                             f"{local_backend.base_url}/api/tags"
@@ -241,7 +243,7 @@ class Router:
         *,
         model: Optional[str] = None,
         backend: Optional[Union[str, BaseBackend]] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> tuple[BaseBackend, str]:
         """
         Smart routing that selects backend and model based on preferences and prompt.
@@ -350,7 +352,7 @@ class Router:
         method: str = "ask",
         *,
         max_retries: Optional[int] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AIResponse:
         """
         Route request with automatic fallback on failure.

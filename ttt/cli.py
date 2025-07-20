@@ -6,7 +6,7 @@ import os
 import sys
 import warnings
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import click
 from dotenv import load_dotenv
@@ -531,7 +531,7 @@ def chat(ctx: click.Context, resume: bool, session_id: Optional[str], list_sessi
         with ttt.chat(**chat_kwargs) as chat_session:
             # Restore message history
             if messages:
-                chat_session.messages = messages
+                chat_session.history = messages
 
             while True:
                 try:
@@ -553,7 +553,7 @@ def chat(ctx: click.Context, resume: bool, session_id: Optional[str], list_sessi
                         session_manager.save_session(session)
                         console.print("[yellow]Chat history cleared.[/yellow]")
                         # Reset chat session messages
-                        chat_session.messages = (
+                        chat_session.history = (
                             [{"role": "system", "content": session.system_prompt}]
                             if session.system_prompt
                             else []
@@ -654,14 +654,14 @@ def config(ctx: click.Context, action: Optional[str], key: Optional[str], value:
             import json
             config = config_manager.get_merged_config()
             # Navigate to the key
-            value = config
+            config_value: Any = config
             for part in key.split('.'):
-                if isinstance(value, dict) and part in value:
-                    value = value[part]
+                if isinstance(config_value, dict) and part in config_value:
+                    config_value = config_value[part]
                 else:
-                    value = None
+                    config_value = None
                     break
-            click.echo(json.dumps({key: value}, indent=2))
+            click.echo(json.dumps({key: config_value}, indent=2))
         else:
             config_manager.show_value(key)
     elif action == "set" and key and value:
@@ -840,7 +840,7 @@ def ask_command(
                     except (json.JSONDecodeError, ValueError):
                         # If parsing fails, keep original content as string
                         pass
-                
+
                 output = {
                     "content": content,
                     "model": response.model,
@@ -879,8 +879,8 @@ def ask_command(
 # Helper functions
 def show_backend_status(json_output: bool = False) -> None:
     """Show backend status."""
-    status_data = {"backends": {}}
-    
+    status_data: Dict[str, Any] = {"backends": {}}
+
     # Check local backend
     try:
         import ttt.backends.local as local_module
@@ -903,7 +903,7 @@ def show_backend_status(json_output: bool = False) -> None:
         import ttt.backends.cloud as cloud_module
 
         cloud = cloud_module.CloudBackend()
-        
+
         # Check API keys
         keys_found = []
         for key_name in [
@@ -914,7 +914,7 @@ def show_backend_status(json_output: bool = False) -> None:
         ]:
             if os.getenv(key_name):
                 keys_found.append(key_name.replace("_API_KEY", ""))
-        
+
         cloud_status = {
             "available": cloud.is_available,
             "default_model": cloud.default_model,
@@ -926,7 +926,7 @@ def show_backend_status(json_output: bool = False) -> None:
             "available": False,
             "error": str(e)
         }
-    
+
     # Output results
     if json_output:
         import json
@@ -934,7 +934,7 @@ def show_backend_status(json_output: bool = False) -> None:
     else:
         console.print("[bold blue]Backend Status:[/bold blue]")
         console.print()
-        
+
         # Local backend
         local_info = status_data["backends"].get("local", {})
         if local_info.get("available"):
@@ -945,9 +945,9 @@ def show_backend_status(json_output: bool = False) -> None:
             console.print(f"❌ [red]Local Backend:[/red] Error - {local_info['error']}")
         else:
             console.print("❌ [red]Local Backend:[/red] Not available")
-        
+
         console.print()
-        
+
         # Cloud backend
         cloud_info = status_data["backends"].get("cloud", {})
         if cloud_info.get("available"):
@@ -965,8 +965,8 @@ def show_backend_status(json_output: bool = False) -> None:
 
 def show_models_list(json_output: bool = False) -> None:
     """Show available models."""
-    models_data = {"local": [], "cloud": {}, "aliases": {}}
-    
+    models_data: Dict[str, Any] = {"local": [], "cloud": {}, "aliases": {}}
+
     # Get local models
     try:
         import ttt.backends.local as local_module
@@ -982,16 +982,16 @@ def show_models_list(json_output: bool = False) -> None:
                 pass
     except Exception:
         pass
-    
+
     # Get cloud models from config
     try:
         from ttt.config_loader import get_project_config
         config = get_project_config()
         available_models = config.get("models", {}).get("available", {})
         aliases = config.get("models", {}).get("aliases", {})
-        
+
         models_data["aliases"] = aliases
-        
+
         # Group by provider
         providers: Dict[str, List[str]] = {}
         for model_name, model_info in available_models.items():
@@ -1001,11 +1001,11 @@ def show_models_list(json_output: bool = False) -> None:
                     if provider not in providers:
                         providers[provider] = []
                     providers[provider].append(model_name)
-        
+
         models_data["cloud"] = providers
     except Exception:
         pass
-    
+
     # Output results
     if json_output:
         import json
@@ -1013,7 +1013,7 @@ def show_models_list(json_output: bool = False) -> None:
     else:
         console.print("[bold blue]Available Models:[/bold blue]")
         console.print()
-        
+
         # Local models
         console.print("[bold green]Local Models (Ollama):[/bold green]")
         if models_data["local"]:
@@ -1021,25 +1021,27 @@ def show_models_list(json_output: bool = False) -> None:
                 console.print(f"  • {model}")
         else:
             console.print("  No local models found or Ollama not running")
-        
+
         console.print()
-        
+
         # Cloud models
         console.print("[bold green]Cloud Models:[/bold green]")
-        for provider, models in sorted(models_data["cloud"].items()):
+        cloud_models = cast(Dict[str, List[str]], models_data["cloud"])
+        for provider, models in sorted(cloud_models.items()):
             console.print(f"  [yellow]{provider.title()}:[/yellow]")
             for model in sorted(models[:3]):
                 console.print(f"    • {model}")
             if len(models) > 3:
                 console.print(f"    and {len(models) - 3} more...")
-        
+
         # Show aliases
         if models_data["aliases"]:
             console.print()
             console.print("[bold green]Model Aliases:[/bold green]")
-            for alias, model in sorted(models_data["aliases"].items()):
+            aliases = cast(Dict[str, str], models_data["aliases"])
+            for alias, model in sorted(aliases.items()):
                 console.print(f"  @{alias} → {model}")
-        
+
         console.print()
         console.print("  • And many more via OpenRouter...")
 
@@ -1090,9 +1092,9 @@ def resolve_tools(tool_specs: List[str]) -> List[Any]:
                     )
             else:
                 # Just tool name
-                tool_def = get_tool(spec)
-                if tool_def:
-                    tools.append(tool_def.function)
+                found_tool_def = get_tool(spec)
+                if found_tool_def:
+                    tools.append(found_tool_def.function)
                 else:
                     console.print(f"[yellow]Warning: Tool {spec} not found[/yellow]")
     except Exception as e:
@@ -1197,7 +1199,7 @@ def cli_entry() -> None:
                 model_alias = sys.argv[1]
                 prompt_idx = 2  # The prompt comes after the model alias
                 options_after_prompt = []
-                
+
                 # Collect options that come after the prompt
                 i = prompt_idx + 1
                 while i < len(sys.argv):
@@ -1214,19 +1216,19 @@ def cli_entry() -> None:
                             i += 1
                     else:
                         i += 1
-                
+
                 # Remove options from their current position
                 for opt in options_after_prompt:
                     if opt in sys.argv:
                         sys.argv.remove(opt)
-                
+
                 # Transform: ['ttt', '@model', 'prompt'] -> ['ttt', '-m', '@model', 'ask', 'prompt']
                 # But first insert any moved options right after 'ttt'
                 insertion_point = 1
                 for opt in options_after_prompt:
                     sys.argv.insert(insertion_point, opt)
                     insertion_point += 1
-                
+
                 # Now find where the model alias is (it may have moved due to insertions)
                 model_idx = sys.argv.index(model_alias)
                 # Replace @model with -m @model ask
@@ -1240,7 +1242,7 @@ def cli_entry() -> None:
             skip_next = False
             options_after_prompt = []
             prompt_found = False
-            
+
             for i, arg in enumerate(sys.argv[1:], 1):
                 if skip_next:
                     skip_next = False
@@ -1258,7 +1260,7 @@ def cli_entry() -> None:
                         "--tools",
                     ]:
                         skip_next = True
-                    
+
                     # If we already found the prompt, collect options that come after
                     if prompt_found:
                         options_after_prompt.append(arg)
@@ -1277,14 +1279,14 @@ def cli_entry() -> None:
                     # Remove options from their current position
                     for opt in options_after_prompt:
                         sys.argv.remove(opt)
-                    
+
                     # Insert them before the prompt
                     for j, opt in enumerate(options_after_prompt):
                         sys.argv.insert(first_non_option_idx + j, opt)
-                    
+
                     # Update the index for 'ask' insertion
                     first_non_option_idx += len(options_after_prompt)
-                
+
                 # Insert 'ask' command
                 sys.argv.insert(first_non_option_idx, "ask")
 

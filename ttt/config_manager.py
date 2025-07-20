@@ -19,20 +19,20 @@ class ConfigManager:
     def __init__(self) -> None:
         """Initialize the config manager."""
         self.user_config_path = Path.home() / ".config" / "ttt" / "config.yaml"
-        
+
         # Try multiple locations for default config
         possible_config_paths = [
             Path(__file__).parent / "config.yaml",         # Installed in ttt package (preferred)
             Path(__file__).parent.parent / "config.yaml",  # Development
             Path(__file__).parent.parent.parent / "config.yaml",  # Installed at root
         ]
-        
+
         self.default_config_path = None
         for path in possible_config_paths:
             if path.exists():
                 self.default_config_path = path
                 break
-        
+
         # If no config found, use empty dict
         if self.default_config_path is None:
             console.print("[yellow]Warning: Default config.yaml not found, using minimal defaults[/yellow]")
@@ -61,7 +61,7 @@ class ConfigManager:
                 console.print(f"[red]Error loading default config: {e}[/red]")
                 return self._get_minimal_defaults()
         return self._get_minimal_defaults()
-    
+
     def _get_minimal_defaults(self) -> Dict[str, Any]:
         """Provide minimal default configuration when config.yaml is not available."""
         return {

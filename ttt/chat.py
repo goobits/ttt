@@ -5,7 +5,7 @@ import json
 import pickle
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Union
+from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union
 
 from .backends import BaseBackend
 from .exceptions import InvalidParameterError, SessionLoadError, SessionSaveError
@@ -30,7 +30,6 @@ def _estimate_tokens(content: Union[str, List]) -> int:
                 # Images typically use more tokens
                 tokens += 85  # Base64 encoded images use significant tokens
         return tokens
-    return 0
 
 
 class PersistentChatSession:
@@ -53,7 +52,7 @@ class PersistentChatSession:
         backend: Optional[Union[str, BaseBackend]] = None,
         session_id: Optional[str] = None,
         tools: Optional[List] = None,
-        **kwargs,
+        **kwargs: Any,
     ):
         """
         Initialize a chat session.
@@ -105,7 +104,7 @@ class PersistentChatSession:
     @property
     def session_id(self) -> str:
         """Get the session ID."""
-        return self.metadata["session_id"]
+        return str(self.metadata["session_id"])
 
     @property
     def messages(self) -> List[Dict[str, Any]]:
@@ -117,7 +116,7 @@ class PersistentChatSession:
         prompt: Union[str, List[Union[str, ImageInput]]],
         *,
         model: Optional[str] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AIResponse:
         """
         Ask a question in this chat session.
@@ -163,7 +162,7 @@ class PersistentChatSession:
         ):
             # Convert to conversation format
             conversation = self._messages_to_conversation(messages)
-            full_prompt = conversation
+            full_prompt: Union[str, List[Union[str, ImageInput]]] = conversation
         else:
             # Use last message as prompt (backend will handle history)
             full_prompt = prompt
@@ -172,7 +171,7 @@ class PersistentChatSession:
         params = {**self.kwargs, **kwargs}
 
         # Make the request
-        async def _ask_wrapper():
+        async def _ask_wrapper() -> AIResponse:
             return await self.backend.ask(
                 full_prompt,
                 model=model or self.model,
@@ -187,7 +186,7 @@ class PersistentChatSession:
         response = run_async(_ask_wrapper())
 
         # Add assistant response to history
-        response_entry = {
+        response_entry: Dict[str, Any] = {
             "role": "assistant",
             "content": str(response),
             "timestamp": datetime.now().isoformat(),
@@ -230,7 +229,7 @@ class PersistentChatSession:
         prompt: Union[str, List[Union[str, ImageInput]]],
         *,
         model: Optional[str] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Iterator[str]:
         """
         Stream a response in this chat session.
@@ -263,7 +262,7 @@ class PersistentChatSession:
             and not self.backend.supports_messages
         ):
             conversation = self._messages_to_conversation(messages)
-            full_prompt = conversation
+            full_prompt: Union[str, List[Union[str, ImageInput]]] = conversation
         else:
             full_prompt = prompt
 
@@ -274,8 +273,8 @@ class PersistentChatSession:
         response_chunks = []
 
         # Stream the response
-        async def _async_stream():
-            async for chunk in self.backend.astream(
+        async def _async_stream() -> AsyncIterator[str]:
+            async for chunk in self.backend.astream(  # type: ignore[attr-defined]
                 full_prompt,
                 model=model or self.model,
                 system=self.system if len(self.history) == 1 else None,

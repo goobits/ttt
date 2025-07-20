@@ -10,6 +10,6 @@ try:
     HAS_LOCAL_BACKEND = True
     __all__ = ["BaseBackend", "CloudBackend", "LocalBackend"]
 except ImportError:
-    LocalBackend = None  # type: ignore[assignment]
+    LocalBackend = None  # type: ignore[misc]
     HAS_LOCAL_BACKEND = False
     __all__ = ["BaseBackend", "CloudBackend"]
