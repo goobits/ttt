@@ -56,7 +56,6 @@ except Exception:
 env_paths.extend(
     [
         Path.home() / ".env",
-        Path("/workspace") / ".env",  # For development environments
     ]
 )
 
@@ -596,15 +595,19 @@ def chat(ctx: click.Context, resume: bool, session_id: Optional[str], list_sessi
 
 
 @main.command()
-def status() -> None:
+@click.pass_context
+def status(ctx: click.Context) -> None:
     """⚡ Verify system health and API connectivity."""
-    show_backend_status()
+    json_output = ctx.parent.params.get('json_output', False) if ctx.parent else False
+    show_backend_status(json_output)
 
 
 @main.command()
-def models() -> None:
+@click.pass_context
+def models(ctx: click.Context) -> None:
     """🤖 Browse all available AI models and their capabilities."""
-    show_models_list()
+    json_output = ctx.parent.params.get('json_output', False) if ctx.parent else False
+    show_models_list(json_output)
 
 
 @main.command()
@@ -612,7 +615,8 @@ def models() -> None:
 @click.argument("key", required=False)
 @click.argument("value", required=False)
 @click.option("--reset", is_flag=True, help="Reset configuration to defaults")
-def config(action: Optional[str], key: Optional[str], value: Optional[str], reset: bool) -> None:
+@click.pass_context
+def config(ctx: click.Context, action: Optional[str], key: Optional[str], value: Optional[str], reset: bool) -> None:
     """⚙️ Access configuration management and preferences.
 
     \b
@@ -626,6 +630,7 @@ def config(action: Optional[str], key: Optional[str], value: Optional[str], rese
     from ttt.config_manager import ConfigManager
 
     config_manager = ConfigManager()
+    json_output = ctx.parent.params.get('json_output', False) if ctx.parent else False
 
     # Handle reset
     if reset:
@@ -637,13 +642,34 @@ def config(action: Optional[str], key: Optional[str], value: Optional[str], rese
     # Handle different actions
     if not action:
         # No action specified - show all config
-        config_manager.display_config()
+        if json_output:
+            import json
+            config = config_manager.get_merged_config()
+            click.echo(json.dumps(config, indent=2))
+        else:
+            config_manager.display_config()
     elif action == "get" and key:
         # Get specific value
-        config_manager.show_value(key)
+        if json_output:
+            import json
+            config = config_manager.get_merged_config()
+            # Navigate to the key
+            value = config
+            for part in key.split('.'):
+                if isinstance(value, dict) and part in value:
+                    value = value[part]
+                else:
+                    value = None
+                    break
+            click.echo(json.dumps({key: value}, indent=2))
+        else:
+            config_manager.show_value(key)
     elif action == "set" and key and value:
         # Set specific value
         config_manager.set_value(key, value)
+        if json_output:
+            import json
+            click.echo(json.dumps({"status": "success", "key": key, "value": value}))
     elif action == "set" and key and not value:
         # Special case: "ttt config set alias.foo" should show error
         console.print("[red]Error: Missing value for set command[/red]")
@@ -802,8 +828,21 @@ def ask_command(
             if json_output:
                 import json
 
+                content = str(response)
+                # If content contains JSON, parse it as an object
+                if content.strip().startswith('```json'):
+                    try:
+                        # Extract JSON from markdown code block
+                        json_start = content.find('{')
+                        json_end = content.rfind('}') + 1
+                        if json_start != -1 and json_end > json_start:
+                            content = json.loads(content[json_start:json_end])
+                    except (json.JSONDecodeError, ValueError):
+                        # If parsing fails, keep original content as string
+                        pass
+                
                 output = {
-                    "content": str(response),
+                    "content": content,
                     "model": response.model,
                     "backend": response.backend,
                     "time": response.time,
@@ -812,7 +851,7 @@ def ask_command(
                 if hasattr(response, "tokens_in") and response.tokens_in:
                     output["tokens_in"] = response.tokens_in
                     output["tokens_out"] = response.tokens_out
-                click.echo(json.dumps(output))
+                click.echo(json.dumps(output, separators=(',', ':')))
             else:
                 click.echo(str(response).rstrip())
 
@@ -838,103 +877,121 @@ def ask_command(
 
 
 # Helper functions
-def show_backend_status() -> None:
+def show_backend_status(json_output: bool = False) -> None:
     """Show backend status."""
-    console.print("[bold blue]Backend Status:[/bold blue]")
-    console.print()
-
+    status_data = {"backends": {}}
+    
     # Check local backend
     try:
         import ttt.backends.local as local_module
 
         local = local_module.LocalBackend()
-        if local.is_available:
-            console.print("✅ [green]Local Backend:[/green] Available")
-            console.print(f"   Base URL: {local.base_url}")
-            console.print(f"   Default Model: {local.default_model}")
-        else:
-            console.print("❌ [red]Local Backend:[/red] Not available")
+        local_status = {
+            "available": local.is_available,
+            "base_url": local.base_url,
+            "default_model": local.default_model
+        }
+        status_data["backends"]["local"] = local_status
     except Exception as e:
-        console.print(f"❌ [red]Local Backend:[/red] Error - {e}")
-
-    console.print()
+        status_data["backends"]["local"] = {
+            "available": False,
+            "error": str(e)
+        }
 
     # Check cloud backend
     try:
         import ttt.backends.cloud as cloud_module
 
         cloud = cloud_module.CloudBackend()
-        if cloud.is_available:
+        
+        # Check API keys
+        keys_found = []
+        for key_name in [
+            "OPENAI_API_KEY",
+            "ANTHROPIC_API_KEY",
+            "GOOGLE_API_KEY",
+            "OPENROUTER_API_KEY",
+        ]:
+            if os.getenv(key_name):
+                keys_found.append(key_name.replace("_API_KEY", ""))
+        
+        cloud_status = {
+            "available": cloud.is_available,
+            "default_model": cloud.default_model,
+            "api_keys": keys_found
+        }
+        status_data["backends"]["cloud"] = cloud_status
+    except Exception as e:
+        status_data["backends"]["cloud"] = {
+            "available": False,
+            "error": str(e)
+        }
+    
+    # Output results
+    if json_output:
+        import json
+        click.echo(json.dumps(status_data, indent=2))
+    else:
+        console.print("[bold blue]Backend Status:[/bold blue]")
+        console.print()
+        
+        # Local backend
+        local_info = status_data["backends"].get("local", {})
+        if local_info.get("available"):
+            console.print("✅ [green]Local Backend:[/green] Available")
+            console.print(f"   Base URL: {local_info['base_url']}")
+            console.print(f"   Default Model: {local_info['default_model']}")
+        elif "error" in local_info:
+            console.print(f"❌ [red]Local Backend:[/red] Error - {local_info['error']}")
+        else:
+            console.print("❌ [red]Local Backend:[/red] Not available")
+        
+        console.print()
+        
+        # Cloud backend
+        cloud_info = status_data["backends"].get("cloud", {})
+        if cloud_info.get("available"):
             console.print("✅ [green]Cloud Backend:[/green] Available")
-            console.print(f"   Default Model: {cloud.default_model}")
-
-            # Check API keys
-            keys_found = []
-            for key_name in [
-                "OPENAI_API_KEY",
-                "ANTHROPIC_API_KEY",
-                "GOOGLE_API_KEY",
-                "OPENROUTER_API_KEY",
-            ]:
-                if os.getenv(key_name):
-                    keys_found.append(key_name.replace("_API_KEY", ""))
-
-            if keys_found:
-                console.print(f"   API Keys: {', '.join(keys_found)}")
+            console.print(f"   Default Model: {cloud_info['default_model']}")
+            if cloud_info.get("api_keys"):
+                console.print(f"   API Keys: {', '.join(cloud_info['api_keys'])}")
             else:
                 console.print("   [yellow]API Keys:[/yellow] None configured")
+        elif "error" in cloud_info:
+            console.print(f"❌ [red]Cloud Backend:[/red] Error - {cloud_info['error']}")
         else:
             console.print("❌ [red]Cloud Backend:[/red] Not available")
-    except Exception as e:
-        console.print(f"❌ [red]Cloud Backend:[/red] Error - {e}")
 
 
-def show_models_list() -> None:
+def show_models_list(json_output: bool = False) -> None:
     """Show available models."""
-    console.print("[bold blue]Available Models:[/bold blue]")
-    console.print()
-
-    # Local models
-    console.print("[bold green]Local Models (Ollama):[/bold green]")
+    models_data = {"local": [], "cloud": {}, "aliases": {}}
+    
+    # Get local models
     try:
         import ttt.backends.local as local_module
-
         local = local_module.LocalBackend()
         if local.is_available:
-            # Try to get models from Ollama
             import httpx
-
             try:
                 response = httpx.get(f"{local.base_url}/api/tags", timeout=5.0)
                 if response.status_code == 200:
-                    models = response.json().get("models", [])
-                    if models:
-                        for model in models:
-                            console.print(f"  • {model['name']}")
-                    else:
-                        console.print("  No local models found")
-                else:
-                    console.print("  Could not fetch local models")
+                    local_models = response.json().get("models", [])
+                    models_data["local"] = [m["name"] for m in local_models]
             except Exception:
-                console.print("  Ollama not running or not accessible")
-        else:
-            console.print("  Local backend not available")
-    except Exception as e:
-        console.print(f"  Error: {e}")
-
-    console.print()
-
-    # Cloud models
-    console.print("[bold green]Cloud Models:[/bold green]")
-
-    # Try to get models from config
+                pass
+    except Exception:
+        pass
+    
+    # Get cloud models from config
     try:
         from ttt.config_loader import get_project_config
-
         config = get_project_config()
         available_models = config.get("models", {}).get("available", {})
         aliases = config.get("models", {}).get("aliases", {})
-
+        
+        models_data["aliases"] = aliases
+        
         # Group by provider
         providers: Dict[str, List[str]] = {}
         for model_name, model_info in available_models.items():
@@ -944,39 +1001,47 @@ def show_models_list() -> None:
                     if provider not in providers:
                         providers[provider] = []
                     providers[provider].append(model_name)
-
-        # Display models by provider
-        for provider, models in sorted(providers.items()):
-            if models:
-                console.print(
-                    f"  • {provider.title()}: {', '.join(sorted(models[:3]))}"
-                )
-                if len(models) > 3:
-                    console.print(f"    and {len(models) - 3} more...")
-
-        # Show aliases
-        console.print()
-        console.print("[bold green]Model Aliases:[/bold green]")
-        for alias, model in sorted(aliases.items()):
-            console.print(f"  • @{alias} → {model}")
-
-        if not providers:
-            # Fallback to hardcoded if no config
-            console.print("  • OpenAI: gpt-4o, gpt-4o-mini, gpt-3.5-turbo")
-            console.print(
-                "  • Anthropic: claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022"
-            )
-            console.print("  • Google: gemini-1.5-pro, gemini-1.5-flash")
-
+        
+        models_data["cloud"] = providers
     except Exception:
-        # Fallback to hardcoded if error
-        console.print("  • OpenAI: gpt-4o, gpt-4o-mini, gpt-3.5-turbo")
-        console.print(
-            "  • Anthropic: claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022"
-        )
-        console.print("  • Google: gemini-1.5-pro, gemini-1.5-flash")
-
-    console.print("  • And many more via OpenRouter...")
+        pass
+    
+    # Output results
+    if json_output:
+        import json
+        click.echo(json.dumps(models_data, indent=2))
+    else:
+        console.print("[bold blue]Available Models:[/bold blue]")
+        console.print()
+        
+        # Local models
+        console.print("[bold green]Local Models (Ollama):[/bold green]")
+        if models_data["local"]:
+            for model in models_data["local"]:
+                console.print(f"  • {model}")
+        else:
+            console.print("  No local models found or Ollama not running")
+        
+        console.print()
+        
+        # Cloud models
+        console.print("[bold green]Cloud Models:[/bold green]")
+        for provider, models in sorted(models_data["cloud"].items()):
+            console.print(f"  [yellow]{provider.title()}:[/yellow]")
+            for model in sorted(models[:3]):
+                console.print(f"    • {model}")
+            if len(models) > 3:
+                console.print(f"    and {len(models) - 3} more...")
+        
+        # Show aliases
+        if models_data["aliases"]:
+            console.print()
+            console.print("[bold green]Model Aliases:[/bold green]")
+            for alias, model in sorted(models_data["aliases"].items()):
+                console.print(f"  @{alias} → {model}")
+        
+        console.print()
+        console.print("  • And many more via OpenRouter...")
 
 
 def show_tools_list() -> None:
@@ -1125,13 +1190,47 @@ def cli_entry() -> None:
         # Get list of available commands dynamically
         available_commands = list(main.commands.keys())
 
-        # Special case: ttt @model "prompt" -> ttt -m @model ask "prompt"
+        # Special case: ttt @model "prompt" [--options] -> ttt -m @model ask "prompt" [--options]
         if sys.argv[1].startswith("@"):
             if len(sys.argv) > 2:
-                # Transform: ['ttt', '@model', 'prompt'] -> ['ttt', '-m', '@model', 'ask', 'prompt']
+                # First, find any options that come after the prompt and move them
                 model_alias = sys.argv[1]
-                sys.argv[1:2] = ["-m", model_alias, "ask"]
-                # Now it will be: ttt -m @model ask "prompt"
+                prompt_idx = 2  # The prompt comes after the model alias
+                options_after_prompt = []
+                
+                # Collect options that come after the prompt
+                i = prompt_idx + 1
+                while i < len(sys.argv):
+                    if sys.argv[i].startswith("-"):
+                        options_after_prompt.append(sys.argv[i])
+                        # Check if this option takes a value
+                        if sys.argv[i] in ["-m", "--model", "-s", "--system", "-t", "--temperature", "--max-tokens", "--tools"]:
+                            if i + 1 < len(sys.argv):
+                                options_after_prompt.append(sys.argv[i + 1])
+                                i += 2
+                            else:
+                                i += 1
+                        else:
+                            i += 1
+                    else:
+                        i += 1
+                
+                # Remove options from their current position
+                for opt in options_after_prompt:
+                    if opt in sys.argv:
+                        sys.argv.remove(opt)
+                
+                # Transform: ['ttt', '@model', 'prompt'] -> ['ttt', '-m', '@model', 'ask', 'prompt']
+                # But first insert any moved options right after 'ttt'
+                insertion_point = 1
+                for opt in options_after_prompt:
+                    sys.argv.insert(insertion_point, opt)
+                    insertion_point += 1
+                
+                # Now find where the model alias is (it may have moved due to insertions)
+                model_idx = sys.argv.index(model_alias)
+                # Replace @model with -m @model ask
+                sys.argv[model_idx:model_idx+1] = ["-m", model_alias, "ask"]
             else:
                 # Just "ttt @model" - show help
                 sys.argv[1:1] = ["--help"]
@@ -1139,6 +1238,9 @@ def cli_entry() -> None:
             # Find the first non-option argument
             first_non_option_idx = None
             skip_next = False
+            options_after_prompt = []
+            prompt_found = False
+            
             for i, arg in enumerate(sys.argv[1:], 1):
                 if skip_next:
                     skip_next = False
@@ -1156,16 +1258,34 @@ def cli_entry() -> None:
                         "--tools",
                     ]:
                         skip_next = True
+                    
+                    # If we already found the prompt, collect options that come after
+                    if prompt_found:
+                        options_after_prompt.append(arg)
+                        if skip_next and i < len(sys.argv) - 1:
+                            options_after_prompt.append(sys.argv[i + 1])
                 else:
                     # This is the first non-option argument
-                    first_non_option_idx = i
-                    break
+                    if not prompt_found and arg not in available_commands:
+                        first_non_option_idx = i
+                        prompt_found = True
 
-            # If we found a non-option arg that's not a known command, insert 'ask'
-            if (
-                first_non_option_idx
-                and sys.argv[first_non_option_idx] not in available_commands
-            ):
+            # If we found a non-option arg that's not a known command, we need to restructure
+            if first_non_option_idx and sys.argv[first_non_option_idx] not in available_commands:
+                # If there are options after the prompt, move them before it
+                if options_after_prompt:
+                    # Remove options from their current position
+                    for opt in options_after_prompt:
+                        sys.argv.remove(opt)
+                    
+                    # Insert them before the prompt
+                    for j, opt in enumerate(options_after_prompt):
+                        sys.argv.insert(first_non_option_idx + j, opt)
+                    
+                    # Update the index for 'ask' insertion
+                    first_non_option_idx += len(options_after_prompt)
+                
+                # Insert 'ask' command
                 sys.argv.insert(first_non_option_idx, "ask")
 
     # Run the main CLI

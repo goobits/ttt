@@ -19,7 +19,23 @@ class ConfigManager:
     def __init__(self) -> None:
         """Initialize the config manager."""
         self.user_config_path = Path.home() / ".config" / "ttt" / "config.yaml"
-        self.default_config_path = Path(__file__).parent.parent / "config.yaml"
+        
+        # Try multiple locations for default config
+        possible_config_paths = [
+            Path(__file__).parent / "config.yaml",         # Installed in ttt package (preferred)
+            Path(__file__).parent.parent / "config.yaml",  # Development
+            Path(__file__).parent.parent.parent / "config.yaml",  # Installed at root
+        ]
+        
+        self.default_config_path = None
+        for path in possible_config_paths:
+            if path.exists():
+                self.default_config_path = path
+                break
+        
+        # If no config found, use empty dict
+        if self.default_config_path is None:
+            console.print("[yellow]Warning: Default config.yaml not found, using minimal defaults[/yellow]")
 
         # Ensure user config directory exists
         self.user_config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -37,14 +53,37 @@ class ConfigManager:
 
     def get_default_config(self) -> Dict[str, Any]:
         """Load default configuration."""
-        if self.default_config_path.exists():
+        if self.default_config_path and self.default_config_path.exists():
             try:
                 with open(self.default_config_path) as f:
                     return yaml.safe_load(f) or {}
             except Exception as e:
                 console.print(f"[red]Error loading default config: {e}[/red]")
-                return {}
-        return {}
+                return self._get_minimal_defaults()
+        return self._get_minimal_defaults()
+    
+    def _get_minimal_defaults(self) -> Dict[str, Any]:
+        """Provide minimal default configuration when config.yaml is not available."""
+        return {
+            "models": {
+                "default": "openrouter/google/gemini-flash-1.5",
+                "aliases": {
+                    "fast": "openrouter/openai/gpt-3.5-turbo",
+                    "best": "openrouter/openai/gpt-4",
+                    "coding": "openrouter/google/gemini-1.5-pro",
+                    "local": "llama2",
+                    "claude": "openrouter/anthropic/claude-3-sonnet-20240229",
+                    "gpt4": "openrouter/openai/gpt-4",
+                    "gpt3": "openrouter/openai/gpt-3.5-turbo",
+                    "gemini": "openrouter/google/gemini-pro",
+                    "mixtral": "openrouter/mistralai/mixtral-8x7b-instruct",
+                    "flash": "openrouter/google/gemini-2.5-flash",
+                }
+            },
+            "backends": {
+                "default": "cloud"
+            }
+        }
 
     def get_merged_config(self) -> Dict[str, Any]:
         """Get configuration with user settings overriding defaults."""
