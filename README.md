@@ -68,25 +68,38 @@ CLI Interface / Python API
 source ~/.bashrc
 
 # Set up API key (choose one)
-ttt config openai_key sk-your-key-here
-ttt config openrouter_key sk-or-v1-your-key-here
+export OPENAI_API_KEY=sk-your-key-here
+export OPENROUTER_API_KEY=sk-or-v1-your-key-here
+# Or add to your .env file
+
+# Configure default model
+ttt config set models.default gpt-4
+
+# Create model aliases
+ttt config set alias.work claude-3-opus
 
 # Start using immediately
 ttt "What is Python?"
-ttt "Write a function to sort a list" --code
+ttt -m @work "Write a function to sort a list" --code
 
 # Pipe text directly to AI
 echo "Explain this code" | ttt
 cat file.txt | ttt "Review this code"
 
 # Use local models (privacy-focused)
-ttt config backend local
-ttt config model qwen2.5:32b
+ttt config set backends.default local
+ttt config set models.default qwen2.5:32b
 ttt "private question"
 
 # Use built-in tools
 ttt "What time is it in Tokyo?" --tools get_current_time
 ttt "Search for Python tutorials" --tools web_search
+
+# Interactive chat mode with persistence
+ttt chat                           # Start new chat session
+ttt chat --resume                  # Continue last session
+ttt chat --list                    # Show all sessions
+ttt chat --id SESSION_ID           # Resume specific session
 ```
 
 ## ⚙️ Configuration Management
@@ -142,8 +155,10 @@ ttt "write a function" --code
 ttt --code "write a function"  
 ttt "write" --code "a function"
 
-# Interactive mode (coming soon):
-# ttt --chat                      # Start persistent conversation
+# Interactive chat mode with session management
+ttt chat                           # Start new chat session
+ttt chat --resume                  # Continue last session
+ttt chat --list                    # Show all sessions
 ```
 
 ### Usage Examples
@@ -171,8 +186,9 @@ ttt "complex analysis" --model gpt-4        # Uses cloud model automatically
 ttt "Tell me a story" --stream
 
 # System status and discovery
-ttt status                               # Check what's configured
-ttt models                               # See available models
+ttt status                               # Check backend connectivity
+ttt models                               # List available models
+ttt config                               # View configuration
 
 # Traditional stdin support (also works)
 echo "2 + 2" | ttt -
@@ -389,19 +405,44 @@ ttt --verbose --code "write a function"
 
 ```bash
 # Check backend status and connectivity
-ttt --status
+ttt status
 
 # List all available models
-ttt --models
+ttt models
 
-# List available tools
-ttt --tools-list
-
-# Manage configuration (see Configuration Reference above)
-ttt --config
+# Configuration management
+ttt config                               # Show all settings
+ttt config get models.default            # Get specific value
+ttt config set models.default gpt-4      # Set value
+ttt config set alias.fast gpt-3.5-turbo  # Create alias
+ttt config --reset                       # Reset to defaults
 
 # Show help
 ttt --help
+```
+
+### Interactive Chat Mode
+
+```bash
+# Start a new chat session with persistence
+ttt chat
+
+# Resume your last chat session
+ttt chat --resume
+
+# List all saved chat sessions
+ttt chat --list
+
+# Resume a specific session by ID
+ttt chat --id 20241220_120530_abc123
+
+# Chat with specific model or system prompt
+ttt chat -m @claude -s "You are a coding expert"
+
+# Chat commands:
+# /exit or /quit - End the session
+# /clear - Clear chat history
+# /help - Show available commands
 ```
 
 ### Advanced Options
@@ -412,13 +453,14 @@ ttt "Question" --code               # Coding-optimized responses
 
 # Model specification
 ttt "Question" --model gpt-4
-ttt "Question" --model openrouter/google/gemini-flash-1.5
+ttt "Question" --model gemini-flash-1.5
 ttt "Question" --model anthropic/claude-3-haiku
 
-# Model aliases (fast, best, cheap, coding, local)
-ttt "Question" --model fast              # Uses gpt-3.5-turbo
-ttt "Question" --model best              # Uses gpt-4
-ttt "Question" --model coding            # Uses google/gemini-1.5-pro
+# Model aliases with @ syntax
+ttt -m @fast "Question"                  # Uses gpt-3.5-turbo
+ttt -m @best "Question"                  # Uses gpt-4
+ttt -m @coding "Question"                # Uses google/gemini-1.5-pro
+ttt -m @claude "Question"                # Uses claude-3-sonnet
 
 # Response formatting
 ttt "Question" --stream             # Stream response tokens
@@ -453,7 +495,7 @@ The cloud backend uses LiteLLM to provide unified access to multiple AI provider
 - **Google**: Gemini models
 
 **Default Models:**
-- Primary: `openrouter/google/gemini-flash-1.5`
+- Primary: `gemini-flash-1.5`
 - Model aliases: `fast` (gpt-3.5-turbo), `best` (gpt-4), `cheap` (gpt-3.5-turbo), `coding` (google/gemini-1.5-pro), `local` (llama2)
 
 ### Local Backend (Optional)

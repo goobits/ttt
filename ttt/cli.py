@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Modern Click-based CLI for the AI library."""
+"""Modern Click-based CLI for the AI library with subcommand structure."""
 
 import sys
 import os
@@ -80,6 +80,21 @@ console = Console()
 import ttt
 
 
+def get_ttt_version():
+    """Get the TTT version dynamically."""
+    try:
+        # Try the actual package name first
+        from importlib.metadata import version as get_version
+    except ImportError:
+        from importlib_metadata import version as get_version
+    
+    try:
+        return get_version('goobits-ttt')
+    except Exception:
+        try:
+            return get_version('ttt')
+        except Exception:
+            return getattr(ttt, '__version__', 'unknown')
 
 
 def setup_logging_level(verbose=False, debug=False, json_output=False):
@@ -140,174 +155,277 @@ def setup_logging_level(verbose=False, debug=False, json_output=False):
             pass
 
 
-@click.command(context_settings={"allow_extra_args": True})
+def resolve_model_alias(model: str) -> str:
+    """Resolve model alias to full model name."""
+    if model and model.startswith('@'):
+        # Remove @ prefix
+        alias = model[1:]
+        
+        # Load aliases from config
+        try:
+            from ttt.config_manager import ConfigManager
+            config_manager = ConfigManager()
+            merged_config = config_manager.get_merged_config()
+            
+            # Check aliases (includes both default and user-defined)
+            aliases = merged_config.get('models', {}).get('aliases', {})
+            if alias in aliases:
+                return aliases[alias]
+            
+            # Also check model names that have aliases
+            available_models = merged_config.get('models', {}).get('available', {})
+            for model_name, model_info in available_models.items():
+                if isinstance(model_info, dict):
+                    model_aliases = model_info.get('aliases', [])
+                    if alias in model_aliases:
+                        return model_name
+            
+            # If not found, return original without @
+            console.print(f"[yellow]Warning: Unknown model alias '@{alias}', using '{alias}'[/yellow]")
+            return alias
+        except Exception as e:
+            console.print(f"[yellow]Warning: Could not resolve model alias: {e}[/yellow]")
+            return alias
+    
+    return model
+
+
+def parse_tools_arg(tools: Optional[str]) -> Optional[str]:
+    """Parse the tools argument according to new spec."""
+    if tools is None:
+        return None
+    
+    # If empty string or just --tools with no value, enable all tools
+    if tools == "":
+        # This will be handled by passing None to the ask function
+        # which should enable all tools
+        return "all"
+    
+    # Otherwise return the comma-separated list as-is
+    return tools
+
+
+class VersionAwareGroup(click.Group):
+    """Custom group that adds version to help text."""
+    
+    def get_help(self, ctx):
+        # Get the original help text
+        original_help = super().get_help(ctx)
+        
+        # Replace the title line with version included
+        lines = original_help.split('\n')
+        for i, line in enumerate(lines):
+            if line.strip().startswith('🚀 TTT - Transform'):
+                lines[i] = f"  🚀 TTT {get_ttt_version()} - Transform any text with intelligent AI processing"
+                break
+        
+        return '\n'.join(lines)
+
+
+@click.group(cls=VersionAwareGroup, invoke_without_command=True,
+             context_settings={'allow_interspersed_args': False})
+@click.pass_context
 @click.option('--version', is_flag=True, help='📋 Show version and system information')
-@click.option('--model', '-m', help='🤖 Select your AI model for optimal results (e.g., gpt-4o, claude-3-5-sonnet)')
+@click.option('--model', '-m', help='🤖 Select your AI model (e.g., @claude, @gpt4, gpt-4o)')
 @click.option('--system', '-s', help='🎭 Define AI behavior and expertise with custom instructions')
 @click.option('--temperature', '-t', type=float, help='🌡️  Balance creativity vs precision (0=focused, 1=creative)')
 @click.option('--max-tokens', type=int, help='📝 Control response length for concise or detailed output')
-@click.option('--tools', help='🔧 Activate AI capabilities: web search, code execution, file operations')
+@click.option('--tools', default=None, help='🔧 Enable AI tools (empty=all, or specify: web,code)')
 @click.option('--stream', is_flag=True, help='⚡ Watch responses appear in real-time as AI thinks')
 @click.option('--verbose', '-v', is_flag=True, help='🔍 Show detailed processing information and diagnostics')
 @click.option('--debug', is_flag=True, help='🐛 Enable comprehensive debugging for troubleshooting')
 @click.option('--code', is_flag=True, help='💻 Optimize AI responses for programming and development tasks')
 @click.option('--json', 'json_output', is_flag=True, help='📦 Export results as JSON for automation and scripting')
-@click.option('--chat', is_flag=True, help='💬 Launch interactive conversation mode with memory')
-@click.option('--status', is_flag=True, help='⚡ Verify system health and API connectivity')
-@click.option('--models', is_flag=True, help='🤖 Browse all available AI models and their capabilities')
-@click.option('--tools-list', is_flag=True, help='🔧 Discover all available AI tools and functions')
-@click.option('--config', is_flag=True, help='⚙️  Access configuration management and preferences')
-@click.argument('args', nargs=-1)
-@click.pass_context
 def main(ctx, version, model, system, temperature, max_tokens, 
-         tools, stream, verbose, debug, code, json_output, 
-         chat, status, models, tools_list, config, args):
+         tools, stream, verbose, debug, code, json_output):
     """🚀 TTT - Transform any text with intelligent AI processing
     
     TTT empowers developers, writers, and creators to process text with precision.
     From simple transformations to complex analysis - AI-powered and pipeline-ready.
     
     \b
-    💡 Quick Wins:
+    💡 Quick Examples:
       ttt "Fix grammar in this text"           # Instant text cleanup
-      ttt "Summarize this article"             # Extract key insights
+      ttt @claude "Summarize this article"     # Use Claude model
       echo "data.txt" | ttt "Convert to JSON"  # Pipeline integration
-      ttt --chat                               # Interactive AI assistant
+      ttt chat                                 # Interactive AI assistant
     
     \b
-    🎯 Text Transformation & Analysis:
-      ttt "Translate to Spanish"               # Language conversion
-      ttt "Write a Python function to sort"    # Code generation
-      ttt "What's the main theme here?"        # Content analysis
-      ttt "Rewrite this professionally"        # Style transformation
-    
-    \b
-    🌟 Why Choose TTT:
-      • 100+ AI models with smart auto-selection
-      • Stream responses in real-time or batch process
-      • Built-in tools: web search, code execution, file operations
-      • JSON output for scripting and automation
-      • Works in pipelines, scripts, and interactive sessions
+    🎯 Subcommands:
+      chat     💬 Launch interactive conversation mode
+      status   ⚡ Verify system health and API connectivity
+      models   🤖 Browse available AI models
+      config   ⚙️  Manage configuration settings
     
     \b
     🔑 Quick Setup:
       export OPENROUTER_API_KEY=your-key-here
-      ttt status  # Verify your installation and API access
+      ttt status  # Verify your installation
     """
     
     # Setup logging based on verbosity
     setup_logging_level(verbose, debug, json_output)
     
     if version:
-        try:
-            # Try the actual package name first
-            pkg_version = get_version('goobits-ttt')
-        except Exception:
-            try:
-                # Try the module name as fallback
-                pkg_version = get_version('ttt')
-            except Exception:
-                # Last resort: use __version__ if available
-                pkg_version = getattr(ttt, '__version__', 'unknown')
+        pkg_version = get_ttt_version()
         click.echo(f"TTT Library v{pkg_version}")
         return
     
-    # Handle special commands first
-    if chat:
-        start_chat_session(model, system, None, tools, None, verbose)
-        return
-    elif status:
-        show_backend_status()
-        return
-    elif models:
-        show_models_list()
-        return
-    elif tools_list:
-        show_tools_list()
-        return
-    elif config:
-        handle_config_command(args)
-        return
-    
-    # Default behavior: treat args as prompt for ask command
-    prompt = " ".join(args) if args else None
-    
-    # If no prompt, show help (unless reading from pipe)
-    if prompt is None:
-        # Check if we're in a pipeline (stdin is not a tty)
-        if sys.stdin.isatty():
-            # Interactive terminal - show help immediately
-            click.echo(ctx.get_help())
-            return
+    # If no subcommand, treat remaining args as direct prompt
+    if ctx.invoked_subcommand is None:
+        # Check if we have a prompt stored in context (from direct invocation)
+        if hasattr(ctx, 'obj') and ctx.obj:
+            prompt_text = ctx.obj
         else:
-            # We're in a pipeline - wait a reasonable amount of time for input
-            import select
-            try:
-                # Wait up to 30 seconds for input (for STT processing time)
-                if not select.select([sys.stdin], [], [], 30)[0]:
-                    # Still no input after 30 seconds - show help
-                    click.echo(ctx.get_help())
-                    return
-            except (OSError, io.UnsupportedOperation):
-                # Fallback: assume we should wait for stdin
-                pass
+            # Get remaining args after options as prompt
+            remaining_args = ctx.args
+            prompt_text = " ".join(remaining_args) if remaining_args else None
+        
+        # If no prompt, show help (unless reading from pipe)
+        if prompt_text is None:
+            # Check if we're in a pipeline (stdin is not a tty)
+            if sys.stdin.isatty():
+                # Interactive terminal - show help immediately
+                click.echo(ctx.get_help())
+                return
+            else:
+                # We're in a pipeline - wait a reasonable amount of time for input
+                import select
+                try:
+                    # Wait up to 30 seconds for input (for STT processing time)
+                    if not select.select([sys.stdin], [], [], 30)[0]:
+                        # Still no input after 30 seconds - show help
+                        click.echo(ctx.get_help())
+                        return
+                except (OSError, io.UnsupportedOperation):
+                    # Fallback: assume we should wait for stdin
+                    pass
+        
+        # Resolve model alias
+        if model:
+            model = resolve_model_alias(model)
+        
+        # Parse tools argument
+        tools = parse_tools_arg(tools)
+        
+        ask_command(prompt_text, model, system, temperature, max_tokens, 
+                   tools, stream, verbose, code, json_output, allow_empty=False)
+
+
+@main.command()
+@click.option('--resume', is_flag=True, help='Continue the last chat session')
+@click.option('--id', 'session_id', help='Use a named chat session')
+@click.option('--list', 'list_sessions', is_flag=True, help='Show all chat sessions')
+@click.option('--model', '-m', help='🤖 Select AI model (overrides default)')
+@click.option('--system', '-s', help='🎭 Set system prompt for the session')
+@click.option('--tools', help='🔧 Enable tools for this session')
+@click.pass_context
+def chat(ctx, resume, session_id, list_sessions, model, system, tools):
+    """💬 Launch interactive conversation mode with memory."""
+    from ttt.chat_sessions import ChatSessionManager
     
-    ask_command(prompt, model, system, temperature, max_tokens, 
-               tools, stream, verbose, code, json_output, allow_empty=False)
-
-
-def start_chat_session(model, system, session_id, tools, load, verbose):
-    """Start an interactive chat session."""
+    # Initialize session manager
+    session_manager = ChatSessionManager()
+    
+    # Handle --list
+    if list_sessions:
+        session_manager.display_sessions_table()
+        return
+    
+    # Resolve model alias if provided
+    if model:
+        model = resolve_model_alias(model)
     
     # Parse tools
-    tools_list = None
     if tools:
-        tools_list = [tool.strip() for tool in tools.split(',')]
-        tools_list = resolve_tools(tools_list)
+        tools = parse_tools_arg(tools)
+        if tools == "all":
+            tools = None  # Will enable all tools
+        elif tools:
+            tools = [t.strip() for t in tools.split(',')]
     
-    # Build session parameters
-    kwargs = {}
-    if model:
-        kwargs['model'] = model
-    if system:
-        kwargs['system'] = system
-    if session_id:
-        kwargs['session_id'] = session_id
-    if tools_list:
-        kwargs['tools'] = tools_list
-    
-    try:
-        # Load existing session if requested
-        if load:
-            from ttt.chat import PersistentChatSession
-            session = PersistentChatSession.load(load)
-            console.print(f"[green]Loaded session from {load}[/green]")
+    # Load or create session
+    if resume:
+        session = session_manager.load_last_session()
+        if not session:
+            console.print("[yellow]No previous session found. Starting new session.[/yellow]")
+            session = session_manager.create_session(model=model, system_prompt=system, tools=tools)
         else:
-            session = ttt.chat(**kwargs).__enter__()
-        
-        console.print("[bold blue]AI Chat Session[/bold blue]")
-        
-        # Get chat help message from config
-        try:
-            from ttt.config import load_project_defaults
-            project_defaults = load_project_defaults()
-            help_message = project_defaults.get("chat", {}).get("commands", {}).get(
-                "help_message", 
-                "Type /exit to quit, /save <filename> to save session, /clear to clear history"
-            )
-        except Exception:
-            help_message = "Type /exit to quit, /save <filename> to save session, /clear to clear history"
-            
-        console.print(help_message)
+            console.print(f"[green]Resuming session: {session.id}[/green]")
+            # Override settings if provided
+            if model:
+                session.model = model
+            if system:
+                session.system_prompt = system
+            if tools:
+                session.tools = tools
+    elif session_id:
+        session = session_manager.load_session(session_id)
+        if not session:
+            console.print(f"[red]Session '{session_id}' not found.[/red]")
+            return
+        console.print(f"[green]Loaded session: {session.id}[/green]")
+        # Override settings if provided
+        if model:
+            session.model = model
+        if system:
+            session.system_prompt = system
+        if tools:
+            session.tools = tools
+    else:
+        # Create new session
+        session = session_manager.create_session(model=model, system_prompt=system, tools=tools)
+        console.print(f"[green]Started new session: {session.id}[/green]")
+    
+    # Show session info
+    console.print("[bold blue]AI Chat Session[/bold blue]")
+    if session.model:
+        console.print(f"Model: {session.model}")
+    if session.system_prompt:
+        console.print(f"System: {session.system_prompt[:50]}...")
+    console.print("Type /exit to quit, /clear to clear history, /help for commands")
+    console.print()
+    
+    # Restore previous messages
+    if session.messages:
+        console.print("[dim]--- Previous conversation ---[/dim]")
+        for msg in session.messages[-10:]:  # Show last 10 messages
+            if msg.role == "user":
+                console.print(f"[bold cyan]You:[/bold cyan] {msg.content}")
+            else:
+                console.print(f"[bold green]AI:[/bold green] {msg.content}")
+        console.print("[dim]--- Continue conversation ---[/dim]")
         console.print()
+    
+    # Start chat loop
+    try:
+        # Build kwargs for chat session
+        chat_kwargs = {}
+        if session.model:
+            chat_kwargs['model'] = session.model
+        if session.system_prompt:
+            chat_kwargs['system'] = session.system_prompt
+        if session.tools:
+            chat_kwargs['tools'] = resolve_tools(session.tools)
         
-        turn_count = 0
+        # Create chat session with context from previous messages
+        messages = []
+        if session.system_prompt:
+            messages.append({"role": "system", "content": session.system_prompt})
+        for msg in session.messages:
+            messages.append({"role": msg.role, "content": msg.content})
         
-        try:
+        # Use the chat API
+        with ttt.chat(**chat_kwargs) as chat_session:
+            # Restore message history
+            if messages:
+                chat_session.messages = messages
+            
             while True:
                 try:
-                    user_input = click.prompt(f"You ({turn_count + 1})", type=str, prompt_suffix=": ")
+                    user_input = click.prompt("You", type=str, prompt_suffix=": ")
                 except (EOFError, KeyboardInterrupt):
+                    console.print("\n[yellow]Chat session ended.[/yellow]")
                     break
                 
                 if not user_input.strip():
@@ -316,67 +434,113 @@ def start_chat_session(model, system, session_id, tools, load, verbose):
                 # Handle chat commands
                 if user_input.startswith('/'):
                     if user_input in ['/exit', '/quit']:
+                        console.print("[yellow]Chat session ended.[/yellow]")
                         break
-                    elif user_input.startswith('/save '):
-                        filename = user_input[6:].strip()
-                        if filename:
-                            session.save(filename)
-                            console.print(f"[green]Session saved to {filename}[/green]")
-                        else:
-                            console.print("[red]Please specify a filename[/red]")
-                        continue
                     elif user_input == '/clear':
-                        session.clear()
-                        console.print("[yellow]Chat history cleared[/yellow]")
-                        turn_count = 0
+                        session.messages = []
+                        session_manager.save_session(session)
+                        console.print("[yellow]Chat history cleared.[/yellow]")
+                        # Reset chat session messages
+                        chat_session.messages = [{"role": "system", "content": session.system_prompt}] if session.system_prompt else []
                         continue
                     elif user_input == '/help':
-                        console.print("Commands: /exit, /quit, /save <file>, /clear, /help")
+                        console.print("Commands:")
+                        console.print("  /exit, /quit - End the chat session")
+                        console.print("  /clear - Clear chat history")
+                        console.print("  /help - Show this help message")
                         continue
                     else:
                         console.print(f"[red]Unknown command: {user_input}[/red]")
                         continue
                 
+                # Add user message to session
+                session_manager.add_message(session, "user", user_input)
+                
                 try:
-                    response = session.ask(user_input)
-                    console.print(f"[bold green]AI[/bold green]: {response}")
+                    # Get AI response
+                    response = chat_session.ask(user_input)
                     
-                    if verbose:
-                        console.print(f"[dim]Model: {response.model}, Time: {response.time:.2f}s[/dim]")
+                    # Display response
+                    console.print(f"[bold green]AI:[/bold green] {response}")
                     
-                    turn_count += 1
+                    # Add AI response to session
+                    session_manager.add_message(session, "assistant", str(response), 
+                                              model=response.model if hasattr(response, 'model') else None)
                     
                 except Exception as e:
                     console.print(f"[red]Error: {e}[/red]")
                     
-        finally:
-            if hasattr(session, '__exit__'):
-                session.__exit__(None, None, None)
-            
     except Exception as e:
-        click.echo(f"Error starting chat session: {e}", err=True)
-        sys.exit(1)
+        console.print(f"[red]Error starting chat session: {e}[/red]")
 
 
-def handle_config_command(args):
-    """Handle config command with arguments."""
-    from ttt.config import get_config, configure, save_config
+@main.command()
+def status():
+    """⚡ Verify system health and API connectivity."""
+    show_backend_status()
+
+
+@main.command()
+def models():
+    """🤖 Browse all available AI models and their capabilities."""
+    show_models_list()
+
+
+@main.command()
+@click.argument('action', required=False)
+@click.argument('key', required=False)
+@click.argument('value', required=False)
+@click.option('--reset', is_flag=True, help='Reset configuration to defaults')
+def config(action, key, value, reset):
+    """⚙️ Access configuration management and preferences.
     
-    try:
-        if not args:
-            # Show all configuration
-            show_all_config()
-        elif len(args) == 1:
-            # Show specific key
-            show_config_key(args[0])
+    \b
+    Examples:
+      ttt config                          # Show all configuration
+      ttt config get models.default       # Show specific value
+      ttt config set models.default gpt-4 # Set a value
+      ttt config set alias.work gpt-4     # Set a model alias
+      ttt config --reset                  # Reset to defaults
+    """
+    from ttt.config_manager import ConfigManager
+    
+    config_manager = ConfigManager()
+    
+    # Handle reset
+    if reset:
+        # Confirm before resetting
+        if click.confirm("Are you sure you want to reset configuration to defaults?"):
+            config_manager.reset_config()
+        return
+    
+    # Handle different actions
+    if not action:
+        # No action specified - show all config
+        config_manager.display_config()
+    elif action == 'get' and key:
+        # Get specific value
+        config_manager.show_value(key)
+    elif action == 'set' and key and value:
+        # Set specific value
+        config_manager.set_value(key, value)
+    elif action == 'set' and key and not value:
+        # Special case: "ttt config set alias.foo" should show error
+        console.print("[red]Error: Missing value for set command[/red]")
+        console.print("Usage: ttt config set KEY VALUE")
+    else:
+        # Check if user meant to use old syntax
+        if action and not key:
+            # Maybe they typed "ttt config models.default"
+            config_manager.show_value(action)
         else:
-            # Set key-value pair
-            set_config_key(args[0], args[1])
-    except Exception as e:
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
-
-
+            console.print("[red]Invalid config command[/red]")
+            console.print()
+            console.print("Usage:")
+            console.print("  ttt config                          # Show all configuration")
+            console.print("  ttt config get KEY                  # Show specific value")  
+            console.print("  ttt config set KEY VALUE            # Set a value")
+            console.print("  ttt config set alias.NAME MODEL     # Set a model alias")
+            console.print("  ttt config --reset                  # Reset to defaults")
 
 
 def ask_command(prompt, model, system, temperature, max_tokens, 
@@ -450,8 +614,12 @@ def ask_command(prompt, model, system, temperature, max_tokens,
     # Parse tools
     tools_list = None
     if tools:
-        tools_list = [tool.strip() for tool in tools.split(',')]
-        tools_list = resolve_tools(tools_list)
+        if tools == "all":
+            # Enable all tools - pass None to let the backend decide
+            tools_list = None
+        else:
+            tools_list = [tool.strip() for tool in tools.split(',')]
+            tools_list = resolve_tools(tools_list)
     
     # Build request parameters
     kwargs = {}
@@ -519,10 +687,6 @@ def ask_command(prompt, model, system, temperature, max_tokens,
         else:
             click.echo(f"Error: {e}", err=True)
         sys.exit(1)
-
-
-
-
 
 
 # Helper functions
@@ -620,6 +784,7 @@ def show_models_list():
         from ttt.config_loader import get_project_config
         config = get_project_config()
         available_models = config.get("models", {}).get("available", {})
+        aliases = config.get("models", {}).get("aliases", {})
         
         # Group by provider
         providers = {}
@@ -637,6 +802,12 @@ def show_models_list():
                 console.print(f"  • {provider.title()}: {', '.join(sorted(models[:3]))}")
                 if len(models) > 3:
                     console.print(f"    and {len(models) - 3} more...")
+        
+        # Show aliases
+        console.print()
+        console.print("[bold green]Model Aliases:[/bold green]")
+        for alias, model in sorted(aliases.items()):
+            console.print(f"  • @{alias} → {model}")
                     
         if not providers:
             # Fallback to hardcoded if no config
@@ -728,110 +899,31 @@ def apply_coding_optimization(kwargs):
         kwargs['temperature'] = 0.3
 
 
-def get_config_key_mapping():
-    """Map user-friendly config keys to internal configuration paths."""
-    return {
-        'model': 'default_model',
-        'backend': 'default_backend',
-        'timeout': 'timeout',
-        'retries': 'max_retries',
-        'ollama_url': 'ollama_base_url',
-        'openai_key': 'openai_api_key',
-        'anthropic_key': 'anthropic_api_key',
-        'google_key': 'google_api_key',
-        'openrouter_key': 'openrouter_api_key',
-    }
+@main.command(name='ask', hidden=True)
+@click.argument('prompt', nargs=-1, required=True)
+@click.pass_context  
+def ask_cmd(ctx, prompt):
+    """Direct AI prompt (hidden default command)."""
+    prompt_text = " ".join(prompt)
+    
+    # Get parent context for options
+    parent_ctx = ctx.parent
+    
+    ask_command(prompt_text,
+                parent_ctx.params.get('model'),
+                parent_ctx.params.get('system'), 
+                parent_ctx.params.get('temperature'),
+                parent_ctx.params.get('max_tokens'),
+                parent_ctx.params.get('tools'),
+                parent_ctx.params.get('stream'),
+                parent_ctx.params.get('verbose'),
+                parent_ctx.params.get('code'),
+                parent_ctx.params.get('json_output'),
+                allow_empty=False)
 
 
-def show_all_config():
-    """Display all current configuration settings."""
-    from ttt.config import get_config
-    
-    config = get_config()
-    console.print("[bold blue]Current Configuration:[/bold blue]")
-    console.print()
-    
-    # Show main settings
-    key_mapping = get_config_key_mapping()
-    
-    for user_key, config_key in key_mapping.items():
-        value = getattr(config, config_key, None)
-        if value is not None:
-            # Mask sensitive values
-            if 'key' in user_key.lower():
-                masked_value = f"{str(value)[:8]}..." if len(str(value)) > 8 else "***"
-                console.print(f"  {user_key}: {masked_value}")
-            else:
-                console.print(f"  {user_key}: {value}")
-    
-    console.print()
-    console.print("[dim]Use 'ttt config <key> <value>' to change settings[/dim]")
-
-
-def show_config_key(key):
-    """Display a specific configuration value."""
-    from ttt.config import get_config
-    
-    key_mapping = get_config_key_mapping()
-    
-    if key not in key_mapping:
-        available_keys = ', '.join(key_mapping.keys())
-        console.print(f"[red]Unknown config key '{key}'[/red]")
-        console.print(f"Available keys: {available_keys}")
-        return
-    
-    config = get_config()
-    config_key = key_mapping[key]
-    value = getattr(config, config_key, None)
-    
-    if value is not None:
-        # Mask sensitive values
-        if 'key' in key.lower():
-            masked_value = f"{str(value)[:8]}..." if len(str(value)) > 8 else "***"
-            console.print(f"{key}: {masked_value}")
-        else:
-            console.print(f"{key}: {value}")
-    else:
-        console.print(f"{key}: [dim]not set[/dim]")
-
-
-def set_config_key(key, value):
-    """Set a configuration value and persist it."""
-    from ttt.config import get_config, configure, save_config
-    
-    key_mapping = get_config_key_mapping()
-    
-    if key not in key_mapping:
-        available_keys = ', '.join(key_mapping.keys())
-        console.print(f"[red]Unknown config key '{key}'[/red]")
-        console.print(f"Available keys: {available_keys}")
-        return
-    
-    config_key = key_mapping[key]
-    
-    # Type conversion for specific keys
-    if key in ['timeout', 'retries']:
-        try:
-            value = int(value)
-        except ValueError:
-            console.print(f"[red]Error: '{key}' must be a number[/red]")
-            return
-    
-    # Validate specific values
-    if key == 'backend' and value not in ['local', 'cloud', 'auto']:
-        console.print(f"[red]Error: backend must be 'local', 'cloud', or 'auto'[/red]")
-        return
-    
-    # Apply the configuration change
-    kwargs = {config_key: value}
-    configure(**kwargs)
-    
-    # Save to persistent config file
-    current_config = get_config()
-    save_config(current_config)
-    
-    console.print(f"[green]Set {key} = {value}[/green]")
-    console.print("[dim]Configuration saved to ~/.config/ai/config.yaml[/dim]")
+# Make 'ask' the default command if no subcommand is specified
+main.add_command(ask_cmd, name='ask')
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This proposal outlines a redesign of the TTT CLI to improve usability while maintaining power. The goal is to create a more intuitive, discoverable API that scales from simple use cases to advanced workflows.
+This proposal outlines a redesign of the TTT CLI to improve usability while maintaining power. The goal is to create a more intuitive, discoverable API that scales from simple use cases to advanced workflows, implemented as a single, decisive upgrade.
 
 ## Current State
 
@@ -22,26 +22,28 @@ This proposal outlines a redesign of the TTT CLI to improve usability while main
 
 ## Proposed Changes
 
-### 1. Model Selection Shortcuts
+### 1. Model Selection Shortcuts & Aliases
 
 **Current:**
 ```bash
 ttt -m openrouter/google/gemini-flash-1.5 "prompt"
-ttt --model claude-3-5-sonnet-20241022 "prompt"
 ```
 
 **Proposed:**
 ```bash
+# Built-in shortcuts
 ttt @claude "prompt"
 ttt @gpt4 "prompt"
-ttt @gemini "prompt"
-ttt @local "prompt"
+
+# User-defined aliases
+ttt @work-model "prompt" 
 ```
 
 **Implementation:**
-- Minimal: Just add model alias resolution in CLI
-- Update config.yaml with alias mappings
-- Effort: Low (1-2 hours)
+- Add model alias resolution in the CLI.
+- Update `config.yaml` with a default alias map.
+- Allow users to define custom aliases via the `ttt config set` command.
+- Effort: Low (2-3 hours)
 
 ### 2. Subcommand Structure
 
@@ -50,7 +52,6 @@ ttt @local "prompt"
 ttt --chat
 ttt --status
 ttt --models
-ttt --config
 ```
 
 **Proposed:**
@@ -62,8 +63,8 @@ ttt config
 ```
 
 **Implementation:**
-- Major refactor of cli.py to use Click command groups
-- Breaking change requiring migration guide
+- Refactor `cli.py` to use Click command groups.
+- This is a **breaking change**. All old flag-based commands will be removed.
 - Effort: High (1-2 days)
 
 ### 3. Chat Session Management
@@ -82,31 +83,30 @@ ttt chat --list             # Show all sessions
 ```
 
 **Implementation:**
-- Add SQLite or JSON file storage for sessions
-- Implement session CRUD operations
-- Update chat.py with persistence logic
+- Add SQLite or JSON file storage for sessions.
+- Implement session CRUD operations.
+- Update `chat.py` with persistence logic.
 - Effort: Medium (4-6 hours)
 
 ### 4. Configuration Management
 
 **Current:**
 ```bash
-# Edit config.yaml manually
-# Use environment variables
+# Edit config.yaml manually or use environment variables
 ```
 
 **Proposed:**
 ```bash
 ttt config                       # Show current
 ttt config set model @claude     # Set default model
-ttt config set temperature 0.7   # Set temperature
+ttt config set alias.work-model gpt-4-turbo # Set a custom alias
 ttt config reset                 # Reset to defaults
 ```
 
 **Implementation:**
-- Add write-back capability to config system
-- Handle config file updates safely
-- Add config subcommands
+- Add write-back capability to the config system.
+- Handle config file updates safely.
+- Add config subcommands.
 - Effort: Medium (3-4 hours)
 
 ### 5. Simplified Tool Selection
@@ -123,201 +123,83 @@ ttt --tools web,code "prompt"     # Enable specific tools
 ```
 
 **Implementation:**
-- Parse comma-separated tool list
-- Update help text
+- Parse comma-separated tool list.
+- Update help text.
 - Effort: Low (30 minutes)
 
-## Implementation Phases
+## Implementation Plan
 
-### Phase 1: Quick Wins (1 day)
-- Model shortcuts (@claude syntax)
-- Simplified --tools flag
-- Fix output modes (already completed)
+This will be a single, focused effort to migrate to the new design.
 
-**Testing Strategy:**
-- Run real CLI commands: `ttt @claude "What is 2+2?"` 
-- Verify actual API calls work with shortcuts
-- Test all model aliases against real providers
-- NO MOCKS - skip tests if API keys unavailable
+### Step 1: Foundational Changes (2-3 days)
+- **Implement Subcommand Structure:** Refactor the CLI to use `click` subcommands. All old flags (`--chat`, `--status`, etc.) will be removed immediately.
+- **Model Shortcuts & Aliases:** Implement the `@model` syntax and the `ttt config set alias...` functionality.
+- **Simplified Tools Flag:** Implement the new comma-separated `--tools` flag.
 
-**Cleanup Checklist:**
-- Remove old model string examples from all docs
-- Update --help text to show @model syntax
-- Delete any temporary alias parsing code
-- Ensure no references to old long model strings
-
-**Phase Gate:**
-- All shortcuts work with real APIs
-- Zero references to old syntax in codebase
-- Documentation fully updated
-
-### Phase 2: Subcommands (2-3 days)
-- Refactor to command structure
-- Implement parallel old/new syntax
-- Full test suite migration
-
-**Testing Strategy:**
-- Real end-to-end tests: both syntaxes must work
-  ```bash
-  ttt --chat  # old
-  ttt chat    # new
-  ```
-- Test with actual user sessions
-- Verify real API calls through both paths
-- Test with real files/pipes: `cat file.txt | ttt`
-
-**Cleanup Checklist:**
-- Remove ALL old flag handling code
-- Delete deprecated argument parsers
-- Update every example in docs to new syntax
-- Remove old syntax from test files
-- Search codebase for "--" patterns and eliminate
-
-**Phase Gate:**
-- Old syntax shows deprecation but works
-- New syntax is primary in all docs
-- No duplicate code paths
-
-### Phase 3: Advanced Features (1 week)
-- Chat session management
-- Configuration management
-- Pipe mode optimization
-
-**Testing Strategy:**
-- Create real chat sessions with actual APIs
-- Test session persistence with real conversations
-- Verify config changes with real API calls
-- Test real multi-turn conversations:
-  ```bash
-  ttt chat --id project
-  # Have real conversation
-  ttt chat --resume project
-  # Verify context maintained
-  ```
-
-**Cleanup Checklist:**
-- Remove ALL deprecation warnings
-- Delete backward compatibility layer
-- Remove old flag definitions completely
-- Clean up old config handling
-- Ensure single source of truth for each feature
-
-**Phase Gate:**
-- Zero legacy code remains
-- All tests use new syntax only
-- No references to old patterns anywhere
+### Step 2: Advanced Features (1 week)
+- **Chat Session Management:** Build the persistence layer for chat sessions.
+- **Configuration Management:** Implement the `ttt config` commands for writing to the config file.
+- **Pipe Mode Optimization:** Ensure pipes work seamlessly with the new subcommands.
 
 ## Testing Philosophy
 
-### No Mocks, Only Real Tests
-- If it can't be tested with real API calls, don't test it
-- Skip tests when API keys are missing rather than mock
-- Every test must exercise actual functionality
-- Integration tests are the primary validation
+### Prefer Real Backends, Use Mocks Judiciously
+- **Primary Goal:** Test against real API endpoints to ensure true functionality. Tests should be skipped gracefully if API keys are not available.
+- **Acceptable Mocks:** For unit tests and offline development, it is acceptable to use mock backends that conform to the real backend interface, such as the existing `examples/plugins/mock_llm_backend.py`.
+- **Discouraged Mocks:** Avoid mocking the network layer (e.g., patching `requests` or `httpx`). This is brittle and doesn't accurately reflect the backend integration.
 
 ### Test Organization
+Tests will be organized by feature to create a clear and maintainable structure. The temporary phase-based folders will not be used.
 ```bash
 tests/
-  phase1/           # Only new syntax tests
-  phase2/           # Subcommand tests
-  phase3/           # Advanced feature tests
-  legacy/           # Deleted after each phase
+  test_cli_chat.py      # Tests for 'ttt chat' subcommand
+  test_cli_config.py    # Tests for 'ttt config' subcommand
+  test_aliases.py       # Tests for model alias resolution
+  ...etc
 ```
 
 ## Backward Compatibility
 
-### Strict Deprecation Timeline
-```bash
-# Phase 2: Show warning but work
-$ ttt --chat
-Warning: --chat is deprecated. Use 'ttt chat' instead.
+There will be **no backward compatibility**. This is a clean break from the old CLI syntax.
 
-# Phase 3: Remove completely
-$ ttt --chat
-Error: Unknown option '--chat'. Use 'ttt chat' instead.
-```
-
-### Migration Rules
-- Each phase MUST delete its deprecated code
-- No "just in case" legacy code retention
-- Documentation shows ONLY current syntax
-- Old examples = bugs to be fixed
-
-## Alternative: Minimal Changes
-
-If full redesign is too disruptive, consider only:
-
-1. **Add model shortcuts** without changing flags:
-   ```bash
-   ttt -m @claude "prompt"  # Just recognize @ prefix
-   ```
-
-2. **Add config commands** as flags:
-   ```bash
-   ttt --config-set model=@claude
-   ```
-
-3. **Enhance existing chat**:
-   ```bash
-   ttt --chat --resume
-   ttt --chat --session meeting
-   ```
-
-## Metrics for Success
-
-- Reduced time to first successful command for new users
-- Fewer help/documentation lookups
-- Increased usage of advanced features (chat sessions, config)
-- Positive user feedback on usability
+- All flag-based commands (`--chat`, `--status`) will be removed and replaced with subcommands.
+- A clear section in the README and migration guide will explain the changes to users.
+- This avoids technical debt and ensures a consistent, modern user experience from the start.
 
 ## Risks
 
-1. **Breaking Changes**: May frustrate existing users
-   - Mitigation: Careful deprecation period
+1. **Breaking Changes**: Will require users to adapt.
+   - **Mitigation**: Clear communication and documentation. A one-time, well-documented change is better than a lengthy, confusing deprecation period.
    
-2. **Complexity**: Subcommands add complexity
-   - Mitigation: Excellent help text and examples
-   
-3. **Maintenance**: More code to maintain
-   - Mitigation: Good test coverage
-
-## Recommendation
-
-Start with Phase 1 (model shortcuts, tool simplification) as these provide immediate value with minimal disruption. Evaluate user feedback before proceeding with more dramatic changes.
-
-The full redesign would create a more professional, scalable CLI, but the minimal approach maintains stability while still improving usability.
+2. **Implementation Scope**: This is a significant, coordinated effort.
+   - **Mitigation**: The focused, all-at-once approach prevents complexity from spreading across multiple phases.
 
 ## Cleanup Verification
 
 ### Automated Checks
+A verification script will ensure no legacy code remains.
 ```bash
-# Run after each phase
-./verify_cleanup.sh
+# ./verify_cleanup.sh
 
 # Checks for:
-grep -r "--chat" .  # Should find ZERO matches after Phase 3
-grep -r "openrouter/google/" docs/  # Should find ZERO after Phase 1
-find . -name "*.deprecated.*"  # Should be empty
+grep -rE -- "--chat|--status|--models" . # Should find ZERO matches
+grep -r "openrouter/google/" docs/      # Should find ZERO after implementation
 ```
 
 ### Manual Review Checklist
-- [ ] Help text shows only current syntax
-- [ ] README has zero old examples  
-- [ ] No commented-out legacy code
-- [ ] Test files use only new patterns
-- [ ] CI/CD configs updated
-- [ ] No "backwards compatibility" imports
+- [ ] Help text shows only new subcommand syntax.
+- [ ] README and all documentation use only new examples.
+- [ ] No commented-out legacy code exists.
+- [ ] Test files use only the new subcommand patterns.
 
 ### Definition of Done
-Each phase is ONLY complete when:
-1. All real tests pass (no mocks)
-2. Zero legacy code remains
-3. Documentation is 100% current
-4. Cleanup verification passes
+The project is complete when:
+1. All tests pass against both real and mock backends.
+2. Zero legacy CLI code or documentation remains.
+3. The cleanup verification script passes.
 
 ## Next Steps
 
-1. Gather team/user feedback on this proposal
-2. Decide between full redesign vs minimal changes
-3. Create detailed implementation plan for chosen approach
-4. Begin with Phase 1 quick wins regardless of decision
+1. Gather final feedback on this revised, decisive proposal.
+2. Create detailed implementation tickets for each part of the plan.
+3. Begin implementation.
