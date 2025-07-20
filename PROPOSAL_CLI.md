@@ -134,33 +134,114 @@ ttt --tools web,code "prompt"     # Enable specific tools
 - Simplified --tools flag
 - Fix output modes (already completed)
 
+**Testing Strategy:**
+- Run real CLI commands: `ttt @claude "What is 2+2?"` 
+- Verify actual API calls work with shortcuts
+- Test all model aliases against real providers
+- NO MOCKS - skip tests if API keys unavailable
+
+**Cleanup Checklist:**
+- Remove old model string examples from all docs
+- Update --help text to show @model syntax
+- Delete any temporary alias parsing code
+- Ensure no references to old long model strings
+
+**Phase Gate:**
+- All shortcuts work with real APIs
+- Zero references to old syntax in codebase
+- Documentation fully updated
+
 ### Phase 2: Subcommands (2-3 days)
 - Refactor to command structure
-- Maintain backward compatibility with deprecation warnings
-- Update all tests
+- Implement parallel old/new syntax
+- Full test suite migration
+
+**Testing Strategy:**
+- Real end-to-end tests: both syntaxes must work
+  ```bash
+  ttt --chat  # old
+  ttt chat    # new
+  ```
+- Test with actual user sessions
+- Verify real API calls through both paths
+- Test with real files/pipes: `cat file.txt | ttt`
+
+**Cleanup Checklist:**
+- Remove ALL old flag handling code
+- Delete deprecated argument parsers
+- Update every example in docs to new syntax
+- Remove old syntax from test files
+- Search codebase for "--" patterns and eliminate
+
+**Phase Gate:**
+- Old syntax shows deprecation but works
+- New syntax is primary in all docs
+- No duplicate code paths
 
 ### Phase 3: Advanced Features (1 week)
 - Chat session management
 - Configuration management
 - Pipe mode optimization
-- Upgrade command
+
+**Testing Strategy:**
+- Create real chat sessions with actual APIs
+- Test session persistence with real conversations
+- Verify config changes with real API calls
+- Test real multi-turn conversations:
+  ```bash
+  ttt chat --id project
+  # Have real conversation
+  ttt chat --resume project
+  # Verify context maintained
+  ```
+
+**Cleanup Checklist:**
+- Remove ALL deprecation warnings
+- Delete backward compatibility layer
+- Remove old flag definitions completely
+- Clean up old config handling
+- Ensure single source of truth for each feature
+
+**Phase Gate:**
+- Zero legacy code remains
+- All tests use new syntax only
+- No references to old patterns anywhere
+
+## Testing Philosophy
+
+### No Mocks, Only Real Tests
+- If it can't be tested with real API calls, don't test it
+- Skip tests when API keys are missing rather than mock
+- Every test must exercise actual functionality
+- Integration tests are the primary validation
+
+### Test Organization
+```bash
+tests/
+  phase1/           # Only new syntax tests
+  phase2/           # Subcommand tests
+  phase3/           # Advanced feature tests
+  legacy/           # Deleted after each phase
+```
 
 ## Backward Compatibility
 
-### Deprecation Strategy
+### Strict Deprecation Timeline
 ```bash
-# Old command shows warning:
+# Phase 2: Show warning but work
 $ ttt --chat
 Warning: --chat is deprecated. Use 'ttt chat' instead.
-[continues to work]
 
-# After 3 months, remove old syntax
+# Phase 3: Remove completely
+$ ttt --chat
+Error: Unknown option '--chat'. Use 'ttt chat' instead.
 ```
 
-### Migration Guide
-- Provide clear documentation
-- Automated migration script for common patterns
-- Keep both syntaxes working during transition
+### Migration Rules
+- Each phase MUST delete its deprecated code
+- No "just in case" legacy code retention
+- Documentation shows ONLY current syntax
+- Old examples = bugs to be fixed
 
 ## Alternative: Minimal Changes
 
@@ -205,6 +286,34 @@ If full redesign is too disruptive, consider only:
 Start with Phase 1 (model shortcuts, tool simplification) as these provide immediate value with minimal disruption. Evaluate user feedback before proceeding with more dramatic changes.
 
 The full redesign would create a more professional, scalable CLI, but the minimal approach maintains stability while still improving usability.
+
+## Cleanup Verification
+
+### Automated Checks
+```bash
+# Run after each phase
+./verify_cleanup.sh
+
+# Checks for:
+grep -r "--chat" .  # Should find ZERO matches after Phase 3
+grep -r "openrouter/google/" docs/  # Should find ZERO after Phase 1
+find . -name "*.deprecated.*"  # Should be empty
+```
+
+### Manual Review Checklist
+- [ ] Help text shows only current syntax
+- [ ] README has zero old examples  
+- [ ] No commented-out legacy code
+- [ ] Test files use only new patterns
+- [ ] CI/CD configs updated
+- [ ] No "backwards compatibility" imports
+
+### Definition of Done
+Each phase is ONLY complete when:
+1. All real tests pass (no mocks)
+2. Zero legacy code remains
+3. Documentation is 100% current
+4. Cleanup verification passes
 
 ## Next Steps
 
