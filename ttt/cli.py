@@ -187,6 +187,32 @@ def resolve_model_alias(model: str) -> str:
             console.print(f"[yellow]Warning: Could not resolve model alias: {e}[/yellow]")
             return alias
     
+    # If this is a direct model name, check if we should route through OpenRouter
+    if model and not model.startswith('openrouter/'):
+        # Check what API keys are available
+        has_openrouter = bool(os.getenv("OPENROUTER_API_KEY"))
+        has_openai = bool(os.getenv("OPENAI_API_KEY"))
+        has_anthropic = bool(os.getenv("ANTHROPIC_API_KEY"))
+        has_google = bool(os.getenv("GOOGLE_API_KEY"))
+        
+        # If only OpenRouter key is available, route common models through OpenRouter
+        if has_openrouter and not (has_openai or has_anthropic or has_google):
+            # Map common direct model names to OpenRouter equivalents
+            openrouter_mappings = {
+                'gpt-4o': 'openrouter/openai/gpt-4o',
+                'gpt-4o-mini': 'openrouter/openai/gpt-4o-mini',
+                'gpt-4': 'openrouter/openai/gpt-4',
+                'gpt-3.5-turbo': 'openrouter/openai/gpt-3.5-turbo',
+                'claude-3-5-sonnet-20241022': 'openrouter/anthropic/claude-3-5-sonnet-20241022',
+                'claude-3-5-haiku-20241022': 'openrouter/anthropic/claude-3-5-haiku-20241022',
+                'gemini-1.5-pro': 'openrouter/google/gemini-1.5-pro',
+                'gemini-1.5-flash': 'openrouter/google/gemini-1.5-flash',
+            }
+            
+            if model in openrouter_mappings:
+                console.print(f"[dim]Routing {model} through OpenRouter...[/dim]")
+                return openrouter_mappings[model]
+    
     return model
 
 
@@ -397,24 +423,24 @@ def chat(ctx, resume, session_id, list_sessions, model, system, tools):
         console.print("[dim]--- Continue conversation ---[/dim]")
         console.print()
     
+    # Build kwargs for chat session
+    chat_kwargs = {}
+    if session.model:
+        chat_kwargs['model'] = session.model
+    if session.system_prompt:
+        chat_kwargs['system'] = session.system_prompt
+    if session.tools:
+        chat_kwargs['tools'] = resolve_tools(session.tools)
+    
+    # Create chat session with context from previous messages
+    messages = []
+    if session.system_prompt:
+        messages.append({"role": "system", "content": session.system_prompt})
+    for msg in session.messages:
+        messages.append({"role": msg.role, "content": msg.content})
+    
     # Start chat loop
     try:
-        # Build kwargs for chat session
-        chat_kwargs = {}
-        if session.model:
-            chat_kwargs['model'] = session.model
-        if session.system_prompt:
-            chat_kwargs['system'] = session.system_prompt
-        if session.tools:
-            chat_kwargs['tools'] = resolve_tools(session.tools)
-        
-        # Create chat session with context from previous messages
-        messages = []
-        if session.system_prompt:
-            messages.append({"role": "system", "content": session.system_prompt})
-        for msg in session.messages:
-            messages.append({"role": msg.role, "content": msg.content})
-        
         # Use the chat API
         with ttt.chat(**chat_kwargs) as chat_session:
             # Restore message history
@@ -557,14 +583,17 @@ def ask_command(prompt, model, system, temperature, max_tokens,
         return
     
     # Handle stdin input
-    if prompt == '-' or (prompt is None and not sys.stdin.isatty()):
-        # Reading from pipe
+    stdin_content = None
+    if not sys.stdin.isatty():
+        # We have piped input, read it
         try:
-            input_text = sys.stdin.read().strip()
+            stdin_content = sys.stdin.read().strip()
         except EOFError:
-            input_text = ""
-        
-        if not input_text:
+            stdin_content = ""
+    
+    if prompt == '-' or (prompt is None and stdin_content):
+        # Reading from pipe as main input
+        if not stdin_content:
             # Handle empty input
             click.echo("Error: No input provided", err=True)
             sys.exit(1)
@@ -572,7 +601,7 @@ def ask_command(prompt, model, system, temperature, max_tokens,
         # Try to parse as JSON first
         try:
             import json
-            json_input = json.loads(input_text)
+            json_input = json.loads(stdin_content)
             
             # Extract prompt from various possible fields
             prompt = (json_input.get('prompt') or 
@@ -583,7 +612,7 @@ def ask_command(prompt, model, system, temperature, max_tokens,
             
             if not prompt:
                 # If no recognized prompt field, treat entire JSON as prompt
-                prompt = input_text
+                prompt = stdin_content
             else:
                 # Extract other parameters from JSON if not already set
                 if not model and json_input.get('model'):
@@ -601,7 +630,10 @@ def ask_command(prompt, model, system, temperature, max_tokens,
                     
         except json.JSONDecodeError:
             # Not valid JSON, treat as plain text
-            prompt = input_text
+            prompt = stdin_content
+    elif prompt and stdin_content:
+        # We have both a prompt and piped input - combine them
+        prompt = f"{prompt}\n\nInput data:\n{stdin_content}"
             
     elif prompt is None:
         # If we got here without a prompt and not from stdin, something's wrong
@@ -960,7 +992,7 @@ def cli_entry():
                     continue
                 if arg.startswith('-'):
                     # This is an option, check if it takes a value
-                    if arg in ['-m', '--model', '-s', '--system', '-t', '--temperature', '--max-tokens']:
+                    if arg in ['-m', '--model', '-s', '--system', '-t', '--temperature', '--max-tokens', '--tools']:
                         skip_next = True
                 else:
                     # This is the first non-option argument
