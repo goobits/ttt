@@ -5,7 +5,7 @@ This module defines specific exceptions for different error scenarios,
 making it easier for users to handle errors programmatically.
 """
 
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 
 class AIError(Exception):

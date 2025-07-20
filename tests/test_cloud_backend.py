@@ -1,21 +1,19 @@
 """Tests for the cloud backend with mocked LiteLLM."""
 
-import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
 import asyncio
-from typing import AsyncIterator
+from unittest.mock import AsyncMock, Mock, patch
 
-from ttt.backends.cloud import CloudBackend
-from ttt.models import AIResponse, ImageInput
+import pytest
+
 from ttt.exceptions import (
-    BackendNotAvailableError,
-    ModelNotFoundError,
     APIKeyError,
-    RateLimitError,
-    QuotaExceededError,
-    BackendConnectionError,
+    BackendNotAvailableError,
     EmptyResponseError,
+    ModelNotFoundError,
+    QuotaExceededError,
+    RateLimitError,
 )
+from ttt.models import ImageInput
 
 
 class MockLiteLLM:
@@ -65,6 +63,7 @@ def cloud_backend(mock_litellm):
     """Fixture that provides a CloudBackend with mocked litellm."""
     # Need to reload the module to pick up the mocked litellm
     import importlib
+
     import ttt.backends.cloud
 
     importlib.reload(ttt.backends.cloud)
@@ -80,6 +79,7 @@ class TestCloudBackendInitialization:
     def test_init_success(self, mock_litellm):
         """Test successful initialization with litellm available."""
         import importlib
+
         import ttt.backends.cloud
 
         importlib.reload(ttt.backends.cloud)
@@ -92,6 +92,7 @@ class TestCloudBackendInitialization:
         """Test initialization fails without litellm."""
         with patch.dict("sys.modules", {"litellm": None}):
             import importlib
+
             import ttt.backends.cloud
 
             importlib.reload(ttt.backends.cloud)
@@ -103,6 +104,7 @@ class TestCloudBackendInitialization:
 
 
 # Removed TestCloudBackendProperties - tests for trivial getters add no value
+
 
 class TestCloudBackendAsk:
     """Test CloudBackend ask method."""

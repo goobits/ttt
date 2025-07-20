@@ -14,28 +14,26 @@ Usage:
     from ttt.tools.builtins import web_search, read_file
 """
 
-import os
+import ast
+import datetime
 import json
-import time
+import math
+import operator
+import os
 import subprocess
 import tempfile
-import datetime
-import zoneinfo
-import urllib.request
-import urllib.parse
 import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
-from typing import Optional, Dict, Any, List, Union
-import ast
-import operator
-import math
-import re
-import asyncio
+from typing import Any, Dict, Optional, Union
 
-from ttt.tools import tool
+import zoneinfo
+
 from ttt.config import get_config
-from .recovery import ErrorRecoverySystem, RetryConfig, InputSanitizer
+from ttt.tools import tool
 
+from .recovery import ErrorRecoverySystem, InputSanitizer, RetryConfig
 
 # Initialize recovery system
 recovery_system = ErrorRecoverySystem(RetryConfig())
@@ -255,7 +253,7 @@ def read_file(file_path: str, encoding: str = "utf-8") -> str:
             )
 
         # Read file
-        with open(path, "r", encoding=encoding) as f:
+        with open(path, encoding=encoding) as f:
             content = f.read()
 
         return content
@@ -337,14 +335,17 @@ def run_python(code: str, timeout: int = None) -> str:
         # Get timeout bounds from config
         try:
             from ..config import get_config
+
             config = get_config()
-            timeout_bounds = config.model_dump().get("tools", {}).get("timeout_bounds", {})
+            timeout_bounds = (
+                config.model_dump().get("tools", {}).get("timeout_bounds", {})
+            )
             min_timeout = timeout_bounds.get("min", 1)
             max_timeout = timeout_bounds.get("max", 30)
         except Exception:
             min_timeout = 1
             max_timeout = 30
-            
+
         timeout = min(max(min_timeout, timeout), max_timeout)
 
         # Create temporary file for code
@@ -461,14 +462,17 @@ def http_request(
         # Get timeout bounds from config
         try:
             from ..config import get_config
+
             config = get_config()
-            timeout_bounds = config.model_dump().get("tools", {}).get("timeout_bounds", {})
+            timeout_bounds = (
+                config.model_dump().get("tools", {}).get("timeout_bounds", {})
+            )
             min_timeout = timeout_bounds.get("min", 1)
             max_timeout = timeout_bounds.get("max", 30)
         except Exception:
             min_timeout = 1
             max_timeout = 30
-            
+
         timeout = min(max(min_timeout, timeout), max_timeout)
 
         # Prepare request
@@ -723,18 +727,21 @@ def list_directory(
                 results.append(f"[DIR]  {relative}/")
             else:
                 size = item.stat().st_size
-                
+
                 # Get size format thresholds from config
                 try:
                     from ..config import get_config
+
                     config = get_config()
-                    size_config = config.model_dump().get("files", {}).get("size_format", {})
+                    size_config = (
+                        config.model_dump().get("files", {}).get("size_format", {})
+                    )
                     kb_threshold = size_config.get("kb_threshold", 1024)
                     mb_threshold = size_config.get("mb_threshold", 1048576)
                 except Exception:
                     kb_threshold = 1024
                     mb_threshold = 1048576
-                
+
                 if size < kb_threshold:
                     size_str = f"{size}B"
                 elif size < mb_threshold:

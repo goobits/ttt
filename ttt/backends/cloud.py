@@ -1,24 +1,24 @@
 """Cloud backend implementation using LiteLLM for multiple providers."""
 
-import time
 import json
-from typing import AsyncIterator, Dict, Any, Optional, List, Union
 import os
+import time
+from typing import Any, AsyncIterator, Dict, List, Optional, Union
+
+from ..config import model_registry  # Import the central registry
+from ..exceptions import (
+    APIKeyError,
+    BackendConnectionError,
+    BackendNotAvailableError,
+    BackendTimeoutError,
+    EmptyResponseError,
+    ModelNotFoundError,
+    QuotaExceededError,
+    RateLimitError,
+)
 from ..models import AIResponse, ImageInput
 from ..utils import get_logger
 from .base import BaseBackend
-from ..config import model_registry  # Import the central registry
-from ..exceptions import (
-    BackendNotAvailableError,
-    BackendConnectionError,
-    BackendTimeoutError,
-    ModelNotFoundError,
-    APIKeyError,
-    EmptyResponseError,
-    RateLimitError,
-    QuotaExceededError,
-)
-
 
 logger = get_logger(__name__)
 
@@ -53,22 +53,24 @@ class CloudBackend(BaseBackend):
 
         # Get cloud-specific config
         cloud_config = self.backend_config.get("cloud", {})
-        
+
         # Default models for different providers
         from ..config_loader import get_config_value
+
         self.default_models = cloud_config.get("default_models") or get_config_value(
-            "backends.cloud.default_models", {
+            "backends.cloud.default_models",
+            {
                 "openai": "gpt-3.5-turbo",
                 "anthropic": "claude-3-sonnet-20240229",
                 "google": "gemini-pro",
                 "openrouter": "openrouter/google/gemini-flash-1.5",
-            }
+            },
         )
 
         # Get default model from backend_config (handles merging)
-        self.default_model = self.backend_config.get("default_model") or get_config_value(
-            "models.default", "gpt-3.5-turbo"
-        )
+        self.default_model = self.backend_config.get(
+            "default_model"
+        ) or get_config_value("models.default", "gpt-3.5-turbo")
 
         # Get provider order preference
         self.provider_order = cloud_config.get("provider_order") or get_config_value(
@@ -122,7 +124,7 @@ class CloudBackend(BaseBackend):
     def supports_streaming(self) -> bool:
         """Check if backend supports streaming."""
         return True
-    
+
     @property
     def supports_messages(self) -> bool:
         """Check if backend supports message history format."""
@@ -158,8 +160,8 @@ class CloudBackend(BaseBackend):
 
         # Build messages
         # Check if we received pre-built messages from chat session
-        if 'messages' in kwargs and kwargs['messages']:
-            messages = kwargs['messages']
+        if "messages" in kwargs and kwargs["messages"]:
+            messages = kwargs["messages"]
         else:
             messages = []
             if system:
@@ -226,18 +228,22 @@ class CloudBackend(BaseBackend):
 
         # Add any additional parameters, filtering out None values
         # Also remove 'messages' from kwargs since we build it ourselves
-        filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None and k != 'messages'}
+        filtered_kwargs = {
+            k: v for k, v in kwargs.items() if v is not None and k != "messages"
+        }
         params.update(filtered_kwargs)
 
         try:
             logger.debug(f"Sending request to {used_model}")
-            logger.debug(f"Parameters: max_tokens={params.get('max_tokens')}, temperature={params.get('temperature')}")
+            logger.debug(
+                f"Parameters: max_tokens={params.get('max_tokens')}, temperature={params.get('temperature')}"
+            )
 
             # Use LiteLLM's completion function
             # Add API key explicitly for OpenRouter models
             if used_model.startswith("openrouter/") and os.getenv("OPENROUTER_API_KEY"):
                 params["api_key"] = os.getenv("OPENROUTER_API_KEY")
-            
+
             response = await self.litellm.acompletion(**params)
 
             # Extract response content
@@ -463,18 +469,22 @@ class CloudBackend(BaseBackend):
 
         # Add any additional parameters, filtering out None values
         # Also remove 'messages' from kwargs since we build it ourselves
-        filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None and k != 'messages'}
+        filtered_kwargs = {
+            k: v for k, v in kwargs.items() if v is not None and k != "messages"
+        }
         params.update(filtered_kwargs)
 
         try:
             logger.debug(f"Starting stream request to {used_model}")
-            logger.debug(f"Stream parameters: max_tokens={params.get('max_tokens')}, temperature={params.get('temperature')}")
+            logger.debug(
+                f"Stream parameters: max_tokens={params.get('max_tokens')}, temperature={params.get('temperature')}"
+            )
 
             # Use LiteLLM's streaming completion
             # Add API key explicitly for OpenRouter models
             if used_model.startswith("openrouter/") and os.getenv("OPENROUTER_API_KEY"):
                 params["api_key"] = os.getenv("OPENROUTER_API_KEY")
-            
+
             response = await self.litellm.acompletion(**params)
 
             async for chunk in response:
@@ -528,7 +538,7 @@ class CloudBackend(BaseBackend):
         """
         # Get all model definitions from the registry
         all_model_info = model_registry.models.values()
-        
+
         # Filter for models that are NOT from the 'local' provider
         cloud_models = [
             model.name for model in all_model_info if model.provider != "local"
@@ -550,7 +560,9 @@ class CloudBackend(BaseBackend):
         """
         # Get all non-local models from the registry
         all_model_info = [
-            model for model in model_registry.models.values() if model.provider != "local"
+            model
+            for model in model_registry.models.values()
+            if model.provider != "local"
         ]
 
         if not detailed:

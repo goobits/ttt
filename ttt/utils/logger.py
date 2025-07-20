@@ -2,10 +2,10 @@
 
 import logging
 from typing import Optional
+
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.traceback import install
-
 
 # Install rich traceback handler
 install(show_locals=True)

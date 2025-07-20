@@ -1,13 +1,13 @@
 """Tests for the plugin system."""
 
+from typing import Any, AsyncIterator, Dict, List
+
 import pytest
-import tempfile
-from pathlib import Path
-from typing import AsyncIterator, Dict, Any, List, Optional
-from ttt.plugins import PluginRegistry, BackendPlugin, plugin_registry
+
 from ttt.backends import BaseBackend
-from ttt.models import AIResponse
 from ttt.exceptions import PluginValidationError
+from ttt.models import AIResponse
+from ttt.plugins import BackendPlugin, PluginRegistry, plugin_registry
 
 
 class MockTestBackend(BaseBackend):

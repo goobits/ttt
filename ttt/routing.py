@@ -1,20 +1,18 @@
 """Unified routing logic for selecting backends and models."""
 
-from typing import Optional, Union, Dict, Any, List
+from typing import Dict, List, Optional, Union
+
+from .backends import HAS_LOCAL_BACKEND, BaseBackend, CloudBackend
 from .models import AIResponse, ImageInput
-from .backends import BaseBackend, CloudBackend, HAS_LOCAL_BACKEND
 
 if HAS_LOCAL_BACKEND:
     from .backends import LocalBackend
 from .config import get_config, model_registry
-from .plugins import plugin_registry
-from .utils import get_logger
 from .exceptions import (
     BackendNotAvailableError,
-    ModelNotFoundError,
-    InvalidParameterError,
 )
-
+from .plugins import plugin_registry
+from .utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -156,45 +154,51 @@ class Router:
     def _is_local_model(self, model: str, local_backend) -> bool:
         """
         Check if a model is available locally with caching.
-        
+
         Args:
             model: Model name to check
             local_backend: Local backend instance
-            
+
         Returns:
             True if model is available locally
         """
         import time
+
         current_time = time.time()
-        
+
         # Check if cache is still valid
-        if (self._local_models_cache is not None and 
-            self._cache_timestamp is not None and 
-            current_time - self._cache_timestamp < self._cache_ttl):
+        if (
+            self._local_models_cache is not None
+            and self._cache_timestamp is not None
+            and current_time - self._cache_timestamp < self._cache_ttl
+        ):
             return model in self._local_models_cache
-        
+
         # Cache is stale or missing, refresh it
         try:
             import httpx
+
             from .utils import run_async
-            
+
             async def fetch_local_models():
                 try:
                     async with httpx.AsyncClient(timeout=3) as client:
-                        response = await client.get(f"{local_backend.base_url}/api/tags")
+                        response = await client.get(
+                            f"{local_backend.base_url}/api/tags"
+                        )
                         if response.status_code == 200:
                             data = response.json()
-                            return [m['name'] for m in data.get('models', [])]
+                            return [m["name"] for m in data.get("models", [])]
                         return []
                 except Exception:
                     return []
-            
+
             available_models = run_async(fetch_local_models())
             self._local_models_cache = available_models
             self._cache_timestamp = current_time
-            
+
             return model in available_models
-            
+
         except Exception as e:
             logger.debug(f"Failed to fetch local models: {e}")
             return False
@@ -220,9 +224,10 @@ class Router:
                 # Use backend-specific default
                 if backend and hasattr(backend, "default_model"):
                     return backend.default_model
-                
+
                 # Get fallback from config
                 from .config_loader import get_config_value
+
                 return get_config_value("models.default", "gpt-3.5-turbo")
 
         # Try to resolve alias
@@ -282,47 +287,62 @@ class Router:
                     selected_backend = self.get_backend("cloud")
                 selected_model = self.resolve_model(model, selected_backend)
                 return selected_backend, selected_model
-            
+
             # If not in registry, detect cloud models by naming patterns
             # Get patterns from config
             from .config import load_project_defaults
+
             project_defaults = load_project_defaults()
             cloud_model_patterns = project_defaults.get("routing", {}).get(
-                "cloud_model_patterns", 
+                "cloud_model_patterns",
                 [
-                    "openrouter/", "anthropic/", "openai/", "google/", 
-                    "gpt-", "claude-", "gemini-", "mistral/", "meta/",
-                    "cohere/", "replicate/", "huggingface/"
-                ]
+                    "openrouter/",
+                    "anthropic/",
+                    "openai/",
+                    "google/",
+                    "gpt-",
+                    "claude-",
+                    "gemini-",
+                    "mistral/",
+                    "meta/",
+                    "cohere/",
+                    "replicate/",
+                    "huggingface/",
+                ],
             )
-            
-            is_cloud_model = any(model.startswith(pattern) for pattern in cloud_model_patterns)
-            
+
+            is_cloud_model = any(
+                model.startswith(pattern) for pattern in cloud_model_patterns
+            )
+
             if is_cloud_model:
                 logger.debug(f"Detected cloud model pattern: {model}")
                 selected_backend = self.get_backend("cloud")
                 selected_model = self.resolve_model(model, selected_backend)
                 return selected_backend, selected_model
-            
+
             # If not a cloud model and local backend is available, check if it's a local model
             if HAS_LOCAL_BACKEND:
                 try:
                     local_backend = self.get_backend("local")
-                    if local_backend.is_available and self._is_local_model(model, local_backend):
+                    if local_backend.is_available and self._is_local_model(
+                        model, local_backend
+                    ):
                         logger.debug(f"Detected local model: {model}")
                         selected_model = self.resolve_model(model, local_backend)
                         return local_backend, selected_model
                 except Exception as e:
-                    logger.debug(f"Failed to check local backend for model {model}: {e}")
+                    logger.debug(
+                        f"Failed to check local backend for model {model}: {e}"
+                    )
 
         # Use auto-selection to respect configured default_backend
         selected_backend = self._auto_select_backend()
-        
+
         # Use configured default model
         selected_model = self.resolve_model(model, selected_backend)
 
         return selected_backend, selected_model
-
 
     async def route_with_fallback(
         self,

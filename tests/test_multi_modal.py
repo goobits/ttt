@@ -1,13 +1,13 @@
 """Tests for multi-modal functionality."""
 
-import pytest
-from unittest.mock import Mock, patch, AsyncMock
-from pathlib import Path
 import base64
+from unittest.mock import AsyncMock, Mock, patch
 
-from ai import ask, stream, ImageInput
-from ttt.models import AIResponse
+import pytest
+from ai import ImageInput, ask, stream
+
 from ttt.backends import CloudBackend, LocalBackend
+from ttt.models import AIResponse
 
 
 class TestImageInput:

@@ -1,12 +1,12 @@
 """Tests for tool support in chat sessions."""
 
-import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-import json
-from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-from ttt.chat import PersistentChatSession as ChatSession, PersistentChatSession
+import pytest
+
 from ttt.api import chat
+from ttt.chat import PersistentChatSession
+from ttt.chat import PersistentChatSession as ChatSession
 from ttt.models import AIResponse
 from ttt.tools import ToolCall, ToolResult
 
@@ -189,30 +189,31 @@ class TestCLIToolSupport:
     def test_cli_with_tools(self):
         """Test CLI argument parsing with --tools flag."""
         from click.testing import CliRunner
+
         from ttt.cli import main
-        
+
         runner = CliRunner()
-        
-        with patch('ttt.ask') as mock_ask:
+
+        with patch("ttt.ask") as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
-            
-            with patch('ttt.cli.resolve_tools') as mock_resolve:
+
+            with patch("ttt.cli.resolve_tools") as mock_resolve:
                 mock_resolve.return_value = []  # Simplified for test
-                
-                result = runner.invoke(main, [
-                    'ask', 'Test prompt', '--tools', 'math:add,string:upper'
-                ])
-                
+
+                result = runner.invoke(
+                    main, ["ask", "Test prompt", "--tools", "math:add,string:upper"]
+                )
+
                 assert result.exit_code == 0
                 # Verify tools were parsed and resolved
-                mock_resolve.assert_called_once_with(['math:add', 'string:upper'])
+                mock_resolve.assert_called_once_with(["math:add", "string:upper"])
 
     def test_resolve_tools_from_registry(self):
         """Test resolving tools from registry."""
         from ttt.cli import resolve_tools
-        from ttt.tools.registry import register_tool, clear_registry
+        from ttt.tools.registry import clear_registry, register_tool
 
         # Register a test tool
         def test_tool(x: int) -> int:
@@ -232,19 +233,19 @@ class TestCLIToolSupport:
     def test_resolve_tools_from_module(self):
         """Test resolving tools from module imports."""
         from ttt.cli import resolve_tools
-        from ttt.tools import register_tool, unregister_tool, tool
+        from ttt.tools import register_tool, tool, unregister_tool
 
         # Register a test tool in a test category
         @tool(register=False)
         def my_function(x):
             return x * 2
-        
+
         register_tool(my_function, "my_function", "Test function", "mymodule")
-        
+
         try:
             tools = resolve_tools(["mymodule:my_function"])
             assert len(tools) == 1
-            assert hasattr(tools[0], '__call__')  # Check it's callable
+            assert callable(tools[0])  # Check it's callable
         finally:
             # Clean up
             try:

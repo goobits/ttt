@@ -1,7 +1,8 @@
 """Base backend abstract class defining the common interface."""
 
 from abc import ABC, abstractmethod
-from typing import AsyncIterator, Dict, Any, Optional, List, Union
+from typing import Any, AsyncIterator, Dict, List, Optional, Union
+
 from ..models import AIResponse, ImageInput
 
 
@@ -33,9 +34,16 @@ class BaseBackend(ABC):
 
         # Common configuration attributes
         from ..config_loader import get_config_value
-        self.timeout = self.backend_config.get("timeout") or get_config_value("timeout", 30)
-        self.max_retries = self.backend_config.get("max_retries") or get_config_value("max_retries", 3)
-        self.default_model = self.backend_config.get("default_model") or get_config_value("models.default")
+
+        self.timeout = self.backend_config.get("timeout") or get_config_value(
+            "timeout", 30
+        )
+        self.max_retries = self.backend_config.get("max_retries") or get_config_value(
+            "max_retries", 3
+        )
+        self.default_model = self.backend_config.get(
+            "default_model"
+        ) or get_config_value("models.default")
 
     @abstractmethod
     async def ask(
@@ -47,7 +55,7 @@ class BaseBackend(ABC):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         tools: Optional[List] = None,
-        **kwargs
+        **kwargs,
     ) -> AIResponse:
         """
         Send a single prompt and get a response.
@@ -76,7 +84,7 @@ class BaseBackend(ABC):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         tools: Optional[List] = None,
-        **kwargs
+        **kwargs,
     ) -> AsyncIterator[str]:
         """
         Stream a response token by token.

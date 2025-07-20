@@ -1,22 +1,22 @@
 """Advanced tests for the API module to increase coverage."""
 
-import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-import asyncio
 from typing import AsyncIterator
+from unittest.mock import patch
+
+import pytest
 
 from ttt.api import (
-    ask,
-    stream,
-    chat,
-    ask_async,
-    stream_async,
     achat,
+    ask,
+    ask_async,
+    chat,
+    stream,
+    stream_async,
 )
-from ttt.chat import PersistentChatSession as ChatSession
-from ttt.models import AIResponse, ImageInput
 from ttt.backends import BaseBackend
+from ttt.chat import PersistentChatSession as ChatSession
 from ttt.exceptions import BackendNotAvailableError
+from ttt.models import AIResponse, ImageInput
 
 
 class MockBackend(BaseBackend):
@@ -85,7 +85,6 @@ def mock_router(mock_backend):
     with patch("ttt.api.router") as mock:
         mock.smart_route.return_value = (mock_backend, "mock-model")
         yield mock
-
 
 
 class TestAskFunction:
@@ -229,9 +228,15 @@ class TestChatSession:
         assert str(response) == "Mock response"
         assert len(session.history) == 2
         # Check message exists (may have timestamp and metadata)
-        assert any(msg['role'] == 'user' and msg['content'] == 'Hello' for msg in session.history)
+        assert any(
+            msg["role"] == "user" and msg["content"] == "Hello"
+            for msg in session.history
+        )
         # Check assistant response exists (may have metadata)
-        assert any(msg['role'] == 'assistant' and msg['content'] == 'Mock response' for msg in session.history)
+        assert any(
+            msg["role"] == "assistant" and msg["content"] == "Mock response"
+            for msg in session.history
+        )
 
         # First message should be passed as-is
         assert mock_backend.last_prompt == "Hello"
@@ -256,8 +261,14 @@ class TestChatSession:
         # Check history
         assert len(session.history) == 4
         # Check messages exist (may have timestamps and metadata)
-        assert any(msg['role'] == 'user' and msg['content'] == 'How are you?' for msg in session.history[2:])
-        assert any(msg['role'] == 'assistant' and msg['content'] == 'I\'m doing well' for msg in session.history[2:])
+        assert any(
+            msg["role"] == "user" and msg["content"] == "How are you?"
+            for msg in session.history[2:]
+        )
+        assert any(
+            msg["role"] == "assistant" and msg["content"] == "I'm doing well"
+            for msg in session.history[2:]
+        )
 
     def test_chat_session_stream(self):
         """Test streaming in chat session."""
@@ -322,7 +333,6 @@ class TestChatContextManager:
                 assert session.backend is not None
 
 
-
 class TestAsyncFunctions:
     """Test async versions of functions."""
 
@@ -384,7 +394,9 @@ class TestErrorHandling:
         with pytest.raises(BackendNotAvailableError) as exc_info:
             ChatSession(backend="invalid-backend")
 
-        assert "not available" in str(exc_info.value) or "not found" in str(exc_info.value)
+        assert "not available" in str(exc_info.value) or "not found" in str(
+            exc_info.value
+        )
 
     def test_stream_with_failing_backend(self, mock_router):
         """Test streaming when backend fails."""

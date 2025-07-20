@@ -1,8 +1,9 @@
 """Global tool registry for managing available tools."""
 
-from typing import Dict, List, Optional, Set, Callable, Union
-from .base import ToolDefinition, create_tool_definition
 import threading
+from typing import Callable, Dict, List, Optional, Set, Union
+
+from .base import ToolDefinition, create_tool_definition
 
 
 class ToolRegistry:

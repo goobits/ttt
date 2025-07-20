@@ -1,22 +1,21 @@
 """Tests for the error recovery and fallback system."""
 
-import pytest
 import asyncio
 import tempfile
-import os
-from unittest.mock import patch, Mock, AsyncMock
 from pathlib import Path
+from unittest.mock import Mock, patch
 
+import pytest
+
+from ttt.tools.base import ToolCall
+from ttt.tools.executor import ExecutionConfig, ToolExecutor
 from ttt.tools.recovery import (
-    ErrorRecoverySystem,
-    RetryConfig,
-    InputSanitizer,
-    ErrorType,
     ErrorPattern,
-    FallbackSuggestion,
+    ErrorRecoverySystem,
+    ErrorType,
+    InputSanitizer,
+    RetryConfig,
 )
-from ttt.tools.executor import ToolExecutor, ExecutionConfig
-from ttt.tools.base import ToolCall, ToolResult
 
 
 class TestInputSanitizer:

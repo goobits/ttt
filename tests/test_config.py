@@ -1,11 +1,8 @@
 """Tests for the configuration system."""
 
-import pytest
-import os
-import tempfile
-from pathlib import Path
 import yaml
-from ttt.config import load_config, save_config, configure, get_config, model_registry
+
+from ttt.config import configure, get_config, load_config, model_registry, save_config
 from ttt.models import ConfigModel, ModelInfo
 
 
@@ -16,16 +13,17 @@ class TestConfigModel:
         """Test default configuration values from loaded config."""
         # Get config with defaults loaded from config.yaml
         from ttt.config import get_config
+
         config = get_config()
-        
+
         # Test that we have the expected structure
         assert config.backend_config is not None
-        assert config.backend_config.get('default') == 'cloud'
-        
+        assert config.backend_config.get("default") == "cloud"
+
         # These come from the user's config or project defaults
         if config.default_backend:
-            assert config.default_backend in ['cloud', 'local', 'auto']
-        
+            assert config.default_backend in ["cloud", "local", "auto"]
+
         # Test optional fields
         assert config.enable_fallbacks is True
         # Fallback order can vary based on config
@@ -136,14 +134,14 @@ class TestConfigLoading:
     def test_missing_config_file(self):
         """Test loading with non-existent config file uses project defaults."""
         config = load_config("non_existent_file.yaml")
-        
+
         # Should have loaded project defaults from config.yaml
         assert config.backend_config is not None
-        assert config.backend_config.get('default') == 'cloud'
-        
+        assert config.backend_config.get("default") == "cloud"
+
         # Cloud backend should have timeout configured
-        if 'cloud' in config.backend_config:
-            assert config.backend_config['cloud'].get('timeout', 30) == 30
+        if "cloud" in config.backend_config:
+            assert config.backend_config["cloud"].get("timeout", 30) == 30
 
 
 class TestConfigSaving:

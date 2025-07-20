@@ -1,27 +1,22 @@
 """Tests for built-in tools."""
 
-import pytest
-import os
-import tempfile
 import json
-from pathlib import Path
-from unittest.mock import patch, Mock, MagicMock
 import urllib.error
-import datetime
-import zoneinfo
+from unittest.mock import Mock, patch
 
+import pytest
+
+from ttt.tools import get_tool, list_tools
 from ttt.tools.builtins import (
-    web_search,
-    read_file,
-    write_file,
-    run_python,
+    calculate,
     get_current_time,
     http_request,
-    calculate,
     list_directory,
-    load_builtin_tools,
+    read_file,
+    run_python,
+    web_search,
+    write_file,
 )
-from ttt.tools import get_tool, list_tools
 
 
 class TestWebSearch:

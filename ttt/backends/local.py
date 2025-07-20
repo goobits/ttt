@@ -2,20 +2,20 @@
 
 import json
 import time
-from typing import AsyncIterator, Dict, Any, Optional, List, Union
+from typing import Any, AsyncIterator, Dict, List, Optional, Union
+
 import httpx
-from ..models import AIResponse, ImageInput
-from ..utils import get_logger, run_async
-from .base import BaseBackend
+
 from ..exceptions import (
     BackendConnectionError,
     BackendTimeoutError,
-    ModelNotFoundError,
     EmptyResponseError,
+    ModelNotFoundError,
     ResponseParsingError,
-    MultiModalError,
 )
-
+from ..models import AIResponse, ImageInput
+from ..utils import get_logger, run_async
+from .base import BaseBackend
 
 logger = get_logger(__name__)
 
@@ -38,13 +38,16 @@ class LocalBackend(BaseBackend):
         super().__init__(config)
         # Get local-specific config
         local_config = self.backend_config.get("local", {})
-        
+
         # Use backend_config from base class which handles merging
         from ..config_loader import get_config_value
-        self.base_url = local_config.get("base_url") or self.backend_config.get(
-            "ollama_base_url"
-        ) or get_config_value("backends.local.base_url", "http://localhost:11434")
-        
+
+        self.base_url = (
+            local_config.get("base_url")
+            or self.backend_config.get("ollama_base_url")
+            or get_config_value("backends.local.base_url", "http://localhost:11434")
+        )
+
         self.default_model = local_config.get("default_model") or get_config_value(
             "backends.local.default_model", "llama2"
         )
@@ -174,7 +177,7 @@ class LocalBackend(BaseBackend):
                     raise ModelNotFoundError(used_model, self.name)
 
             raise BackendConnectionError(self.name, e)
-        except httpx.TimeoutException as e:
+        except httpx.TimeoutException:
             raise BackendTimeoutError(self.name, self.timeout)
         except Exception as e:
             logger.error(f"Ollama request failed: {str(e)}")
@@ -260,7 +263,7 @@ class LocalBackend(BaseBackend):
                                 if data.get("done", False):
                                     break
 
-                            except json.JSONDecodeError as e:
+                            except json.JSONDecodeError:
                                 logger.warning(f"Failed to parse JSON line: {line}")
                                 raise ResponseParsingError(
                                     f"Invalid JSON in stream: {line[:100]}", line
@@ -270,7 +273,7 @@ class LocalBackend(BaseBackend):
             if e.response.status_code == 404 and "model" in e.response.text.lower():
                 raise ModelNotFoundError(used_model, self.name)
             raise BackendConnectionError(self.name, e)
-        except httpx.TimeoutException as e:
+        except httpx.TimeoutException:
             raise BackendTimeoutError(self.name, self.timeout)
         except Exception as e:
             logger.error(f"Streaming request failed: {str(e)}")
@@ -294,7 +297,7 @@ class LocalBackend(BaseBackend):
                 logger.debug(f"Found {len(models)} local models")
                 return models
 
-        except httpx.TimeoutException as e:
+        except httpx.TimeoutException:
             raise BackendTimeoutError(self.name, 10.0)
         except Exception as e:
             logger.error(f"Failed to fetch models: {str(e)}")

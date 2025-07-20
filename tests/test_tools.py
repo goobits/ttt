@@ -1,16 +1,22 @@
 """Comprehensive tests for the tool system."""
 
-import pytest
-from unittest.mock import Mock, AsyncMock, patch
 import asyncio
 from typing import List
+from unittest.mock import AsyncMock, Mock, patch
 
-from ttt.tools import tool, ToolDefinition, ToolCall, ToolResult
-from ttt.tools.registry import ToolRegistry, resolve_tools
-from ttt.tools import execute_tool, execute_tools
+import pytest
 from ai import ask
-from ttt.models import AIResponse
+
 from ttt.backends.cloud import CloudBackend
+from ttt.models import AIResponse
+from ttt.tools import (
+    ToolCall,
+    ToolResult,
+    execute_tool,
+    execute_tools,
+    tool,
+)
+from ttt.tools.registry import ToolRegistry, resolve_tools
 
 
 class TestToolDecorator:
@@ -105,7 +111,7 @@ class TestToolExecution:
 
         # Register the tool temporarily
         register_tool(add_numbers, "add_numbers", "Add two numbers", "test")
-        
+
         try:
             result = await execute_tool("add_numbers", {"x": 5, "y": 3})
 
@@ -134,7 +140,7 @@ class TestToolExecution:
 
         # Register the tool temporarily
         register_tool(divide_numbers, "divide_numbers", "Divide two numbers", "test")
-        
+
         try:
             result = await execute_tool("divide_numbers", {"x": 10, "y": 0})
 
@@ -145,9 +151,11 @@ class TestToolExecution:
             assert result.error is not None
             # Check for error message - could be wrapped by recovery system
             # The actual Python error is "division by zero" (lowercase)
-            assert ("division by zero" in result.error.lower() or 
-                    "cannot divide by zero" in result.error.lower() or
-                    "failed:" in result.error.lower())
+            assert (
+                "division by zero" in result.error.lower()
+                or "cannot divide by zero" in result.error.lower()
+                or "failed:" in result.error.lower()
+            )
         finally:
             # Clean up
             try:
@@ -172,12 +180,17 @@ class TestToolExecution:
 
         # Register tools temporarily
         register_tool(multiply, "multiply", "Multiply two numbers", "test")
-        register_tool(format_result, "format_result", "Format a result with prefix", "test")
-        
+        register_tool(
+            format_result, "format_result", "Format a result with prefix", "test"
+        )
+
         try:
             tool_calls = [
                 {"name": "multiply", "arguments": {"x": 4, "y": 3}},
-                {"name": "format_result", "arguments": {"value": 12, "prefix": "Answer"}},
+                {
+                    "name": "format_result",
+                    "arguments": {"value": 12, "prefix": "Answer"},
+                },
             ]
 
             result = await execute_tools(tool_calls, parallel=True)
@@ -275,9 +288,10 @@ class TestToolIntegration:
             elif operation == "multiply":
                 return x * y
             return 0
-        
+
         # Register tools temporarily for the test
         from ttt.tools.registry import register_tool, unregister_tool
+
         register_tool(get_weather, "get_weather", "Get weather for a city", "test")
         register_tool(test_calculate, "test_calculate", "Perform calculation", "test")
 
@@ -330,7 +344,7 @@ class TestToolIntegration:
             )
             assert calc_call.succeeded
             assert calc_call.result == 40
-        
+
         # Clean up registered tools
         try:
             unregister_tool("get_weather")
@@ -378,31 +392,36 @@ class TestToolErrorHandling:
     @pytest.mark.asyncio
     async def test_tool_timeout_handling(self):
         """Test tool execution timeout with async functions."""
-        
+
         # Note: The current executor only supports timeouts for async functions
         # Sync functions run in the main thread and cannot be interrupted by asyncio.wait_for
-        
+
         @tool(register=False)
         async def async_slow_tool() -> str:
             """An async tool that takes too long."""
-            import asyncio
             await asyncio.sleep(1.0)  # Sleep for 1 second
             return "This should timeout"
 
-        from ttt.tools import ToolExecutor, ExecutionConfig
-        from ttt.tools import register_tool, unregister_tool
+        from ttt.tools import (
+            ExecutionConfig,
+            ToolExecutor,
+            register_tool,
+            unregister_tool,
+        )
 
         # Use a short timeout
         config = ExecutionConfig(timeout_seconds=0.1)  # 100ms timeout
         executor = ToolExecutor(config=config)
-        
+
         # Register the tool
         register_tool(async_slow_tool, "async_slow_tool", "An async slow tool", "test")
-        
+
         try:
             # Execute with the short timeout
-            result = await executor.execute_tool("async_slow_tool", {}, timeout=0.05)  # 50ms timeout
-            
+            result = await executor.execute_tool(
+                "async_slow_tool", {}, timeout=0.05
+            )  # 50ms timeout
+
             # The tool should timeout
             assert result.succeeded is False
             assert result.error is not None
@@ -425,18 +444,22 @@ class TestToolErrorHandling:
             return f"Got: {required_param}"
 
         # Register the tool temporarily
-        register_tool(strict_tool, "strict_tool", "Tool with required parameter", "test")
-        
+        register_tool(
+            strict_tool, "strict_tool", "Tool with required parameter", "test"
+        )
+
         try:
             result = await execute_tool("strict_tool", {"wrong_param": "value"})
 
             assert result.succeeded is False
             # The new executor provides a different error message for invalid arguments
             assert result.error is not None
-            assert ("unexpected keyword argument" in result.error.lower() or 
-                    "invalid input" in result.error.lower() or
-                    "missing" in result.error.lower() or 
-                    "required" in result.error.lower())
+            assert (
+                "unexpected keyword argument" in result.error.lower()
+                or "invalid input" in result.error.lower()
+                or "missing" in result.error.lower()
+                or "required" in result.error.lower()
+            )
         finally:
             # Clean up
             try:

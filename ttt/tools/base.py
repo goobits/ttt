@@ -1,10 +1,9 @@
 """Base classes for the tool system."""
 
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Union
-import json
 import inspect
+from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 
 class ToolParameterType(str, Enum):

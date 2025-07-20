@@ -1,16 +1,10 @@
 """Tests for CLI commands."""
 
-import pytest
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
-import subprocess
-import sys
 import os
+from unittest.mock import MagicMock, Mock, patch
 
 # Import functions from the CLI
-from ttt.cli import show_backend_status, show_models_list, main
-from ttt.backends.local import LocalBackend
-from ttt.backends.cloud import CloudBackend
-from ttt.api import ask, stream
+from ttt.cli import main, show_backend_status, show_models_list
 
 
 class TestModelsCommands:
@@ -40,17 +34,20 @@ class TestModelsCommands:
 
             # Check that models were printed
             print_calls = [str(call) for call in mock_console.print.call_args_list]
-            
+
             # Debug: print what's actually being called
             # for call in print_calls:
             #     print(f"DEBUG: {call}")
-            
+
             # The models are printed as "• llama2", not just "llama2"
             # Check for the bullet format
             assert any("llama2" in str(call) for call in print_calls)
             assert any("codellama" in str(call) for call in print_calls)
             # Also check that cloud models are shown
-            assert any("gpt-4o" in str(call) or "gpt-3.5-turbo" in str(call) for call in print_calls)
+            assert any(
+                "gpt-4o" in str(call) or "gpt-3.5-turbo" in str(call)
+                for call in print_calls
+            )
 
     @patch("ttt.backends.local.LocalBackend")
     def test_models_list_no_local_backend(self, mock_local_backend):
@@ -160,6 +157,7 @@ class TestMainCommand:
     def setup_method(self):
         """Set up test fixtures."""
         from click.testing import CliRunner
+
         self.runner = CliRunner()
 
     def test_cli_help(self):
@@ -184,52 +182,52 @@ class TestMainCommand:
 
     def test_ask_basic_query(self):
         """Test basic ask query."""
-        with patch('ttt.ask') as mock_ask:
+        with patch("ttt.ask") as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
-            
+
             result = self.runner.invoke(main, ["What is Python?"])
             assert result.exit_code == 0
-            
+
             call_args = mock_ask.call_args
             assert call_args[0][0] == "What is Python?"
 
     def test_ask_with_model(self):
         """Test ask query with model."""
-        with patch('ttt.ask') as mock_ask:
+        with patch("ttt.ask") as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
-            
+
             result = self.runner.invoke(main, ["Question", "--model", "gpt-4"])
             assert result.exit_code == 0
-            
+
             call_kwargs = mock_ask.call_args[1]
             assert call_kwargs["model"] == "gpt-4"
 
     def test_ask_with_stream(self):
         """Test ask query with stream flag."""
-        with patch('ttt.stream') as mock_stream:
+        with patch("ttt.stream") as mock_stream:
             mock_stream.return_value = iter(["chunk1", "chunk2"])
-            
+
             result = self.runner.invoke(main, ["Question", "--stream"])
             assert result.exit_code == 0
             mock_stream.assert_called_once()
 
     def test_ask_with_backend(self):
         """Test ask query with backend."""
-        with patch('ttt.ask') as mock_ask:
+        with patch("ttt.ask") as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
-            
+
             result = self.runner.invoke(main, ["Question"])
             assert result.exit_code == 0
 
     def test_main_query(self):
         """Test main function with query."""
-        with patch('ttt.ask') as mock_ask:
+        with patch("ttt.ask") as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = Mock(return_value="Test response")
             mock_response.model = "test-model"
@@ -237,17 +235,17 @@ class TestMainCommand:
             mock_response.time = 0.5
             mock_ask.return_value = mock_response
 
-            result = self.runner.invoke(main, ['Test question'])
-            
+            result = self.runner.invoke(main, ["Test question"])
+
             assert result.exit_code == 0
             assert "Test response" in result.output
 
     def test_main_stream(self):
         """Test main function with streaming."""
-        with patch('ttt.stream') as mock_stream:
+        with patch("ttt.stream") as mock_stream:
             mock_stream.return_value = iter(["Hello", " ", "world"])
 
-            result = self.runner.invoke(main, ['Test question', '--stream'])
-            
+            result = self.runner.invoke(main, ["Test question", "--stream"])
+
             assert result.exit_code == 0
             assert "Hello" in result.output and "world" in result.output

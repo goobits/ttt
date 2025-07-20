@@ -3,12 +3,11 @@
 import asyncio
 import logging
 import time
-from typing import Any, Dict, List, Optional, Callable, Union
 from dataclasses import dataclass
-import json
+from typing import Any, Dict, List, Optional
 
-from .base import ToolCall, ToolResult, ToolDefinition
-from .recovery import ErrorRecoverySystem, RetryConfig, InputSanitizer
+from .base import ToolCall, ToolDefinition, ToolResult
+from .recovery import ErrorRecoverySystem, InputSanitizer, RetryConfig
 from .registry import get_tool, list_tools, register_tool
 
 
@@ -21,15 +20,17 @@ class ExecutionConfig:
     enable_fallbacks: bool = True
     enable_input_sanitization: bool = True
     log_level: str = "INFO"
-    
+
     def __post_init__(self):
         """Load defaults from config if not set."""
         from ..config_loader import get_config_value
-        
+
         if self.max_retries is None:
             self.max_retries = get_config_value("tools.executor.max_retries", 3)
         if self.timeout_seconds is None:
-            self.timeout_seconds = get_config_value("tools.executor.timeout_seconds", 30.0)
+            self.timeout_seconds = get_config_value(
+                "tools.executor.timeout_seconds", 30.0
+            )
 
 
 class ToolExecutor:
@@ -383,14 +384,14 @@ class ToolExecutor:
             "fallback_calls": 0,
             "avg_execution_time": 0.0,
         }
-    
+
     async def execute_multiple_async(
         self,
         tool_calls: List[Dict[str, Any]],
         tool_definitions: Dict[str, ToolDefinition],
     ) -> ToolResult:
         """Execute multiple tool calls asynchronously (compatibility method).
-        
+
         This method provides backward compatibility with previous execution patterns.
         It temporarily registers any tools not in the global registry.
         """
@@ -398,9 +399,11 @@ class ToolExecutor:
         temp_registered = []
         for tool_name, tool_def in tool_definitions.items():
             if not get_tool(tool_name):
-                register_tool(tool_def.function, tool_name, tool_def.description, "test")
+                register_tool(
+                    tool_def.function, tool_name, tool_def.description, "test"
+                )
                 temp_registered.append(tool_name)
-        
+
         try:
             # Use the new execute_tools method
             return await self.execute_tools(tool_calls, parallel=True)
@@ -409,6 +412,7 @@ class ToolExecutor:
             for tool_name in temp_registered:
                 try:
                     from .registry import unregister_tool
+
                     unregister_tool(tool_name)
                 except:
                     pass

@@ -2,137 +2,132 @@
 
 import os
 import sys
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from click.testing import CliRunner
 
 # Add the project root to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from ttt.cli import main, is_coding_request, apply_coding_optimization
+from ttt.cli import apply_coding_optimization, is_coding_request, main
 
 
 class TestCLICommands:
     """Test CLI commands using Click CliRunner."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
         self.runner = CliRunner()
 
     def test_basic_ask_command(self):
         """Test basic direct prompt functionality."""
-        with patch('ttt.ask') as mock_ask:
+        with patch("ttt.ask") as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_response.model = "test-model"
             mock_response.backend = "test"
             mock_response.time = 1.23
             mock_ask.return_value = mock_response
-            
-            result = self.runner.invoke(main, ['What is Python?'])
-            
+
+            result = self.runner.invoke(main, ["What is Python?"])
+
             assert result.exit_code == 0
             mock_ask.assert_called_once()
             call_args = mock_ask.call_args
-            assert call_args[0][0] == 'What is Python?'
+            assert call_args[0][0] == "What is Python?"
 
     def test_ask_with_model_option(self):
         """Test direct prompt with model option."""
-        with patch('ttt.ask') as mock_ask:
+        with patch("ttt.ask") as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
-            
-            result = self.runner.invoke(main, ['Test prompt', '--model', 'gpt-4'])
-            
+
+            result = self.runner.invoke(main, ["Test prompt", "--model", "gpt-4"])
+
             assert result.exit_code == 0
             call_kwargs = mock_ask.call_args[1]
-            assert call_kwargs['model'] == 'gpt-4'
-
+            assert call_kwargs["model"] == "gpt-4"
 
     def test_ask_with_temperature(self):
         """Test direct prompt with temperature option."""
-        with patch('ttt.ask') as mock_ask:
+        with patch("ttt.ask") as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
-            
-            result = self.runner.invoke(main, ['Test prompt', '--temperature', '0.7'])
-            
+
+            result = self.runner.invoke(main, ["Test prompt", "--temperature", "0.7"])
+
             assert result.exit_code == 0
             call_kwargs = mock_ask.call_args[1]
-            assert call_kwargs['temperature'] == 0.7
-
-
-
+            assert call_kwargs["temperature"] == 0.7
 
     def test_ask_with_streaming(self):
         """Test direct prompt with streaming."""
-        with patch('ttt.stream') as mock_stream:
-            mock_stream.return_value = iter(['chunk1', 'chunk2', 'chunk3'])
-            
-            result = self.runner.invoke(main, ['Test prompt', '--stream'])
-            
+        with patch("ttt.stream") as mock_stream:
+            mock_stream.return_value = iter(["chunk1", "chunk2", "chunk3"])
+
+            result = self.runner.invoke(main, ["Test prompt", "--stream"])
+
             assert result.exit_code == 0
             mock_stream.assert_called_once()
-            assert 'chunk1chunk2chunk3' in result.output
+            assert "chunk1chunk2chunk3" in result.output
 
     def test_chat_command(self):
         """Test chat command initialization."""
-        with patch('ttt.chat') as mock_chat_context:
+        with patch("ttt.chat") as mock_chat_context:
             mock_session = MagicMock()
             mock_chat_context.return_value.__enter__ = lambda x: mock_session
             mock_chat_context.return_value.__exit__ = lambda x, *args: None
-            
+
             # Simulate immediate exit
-            with patch('click.prompt', side_effect=EOFError):
-                result = self.runner.invoke(main, ['--chat'])
-            
+            with patch("click.prompt", side_effect=EOFError):
+                result = self.runner.invoke(main, ["--chat"])
+
             assert result.exit_code == 0
             mock_chat_context.assert_called_once()
 
     def test_backend_status_command(self):
         """Test status command."""
-        with patch('ttt.cli.show_backend_status') as mock_status:
-            result = self.runner.invoke(main, ['--status'])
-            
+        with patch("ttt.cli.show_backend_status") as mock_status:
+            result = self.runner.invoke(main, ["--status"])
+
             assert result.exit_code == 0
             mock_status.assert_called_once()
 
     def test_models_list_command(self):
         """Test models command."""
-        with patch('ttt.cli.show_models_list') as mock_models:
-            result = self.runner.invoke(main, ['--models'])
-            
+        with patch("ttt.cli.show_models_list") as mock_models:
+            result = self.runner.invoke(main, ["--models"])
+
             assert result.exit_code == 0
             mock_models.assert_called_once()
 
     def test_tools_list_command(self):
         """Test tools command."""
-        with patch('ttt.cli.show_tools_list') as mock_tools:
-            result = self.runner.invoke(main, ['--tools-list'])
-            
+        with patch("ttt.cli.show_tools_list") as mock_tools:
+            result = self.runner.invoke(main, ["--tools-list"])
+
             assert result.exit_code == 0
             mock_tools.assert_called_once()
 
     def test_help_display(self):
         """Test help display."""
-        result = self.runner.invoke(main, ['--help'])
-        
+        result = self.runner.invoke(main, ["--help"])
+
         assert result.exit_code == 0
-        assert 'TTT - Text-to-Text Processing Library' in result.output
+        assert "TTT - Text-to-Text Processing Library" in result.output
 
     def test_version_display(self):
         """Test version display."""
-        result = self.runner.invoke(main, ['--version'])
-        
+        result = self.runner.invoke(main, ["--version"])
+
         assert result.exit_code == 0
-        assert 'TTT Library v' in result.output
+        assert "TTT Library v" in result.output
 
 
 class TestHelperFunctions:
     """Test CLI helper functions."""
-
 
     def test_is_coding_request(self):
         """Test coding request detection."""
@@ -144,10 +139,9 @@ class TestHelperFunctions:
         """Test coding optimization application."""
         kwargs = {}
         apply_coding_optimization(kwargs)
-        
-        # Should only set temperature for code optimization
-        assert kwargs['temperature'] == 0.3
 
+        # Should only set temperature for code optimization
+        assert kwargs["temperature"] == 0.3
 
 
 class TestErrorHandling:
@@ -161,30 +155,30 @@ class TestErrorHandling:
         """Test handling of missing prompt argument."""
         # With new CLI, missing prompt should show help, not error
         result = self.runner.invoke(main, [])
-        
+
         # Should either show help (exit 0) or report no input (exit 1)
         assert result.exit_code in (0, 1)
-        assert ('TTT' in result.output or 'No input provided' in result.output)
+        assert "TTT" in result.output or "No input provided" in result.output
 
     def test_invalid_temperature(self):
         """Test handling of invalid temperature value."""
-        with patch('ttt.ask') as mock_ask:
+        with patch("ttt.ask") as mock_ask:
             mock_ask.side_effect = ValueError("Invalid temperature")
-            
-            result = self.runner.invoke(main, ['test', '--temperature', '2.0'])
-            
+
+            result = self.runner.invoke(main, ["test", "--temperature", "2.0"])
+
             assert result.exit_code == 1
-            assert 'Error:' in result.output
+            assert "Error:" in result.output
 
     def test_api_error_handling(self):
         """Test handling of API errors."""
-        with patch('ttt.ask') as mock_ask:
+        with patch("ttt.ask") as mock_ask:
             mock_ask.side_effect = Exception("API Error")
-            
-            result = self.runner.invoke(main, ['test'])
-            
+
+            result = self.runner.invoke(main, ["test"])
+
             assert result.exit_code == 1
-            assert 'Error: API Error' in result.output
+            assert "Error: API Error" in result.output
 
 
 class TestStdinInput:
@@ -196,20 +190,20 @@ class TestStdinInput:
 
     def test_stdin_input(self):
         """Test reading from stdin."""
-        with patch('ttt.ask') as mock_ask:
+        with patch("ttt.ask") as mock_ask:
             mock_response = MagicMock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_ask.return_value = mock_response
-            
-            result = self.runner.invoke(main, ['-'], input='stdin input')
-            
+
+            result = self.runner.invoke(main, ["-"], input="stdin input")
+
             assert result.exit_code == 0
             call_args = mock_ask.call_args
-            assert call_args[0][0] == 'stdin input'
+            assert call_args[0][0] == "stdin input"
 
     def test_empty_stdin(self):
         """Test handling of empty stdin."""
-        result = self.runner.invoke(main, ['-'], input='')
-        
+        result = self.runner.invoke(main, ["-"], input="")
+
         assert result.exit_code == 1
-        assert 'No input provided' in result.output
+        assert "No input provided" in result.output

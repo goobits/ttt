@@ -1,28 +1,23 @@
 """Tests for custom exception hierarchy."""
 
+from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
-import json
-import os
-from pathlib import Path
 
 from ttt.exceptions import (
     AIError,
-    BackendNotAvailableError,
-    BackendConnectionError,
-    BackendTimeoutError,
-    ModelNotFoundError,
-    ModelNotSupportedError,
     APIKeyError,
+    BackendConnectionError,
+    BackendNotAvailableError,
+    BackendTimeoutError,
     ConfigFileError,
-    InvalidPromptError,
     InvalidParameterError,
-    EmptyResponseError,
+    InvalidPromptError,
+    ModelNotFoundError,
     MultiModalError,
-    RateLimitError,
-    QuotaExceededError,
     PluginLoadError,
     PluginValidationError,
+    RateLimitError,
     SessionLoadError,
     SessionSaveError,
 )
@@ -76,8 +71,9 @@ class TestBackendExceptions:
     @patch("ttt.backends.local.httpx.AsyncClient")
     def test_local_backend_connection_error(self, mock_client):
         """Test that connection errors raise BackendConnectionError."""
-        from ttt.backends.local import LocalBackend
         import httpx
+
+        from ttt.backends.local import LocalBackend
 
         # Mock connection error
         mock_client.return_value.__aenter__.return_value.post = AsyncMock(
@@ -102,8 +98,9 @@ class TestBackendExceptions:
     @patch("ttt.backends.local.httpx.AsyncClient")
     def test_local_backend_timeout(self, mock_client):
         """Test that timeouts raise BackendTimeoutError."""
-        from ttt.backends.local import LocalBackend
         import httpx
+
+        from ttt.backends.local import LocalBackend
 
         # Mock timeout
         mock_client.return_value.__aenter__.return_value.post = AsyncMock(
@@ -150,8 +147,9 @@ class TestBackendExceptions:
     @patch("ttt.backends.local.httpx.AsyncClient")
     def test_model_not_found(self, mock_client):
         """Test that 404 errors for models raise ModelNotFoundError."""
-        from ttt.backends.local import LocalBackend
         import httpx
+
+        from ttt.backends.local import LocalBackend
 
         # Mock 404 response
         mock_response = Mock()

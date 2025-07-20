@@ -1,8 +1,8 @@
 """Tests for the data models."""
 
-import pytest
 from datetime import datetime
-from ttt.models import AIResponse, ModelInfo, ConfigModel
+
+from ttt.models import AIResponse, ConfigModel, ModelInfo
 
 
 class TestAIResponse:
@@ -116,17 +116,17 @@ class TestConfigModel:
         # ConfigModel starts with empty aliases
         config = ConfigModel()
         assert config.model_aliases == {}
-        
+
         # Test setting model aliases (without hardcoding specific model names)
         test_aliases = {
             "fast": "test-fast-model",
             "best": "test-best-model",
             "cheap": "test-cheap-model",
             "coding": "test-coding-model",
-            "local": "test-local-model"
+            "local": "test-local-model",
         }
         config.model_aliases = test_aliases
-        
+
         # Verify all aliases were set correctly
         assert config.model_aliases == test_aliases
 

@@ -1,12 +1,12 @@
 """Tests for configurable tool settings."""
 
-import pytest
-from unittest.mock import patch, Mock
-import tempfile
 import os
+import tempfile
+from unittest.mock import Mock, patch
 
-from ttt.tools.builtins import _get_max_file_size, _get_code_timeout, _get_web_timeout
-from ttt.config import load_config
+import pytest
+
+from ttt.tools.builtins import _get_code_timeout, _get_max_file_size, _get_web_timeout
 
 
 class TestConfigurableTools:
@@ -92,10 +92,12 @@ print("This should timeout")
             result = run_python(code)
             # Should timeout or show execution error
             result_lower = result.lower()
-            assert ("timed out" in result_lower or 
-                    "timeout" in result_lower or 
-                    "execution error" in result_lower or
-                    "process terminated" in result_lower)
+            assert (
+                "timed out" in result_lower
+                or "timeout" in result_lower
+                or "execution error" in result_lower
+                or "process terminated" in result_lower
+            )
 
 
 class TestToolsListCommand:
@@ -104,10 +106,11 @@ class TestToolsListCommand:
     def test_tools_list_command_parsing(self):
         """Test that tools command works correctly."""
         from click.testing import CliRunner
+
         from ttt.cli import main
-        
+
         runner = CliRunner()
-        
+
         with patch("ttt.cli.show_tools_list") as mock_show_tools:
             result = runner.invoke(main, ["--tools-list"])
             assert result.exit_code == 0
@@ -124,8 +127,9 @@ class TestToolsListCommand:
         mock_tool.description = "A test tool"
         mock_tool.category = "test"
 
-        with patch("ttt.tools.list_tools", return_value=[mock_tool]), \
-             patch("ttt.tools.get_categories", return_value=["test"]):
+        with patch("ttt.tools.list_tools", return_value=[mock_tool]), patch(
+            "ttt.tools.get_categories", return_value=["test"]
+        ):
             show_tools_list()
 
             # Should have called console.print with tool information

@@ -1,11 +1,11 @@
 """Tests for the main API functions."""
 
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
-from ttt.api import ask, stream, chat
+
+from ttt.api import chat
+from ttt.backends import BaseBackend
 from ttt.chat import PersistentChatSession
 from ttt.models import AIResponse
-from ttt.backends import BaseBackend
 
 
 class MockBackend(BaseBackend):

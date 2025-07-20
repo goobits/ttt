@@ -11,18 +11,19 @@ Set environment variables:
 Note: These tests will consume API credits and should be run sparingly.
 """
 
-import pytest
 import os
-from ai import ask, stream, chat
-from ttt.backends.cloud import CloudBackend
+
+import pytest
+
 from ttt.exceptions import APIKeyError, ModelNotFoundError, RateLimitError
 
 
 def skip_if_no_api_keys():
     """Skip test if no valid API keys are available."""
+
     def is_valid_key(key):
         return key and "test-key" not in key and len(key) > 10
-    
+
     has_keys = any(
         [
             is_valid_key(os.getenv("OPENAI_API_KEY")),
@@ -42,10 +43,11 @@ class TestRealAPIIntegration:
 
     def test_basic_ask_integration(self, delayed_ask):
         """Test basic ask functionality with real API."""
+
         # Prefer OpenRouter if available, then valid OpenAI key
         def is_valid_key(key):
             return key and "test-key" not in key and len(key) > 10
-        
+
         if is_valid_key(os.getenv("OPENROUTER_API_KEY")):
             # Use Gemini 2.5 Flash (stable production model)
             model = "openrouter/google/gemini-2.5-flash"
@@ -67,29 +69,34 @@ class TestRealAPIIntegration:
     def test_streaming_integration(self, delayed_stream):
         """Test streaming with real API."""
         chunks = []
+
         def is_valid_key(key):
             return key and "test-key" not in key and len(key) > 10
-        
+
         if is_valid_key(os.getenv("OPENROUTER_API_KEY")):
             model = "openrouter/google/gemini-2.5-flash"
         elif is_valid_key(os.getenv("OPENAI_API_KEY")):
             model = "gpt-3.5-turbo"  # Use standard model name
         else:
             model = "gpt-3.5-turbo"  # Default fallback
-        for chunk in delayed_stream("Count from 1 to 3, one number per line.", model=model):
+        for chunk in delayed_stream(
+            "Count from 1 to 3, one number per line.", model=model
+        ):
             chunks.append(chunk)
 
         full_response = "".join(chunks)
         assert len(chunks) > 1  # Should be multiple chunks
         # Should contain numbers 1, 2, 3 from the counting request
         import re
-        assert re.search(r'[123]', full_response)
+
+        assert re.search(r"[123]", full_response)
 
     def test_chat_session_integration(self, delayed_chat):
         """Test persistent chat session."""
+
         def is_valid_key(key):
             return key and "test-key" not in key and len(key) > 10
-        
+
         if is_valid_key(os.getenv("OPENROUTER_API_KEY")):
             model = "openrouter/google/gemini-2.5-pro"
         elif is_valid_key(os.getenv("OPENAI_API_KEY")):
@@ -100,13 +107,16 @@ class TestRealAPIIntegration:
             response1 = session.ask("My name is Alice. What's 5+5?")
             # Check that the math result is present (using word boundaries to avoid false positives)
             import re
+
             response_text = str(response1)
-            assert re.search(r'\b(10|ten)\b', response_text, re.IGNORECASE)
+            assert re.search(r"\b(10|ten)\b", response_text, re.IGNORECASE)
 
             response2 = session.ask("What did I say my name was?")
             # Verify the model remembered the name from context
             response2_lower = str(response2).lower()
-            assert "alice" in response2_lower and ("name" in response2_lower or "you" in response2_lower)
+            assert "alice" in response2_lower and (
+                "name" in response2_lower or "you" in response2_lower
+            )
 
     def test_model_fallback_integration(self, delayed_ask):
         """Test that fallback works with real APIs."""
@@ -142,8 +152,11 @@ class TestProviderSpecificIntegration:
     """Test specific providers with real keys."""
 
     @pytest.mark.skipif(
-        not (os.getenv("OPENAI_API_KEY") and "test-key" not in os.getenv("OPENAI_API_KEY", "")),
-        reason="Valid OpenAI key required"
+        not (
+            os.getenv("OPENAI_API_KEY")
+            and "test-key" not in os.getenv("OPENAI_API_KEY", "")
+        ),
+        reason="Valid OpenAI key required",
     )
     def test_openai_specific(self, delayed_ask):
         """Test OpenAI-specific functionality."""
@@ -151,8 +164,11 @@ class TestProviderSpecificIntegration:
         assert "OpenAI" in str(response) or "test" in str(response)
 
     @pytest.mark.skipif(
-        not (os.getenv("ANTHROPIC_API_KEY") and "test-key" not in os.getenv("ANTHROPIC_API_KEY", "")),
-        reason="Valid Anthropic key required"
+        not (
+            os.getenv("ANTHROPIC_API_KEY")
+            and "test-key" not in os.getenv("ANTHROPIC_API_KEY", "")
+        ),
+        reason="Valid Anthropic key required",
     )
     def test_anthropic_specific(self, delayed_ask):
         """Test Anthropic-specific functionality."""
@@ -181,7 +197,9 @@ class TestProviderSpecificIntegration:
                 continue
             except Exception as e:
                 # Log unexpected errors instead of silently ignoring
-                pytest.fail(f"Unexpected error testing {model}: {type(e).__name__}: {e}")
+                pytest.fail(
+                    f"Unexpected error testing {model}: {type(e).__name__}: {e}"
+                )
 
 
 @pytest.mark.integration
@@ -193,7 +211,9 @@ class TestErrorHandlingIntegration:
     def test_invalid_model_error(self, delayed_ask):
         """Test handling of invalid model names."""
         try:
-            response = delayed_ask("Hello", model="definitely-not-a-real-model-name-12345")
+            response = delayed_ask(
+                "Hello", model="definitely-not-a-real-model-name-12345"
+            )
             # If it succeeds, check response
             assert response is not None
         except Exception as e:
@@ -204,16 +224,16 @@ class TestErrorHandlingIntegration:
         """Test rate limit handling (careful - might hit actual limits)."""
         # Make several rapid requests to test rate limiting
         responses = []
-        
+
         # Use OpenRouter model if available
         def is_valid_key(key):
             return key and "test-key" not in key and len(key) > 10
-        
+
         if is_valid_key(os.getenv("OPENROUTER_API_KEY")):
             model = "openrouter/google/gemini-2.5-flash"
         else:
             pytest.skip("No valid API key for rate limit testing")
-        
+
         for i in range(3):  # Keep low to avoid hitting limits
             response = delayed_ask(f"Count: {i}", model=model)
             responses.append(response)
@@ -234,30 +254,33 @@ class TestPerformanceBenchmarks:
         import time
 
         results = {}
-        
+
         def is_valid_key(key):
             return key and "test-key" not in key and len(key) > 10
-        
+
         # Test with OpenRouter models if available
         if is_valid_key(os.getenv("OPENROUTER_API_KEY")):
-            models = ["openrouter/google/gemini-2.5-flash", "openrouter/google/gemini-2.5-pro"]
-            
+            models = [
+                "openrouter/google/gemini-2.5-flash",
+                "openrouter/google/gemini-2.5-pro",
+            ]
+
             for model in models:
                 start_time = time.time()
                 try:
                     response = delayed_ask("What is AI?", model=model)
                     end_time = time.time()
-                    
+
                     if response.succeeded:
                         results[model] = end_time - start_time
                 except Exception:
                     # Model might not be available
                     pass
-        
+
         # Should have at least one result
         if not results:
             pytest.skip("No valid API keys for benchmarking")
-        
+
         # Just verify we got timing data
         assert len(results) > 0
         for model, duration in results.items():
@@ -275,9 +298,10 @@ class TestUsageExamples:
     def test_code_generation_example(self, delayed_ask):
         """Example of using AI for code generation."""
         prompt = "Write a Python function that calculates factorial. Include docstring."
+
         def is_valid_key(key):
             return key and "test-key" not in key and len(key) > 10
-        
+
         if is_valid_key(os.getenv("OPENROUTER_API_KEY")):
             model = "openrouter/google/gemini-2.5-flash"
         else:
@@ -291,9 +315,10 @@ class TestUsageExamples:
     def test_data_analysis_example(self, delayed_ask):
         """Example of using AI for data analysis questions."""
         prompt = "Explain the difference between mean and median in statistics."
+
         def is_valid_key(key):
             return key and "test-key" not in key and len(key) > 10
-        
+
         if is_valid_key(os.getenv("OPENROUTER_API_KEY")):
             model = "openrouter/google/gemini-2.5-flash"
         else:

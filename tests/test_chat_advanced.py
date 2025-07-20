@@ -1,22 +1,22 @@
 """Advanced tests for the chat module to increase coverage."""
 
-import pytest
 import json
 import pickle
 import tempfile
-from pathlib import Path
 from datetime import datetime, timezone
-from unittest.mock import Mock, patch, MagicMock
+from pathlib import Path
+from unittest.mock import patch
 
-from ttt.chat import PersistentChatSession, _estimate_tokens
-from ttt.models import AIResponse, ImageInput
+import pytest
+
 from ttt.backends import BaseBackend
+from ttt.chat import PersistentChatSession, _estimate_tokens
 from ttt.exceptions import (
+    InvalidParameterError,
     SessionLoadError,
     SessionSaveError,
-    InvalidParameterError,
-    BackendNotAvailableError,
 )
+from ttt.models import AIResponse, ImageInput
 
 
 class MockBackend(BaseBackend):

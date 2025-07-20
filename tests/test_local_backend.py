@@ -1,8 +1,10 @@
 """Tests for the local backend."""
 
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+
 import httpx
+import pytest
+
 from ttt.backends.local import LocalBackend
 
 
@@ -15,7 +17,7 @@ def local_backend():
             "local": {
                 "base_url": "http://localhost:11434",
                 "default_model": "test-model",
-            }
+            },
         }
     )
 

@@ -1,15 +1,15 @@
 """Configuration system for the AI library."""
 
 import os
-import yaml
 from pathlib import Path
-from typing import Dict, Any, Optional, Union, List
+from typing import Any, Dict, List, Optional, Union
+
+import yaml
 from dotenv import load_dotenv
 
+from .exceptions import ConfigFileError
 from .models import ConfigModel, ModelInfo
 from .utils import get_logger
-from .exceptions import ConfigFileError, InvalidParameterError
-
 
 logger = get_logger(__name__)
 
@@ -20,7 +20,7 @@ _config: Optional[ConfigModel] = None
 def load_project_defaults() -> Dict[str, Any]:
     """
     Load default configuration from the project's config.yaml file.
-    
+
     Returns:
         Dictionary containing default configuration values
     """
@@ -29,7 +29,7 @@ def load_project_defaults() -> Dict[str, Any]:
         Path(__file__).parent.parent / "config.yaml",  # Relative to ai package
         Path.cwd() / "config.yaml",  # Current working directory
     ]
-    
+
     for config_path in config_paths:
         if config_path.exists():
             try:
@@ -38,8 +38,10 @@ def load_project_defaults() -> Dict[str, Any]:
                     logger.debug(f"Loaded project defaults from {config_path}")
                     return defaults
             except Exception as e:
-                logger.warning(f"Failed to load project defaults from {config_path}: {e}")
-    
+                logger.warning(
+                    f"Failed to load project defaults from {config_path}: {e}"
+                )
+
     # Fallback to minimal defaults if config.yaml not found
     logger.warning("Project config.yaml not found, using minimal defaults")
     return {
@@ -100,17 +102,18 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
     """
     # Load .env file if it exists, searching in project directories
     env_paths = [
-        Path(__file__).parent.parent / ".env",  # Relative to ttt package (installed location)
+        Path(__file__).parent.parent
+        / ".env",  # Relative to ttt package (installed location)
         Path.cwd() / ".env",  # Current working directory
     ]
-    
+
     # Also search up the directory tree from current working directory
     current_path = Path.cwd()
     for parent in [current_path] + list(current_path.parents):
         env_path = parent / ".env"
         if env_path not in env_paths:
             env_paths.append(env_path)
-    
+
     for env_path in env_paths:
         if env_path.exists():
             load_dotenv(env_path)
@@ -152,21 +155,23 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
             raise ConfigFileError(str(config_path), str(e))
 
     # Override with environment variables
-    import os
-    
+
     # Get environment variable mappings from defaults
-    env_mappings = defaults.get("env_mappings", {
-        "openai_api_key": "OPENAI_API_KEY",
-        "anthropic_api_key": "ANTHROPIC_API_KEY",
-        "google_api_key": "GOOGLE_API_KEY",
-        "openrouter_api_key": "OPENROUTER_API_KEY",
-        "ollama_base_url": "OLLAMA_BASE_URL",
-        "default_backend": "AI_DEFAULT_BACKEND",
-        "default_model": "AI_DEFAULT_MODEL",
-        "timeout": "AI_TIMEOUT",
-        "max_retries": "AI_MAX_RETRIES",
-        "enable_fallbacks": "AI_ENABLE_FALLBACKS",
-    })
+    env_mappings = defaults.get(
+        "env_mappings",
+        {
+            "openai_api_key": "OPENAI_API_KEY",
+            "anthropic_api_key": "ANTHROPIC_API_KEY",
+            "google_api_key": "GOOGLE_API_KEY",
+            "openrouter_api_key": "OPENROUTER_API_KEY",
+            "ollama_base_url": "OLLAMA_BASE_URL",
+            "default_backend": "AI_DEFAULT_BACKEND",
+            "default_model": "AI_DEFAULT_MODEL",
+            "timeout": "AI_TIMEOUT",
+            "max_retries": "AI_MAX_RETRIES",
+            "enable_fallbacks": "AI_ENABLE_FALLBACKS",
+        },
+    )
 
     for config_key, env_key in env_mappings.items():
         env_value = os.getenv(env_key)
@@ -189,34 +194,38 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
 
     # Merge defaults with loaded config data
     merged_config = {}
-    
+
     # Deep merge defaults and config_data
     def deep_merge(base, override):
         """Deep merge two dictionaries."""
         result = base.copy()
         for key, value in override.items():
-            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            if (
+                key in result
+                and isinstance(result[key], dict)
+                and isinstance(value, dict)
+            ):
                 result[key] = deep_merge(result[key], value)
             else:
                 result[key] = value
         return result
-    
+
     merged_config = deep_merge(defaults, config_data)
-    
+
     # Populate specific config sections if they exist in defaults
-    if 'backends' in defaults:
-        merged_config['backend_config'] = defaults['backends']
-    if 'tools' in defaults:
-        merged_config['tools_config'] = defaults['tools']
-    if 'chat' in defaults:
-        merged_config['chat_config'] = defaults['chat']
-    if 'models' in defaults and 'aliases' in defaults['models']:
-        merged_config['model_aliases'] = defaults['models']['aliases']
-    if 'backends' in defaults and 'enable_fallbacks' in defaults['backends']:
-        merged_config['enable_fallbacks'] = defaults['backends']['enable_fallbacks']
-    if 'backends' in defaults and 'fallback_order' in defaults['backends']:
-        merged_config['fallback_order'] = defaults['backends']['fallback_order']
-    
+    if "backends" in defaults:
+        merged_config["backend_config"] = defaults["backends"]
+    if "tools" in defaults:
+        merged_config["tools_config"] = defaults["tools"]
+    if "chat" in defaults:
+        merged_config["chat_config"] = defaults["chat"]
+    if "models" in defaults and "aliases" in defaults["models"]:
+        merged_config["model_aliases"] = defaults["models"]["aliases"]
+    if "backends" in defaults and "enable_fallbacks" in defaults["backends"]:
+        merged_config["enable_fallbacks"] = defaults["backends"]["enable_fallbacks"]
+    if "backends" in defaults and "fallback_order" in defaults["backends"]:
+        merged_config["fallback_order"] = defaults["backends"]["fallback_order"]
+
     # Create ConfigModel with merged configuration
     config = ConfigModel(**merged_config)
 
@@ -243,7 +252,7 @@ def find_config_file() -> Optional[Path]:
     # Get search paths from project defaults if available
     project_defaults = load_project_defaults()
     path_configs = project_defaults.get("paths", {}).get("config_search", [])
-    
+
     # Convert paths and expand home directory
     search_paths = []
     for path_str in path_configs:
@@ -252,7 +261,7 @@ def find_config_file() -> Optional[Path]:
         elif path_str.startswith("./"):
             path_str = str(Path.cwd() / path_str[2:])
         search_paths.append(Path(path_str))
-    
+
     # Fallback to hardcoded paths if config not available
     if not search_paths:
         search_paths = [
@@ -293,18 +302,23 @@ def save_config(
         default_save_path = project_defaults.get("paths", {}).get(
             "default_config_save", "~/.config/ttt/config.yaml"
         )
-        
+
         # Expand home directory
         if default_save_path.startswith("~/"):
             config_path = Path.home() / default_save_path[2:]
         else:
             config_path = Path(default_save_path)
-            
+
         config_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Convert config to dict, excluding sensitive data
     config_dict = config.model_dump(
-        exclude={"openai_api_key", "anthropic_api_key", "google_api_key", "openrouter_api_key"}
+        exclude={
+            "openai_api_key",
+            "anthropic_api_key",
+            "google_api_key",
+            "openrouter_api_key",
+        }
     )
 
     try:
@@ -399,7 +413,7 @@ class ModelRegistry:
         # Load project defaults
         project_defaults = load_project_defaults()
         model_configs = project_defaults.get("models", {}).get("available", {})
-        
+
         # Load each model from config
         for model_name, model_config in model_configs.items():
             try:
@@ -412,13 +426,13 @@ class ModelRegistry:
                     quality=model_config.get("quality", "medium"),
                     capabilities=model_config.get("capabilities", []),
                     context_length=model_config.get("context_length"),
-                    cost_per_token=model_config.get("cost_per_token")
+                    cost_per_token=model_config.get("cost_per_token"),
                 )
                 self.add_model(model_info)
                 logger.debug(f"Loaded model from config: {model_name}")
             except Exception as e:
                 logger.warning(f"Failed to load model {model_name} from config: {e}")
-        
+
         # If no models loaded from config, use minimal hardcoded defaults
         if not self.models:
             logger.warning("No models loaded from config, using minimal defaults")

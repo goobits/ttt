@@ -18,35 +18,35 @@ Example usage:
     response = ask("What's the weather in NYC?", tools=[get_weather])
 """
 
-from typing import Callable, Optional, Union, List, Dict, Any
-from functools import wraps
 import asyncio
+from functools import wraps
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from .base import (
-    ToolDefinition,
     ToolCall,
-    ToolResult,
+    ToolDefinition,
     ToolParameter,
     ToolParameterType,
+    ToolResult,
     create_tool_definition,
 )
-from .registry import (
-    ToolRegistry,
-    register_tool,
-    unregister_tool,
-    get_tool,
-    list_tools,
-    get_categories,
-    resolve_tools,
-    clear_registry,
-    get_registry,
-)
 from .executor import (
-    ToolExecutor,
     ExecutionConfig,
+    ToolExecutor,
     execute_tool,
     execute_tools,
     get_execution_stats,
+)
+from .registry import (
+    ToolRegistry,
+    clear_registry,
+    get_categories,
+    get_registry,
+    get_tool,
+    list_tools,
+    register_tool,
+    resolve_tools,
+    unregister_tool,
 )
 
 
@@ -56,7 +56,7 @@ def tool(
     name: Optional[str] = None,
     description: Optional[str] = None,
     category: str = "general",
-    register: bool = True
+    register: bool = True,
 ) -> Union[Callable, ToolDefinition]:
     """
     Decorator to mark a function as a tool.
@@ -100,26 +100,28 @@ def tool(
 
         # Create appropriate wrapper based on function type
         if asyncio.iscoroutinefunction(f):
+
             @wraps(f)
             async def async_wrapper(*args, **kwargs):
                 # Async function still works normally
                 return await f(*args, **kwargs)
-            
+
             # Preserve tool metadata on wrapper
             async_wrapper._tool_definition = tool_def
             async_wrapper._is_tool = True
-            
+
             return async_wrapper
         else:
+
             @wraps(f)
             def wrapper(*args, **kwargs):
                 # Function still works normally
                 return f(*args, **kwargs)
-            
+
             # Preserve tool metadata on wrapper
             wrapper._tool_definition = tool_def
             wrapper._is_tool = True
-            
+
             return wrapper
 
     if func is None:
@@ -138,8 +140,6 @@ def is_tool(func: Callable) -> bool:
 def get_tool_definition(func: Callable) -> Optional[ToolDefinition]:
     """Get the ToolDefinition for a decorated function."""
     return getattr(func, "_tool_definition", None)
-
-
 
 
 # Export all public classes and functions

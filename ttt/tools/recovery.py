@@ -1,21 +1,20 @@
 """Smart error recovery and fallback system for AI tools."""
 
-import time
-import random
-import logging
 import asyncio
-from typing import Any, Dict, List, Optional, Callable, Union
+import json
+import logging
+import random
+import re
+import time
 from dataclasses import dataclass, field
 from enum import Enum
-import re
-import json
 from pathlib import Path
-import ast
+from typing import Any, Callable, Dict, List, Optional
 
 import bleach
 import validators
 
-from .base import ToolCall, ToolResult
+from .base import ToolCall
 
 
 class ErrorType(Enum):
@@ -53,11 +52,11 @@ class RetryConfig:
     max_delay: float = None
     exponential_base: float = 2.0
     jitter: bool = True
-    
+
     def __post_init__(self):
         """Load defaults from config if not set."""
         from ..config_loader import get_config_value
-        
+
         if self.max_attempts is None:
             self.max_attempts = get_config_value("tools.retry.max_attempts", 3)
         if self.base_delay is None:
@@ -120,22 +119,22 @@ class InputSanitizer:
         r'getattr\s*\(\s*os\s*,\s*["\']\s*sys\s*["\']\s*\+',
         r'getattr\s*\(\s*os\s*,\s*["\']sys["\']\s*\+',
         r'getattr\s*\(\s*os\s*,\s*["\']\s*system\s*["\']',
-        r'getattr\s*\(\s*subprocess\s*,',
-        r'getattr\s*\(\s*__import__\s*\(',
+        r"getattr\s*\(\s*subprocess\s*,",
+        r"getattr\s*\(\s*__import__\s*\(",
         # Import bypasses
-        r'from\s+subprocess\s+import\s+(check_output|check_call|getoutput|getstatusoutput|run|call|Popen)',
-        r'from\s+os\s+import\s+(system|popen|exec)',
-        r'import\s+subprocess\s+as\s+\w+',
-        r'import\s+os\s+as\s+\w+',
+        r"from\s+subprocess\s+import\s+(check_output|check_call|getoutput|getstatusoutput|run|call|Popen)",
+        r"from\s+os\s+import\s+(system|popen|exec)",
+        r"import\s+subprocess\s+as\s+\w+",
+        r"import\s+os\s+as\s+\w+",
         # File system access
         r'open\s*\(\s*["\'][/\\]',  # Opening system files
         # Globals and builtins access
-        r'globals\s*\(\s*\)\s*\[',
-        r'__builtins__\s*\[',
-        r'locals\s*\(\s*\)\s*\[',
+        r"globals\s*\(\s*\)\s*\[",
+        r"__builtins__\s*\[",
+        r"locals\s*\(\s*\)\s*\[",
         # Type and reflection-based bypasses
-        r'type\s*\(\s*lambda\s*:',
-        r'chr\s*\(\s*\d+\s*\)\s*\+.*chr\s*\(',  # Character concatenation
+        r"type\s*\(\s*lambda\s*:",
+        r"chr\s*\(\s*\d+\s*\)\s*\+.*chr\s*\(",  # Character concatenation
     ]
 
     @classmethod
@@ -153,13 +152,13 @@ class InputSanitizer:
         # Check for truly dangerous patterns (much more targeted now)
         for pattern in cls.DANGEROUS_PATTERNS:
             if re.search(pattern, value, re.IGNORECASE | re.MULTILINE):
-                raise ValueError(f"Potentially dangerous content detected")
+                raise ValueError("Potentially dangerous content detected")
 
         if allow_code:
             # For code content, check code-specific dangerous patterns
             for pattern in cls.CODE_DANGEROUS_PATTERNS:
                 if re.search(pattern, value, re.IGNORECASE | re.MULTILINE):
-                    raise ValueError(f"Dangerous code pattern detected")
+                    raise ValueError("Dangerous code pattern detected")
 
             # Remove null bytes and other control characters
             sanitized = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", value)
@@ -181,12 +180,13 @@ class InputSanitizer:
 
         # URL decode the path to prevent encoding bypasses
         import urllib.parse
+
         decoded_path = urllib.parse.unquote(path)
-        
+
         # Check for path traversal in both original and decoded paths
         if ".." in path or ".." in decoded_path:
             raise ValueError("Path traversal detected")
-            
+
         # Use the decoded path for further processing
         path = decoded_path
 
@@ -484,7 +484,10 @@ class ErrorRecoverySystem:
         # Special handling for rate limits
         if error_pattern.error_type == ErrorType.RATE_LIMIT_ERROR:
             from ..config_loader import get_config_value
-            min_rate_limit_delay = get_config_value("tools.retry.rate_limit_min_delay", 5.0)
+
+            min_rate_limit_delay = get_config_value(
+                "tools.retry.rate_limit_min_delay", 5.0
+            )
             base_delay = max(base_delay, min_rate_limit_delay)
 
         # Exponential backoff

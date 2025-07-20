@@ -1,9 +1,8 @@
 """Tests for the logger module."""
 
-import pytest
 import logging
-from unittest.mock import patch, Mock
 import os
+from unittest.mock import Mock, patch
 
 from ttt.utils.logger import get_logger, setup_logging
 

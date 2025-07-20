@@ -1,19 +1,17 @@
 """Core API functions providing the main user interface."""
 
-import asyncio
-from typing import AsyncIterator, Optional, Iterator, Union, List
 from contextlib import asynccontextmanager, contextmanager
+from typing import AsyncIterator, Iterator, List, Optional, Union
 
-from .models import AIResponse, ImageInput
-from .backends import BaseBackend, LocalBackend, CloudBackend
-from .routing import router
-from .plugins import discover_plugins
-from .utils import get_logger, run_async, run_coro_in_background
+from .backends import BaseBackend
 from .chat import PersistentChatSession
+from .models import AIResponse, ImageInput
+from .plugins import discover_plugins
+from .routing import router
+from .utils import get_logger, run_async, run_coro_in_background
+
 # Backward compatibility alias - prefer PersistentChatSession in new code
 ChatSession = PersistentChatSession
-
-
 
 
 logger = get_logger(__name__)
@@ -23,10 +21,6 @@ try:
     discover_plugins()
 except Exception as e:
     logger.debug(f"Plugin discovery failed: {e}")
-
-
-
-
 
 
 def ask(
@@ -85,7 +79,9 @@ def ask(
     Returns:
         AIResponse that behaves like a string but contains metadata
     """
-    logger.debug(f"API ask() called with: model={model}, max_tokens={max_tokens}, temperature={temperature}")
+    logger.debug(
+        f"API ask() called with: model={model}, max_tokens={max_tokens}, temperature={temperature}"
+    )
     # Use smart routing
     backend_instance, resolved_model = router.smart_route(
         prompt,
@@ -184,8 +180,6 @@ def stream(
         pass
 
 
-
-
 @contextmanager
 def chat(
     *,
@@ -271,7 +265,7 @@ async def ask_async(
 ) -> AIResponse:
     """
     Async version of ask().
-    
+
     Args:
         prompt: Your question - can be a string or list of content (text/images)
         model: Specific model to use (optional)
@@ -281,7 +275,7 @@ async def ask_async(
         backend: Backend to use, "local", "cloud", "auto", or Backend instance (optional)
         tools: List of functions/tools the AI can call (optional)
         **kwargs: Additional backend-specific parameters
-        
+
     Returns:
         AIResponse that behaves like a string but contains metadata
     """
@@ -317,7 +311,7 @@ async def stream_async(
 ) -> AsyncIterator[str]:
     """
     Async version of stream().
-    
+
     Args:
         prompt: Your question - can be a string or list of content (text/images)
         model: Specific model to use (optional)
@@ -327,7 +321,7 @@ async def stream_async(
         backend: Backend to use, "local", "cloud", "auto", or Backend instance (optional)
         tools: List of functions/tools the AI can call (optional)
         **kwargs: Additional backend-specific parameters
-        
+
     Yields:
         String chunks as they arrive
     """

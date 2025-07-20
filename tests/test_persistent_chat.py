@@ -1,15 +1,11 @@
 """Tests for persistent chat functionality."""
 
-import pytest
 import json
 import pickle
-from pathlib import Path
 from datetime import datetime
-from unittest.mock import Mock, patch, AsyncMock
-import tempfile
+from unittest.mock import AsyncMock, Mock, patch
 
-from ai import chat, PersistentChatSession, AIResponse
-from ttt.chat import PersistentChatSession as ChatClass
+from ai import AIResponse, PersistentChatSession, chat
 
 
 class TestPersistentChatSession:

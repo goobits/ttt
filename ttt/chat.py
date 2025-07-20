@@ -1,18 +1,17 @@
 """Enhanced chat functionality with persistence support."""
 
+import asyncio
 import json
 import pickle
-from pathlib import Path
-from typing import Optional, Dict, Any, List, Union, Iterator
 from datetime import datetime
-import asyncio
+from pathlib import Path
+from typing import Any, Dict, Iterator, List, Optional, Union
 
-from .models import AIResponse, ImageInput
 from .backends import BaseBackend
+from .exceptions import InvalidParameterError, SessionLoadError, SessionSaveError
+from .models import AIResponse, ImageInput
 from .routing import router
 from .utils import get_logger, run_async
-from .exceptions import SessionLoadError, SessionSaveError, InvalidParameterError
-
 
 logger = get_logger(__name__)
 
@@ -184,7 +183,7 @@ class PersistentChatSession:
                 tools=self.tools,
                 **params,
             )
-        
+
         response = run_async(_ask_wrapper())
 
         # Add assistant response to history
@@ -412,7 +411,7 @@ class PersistentChatSession:
 
         try:
             if format == "json":
-                with open(path, "r") as f:
+                with open(path) as f:
                     session_data = json.load(f)
             else:
                 with open(path, "rb") as f:

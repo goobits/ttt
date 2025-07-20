@@ -1,13 +1,15 @@
 """Tests for the routing system."""
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import Mock, patch
-from ttt.routing import Router
+
 from ttt.backends import BaseBackend
-from ttt.models import AIResponse, ModelInfo
 from ttt.config import model_registry
-from ttt.plugins import plugin_registry
 from ttt.exceptions import BackendNotAvailableError
+from ttt.models import AIResponse, ModelInfo
+from ttt.plugins import plugin_registry
+from ttt.routing import Router
 
 
 class MockBackend(BaseBackend):
@@ -28,7 +30,7 @@ class MockBackend(BaseBackend):
 
     async def ask(self, prompt, **kwargs):
         return AIResponse(
-            f"Mock response", model=kwargs.get("model", "mock"), backend=self.name
+            "Mock response", model=kwargs.get("model", "mock"), backend=self.name
         )
 
     async def astream(self, prompt, **kwargs):
@@ -132,7 +134,7 @@ class TestRouter:
     def test_resolve_model_none(self):
         """Test model resolution with None."""
         router = Router()
-        
+
         # If config has default_model, that takes precedence
         if router.config.default_model:
             resolved = router.resolve_model(None)
@@ -173,7 +175,7 @@ class TestSmartRouting:
         assert backend.name == "local"
         assert model == "test-local-model"
 
-    # Note: Tests for prefer_local, code_detection, speed_preference, 
+    # Note: Tests for prefer_local, code_detection, speed_preference,
     # quality_preference, and custom_keywords have been removed as these
     # features were removed from the codebase per user request.
     # The routing now simply uses configured defaults.

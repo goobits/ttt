@@ -1,11 +1,12 @@
 """Core data models for the AI library."""
 
-from typing import Optional, Dict, Any, Union, List, TYPE_CHECKING
-from datetime import datetime
-from dataclasses import dataclass
-from pydantic import BaseModel, Field, ConfigDict
-from pathlib import Path
 import base64
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from .tools.base import ToolResult
@@ -159,7 +160,7 @@ class ConfigModel(BaseModel):
     # Chat Configuration
     chat_config: Dict[str, Any] = Field(default_factory=dict)
 
-    # Model Aliases  
+    # Model Aliases
     model_aliases: Dict[str, str] = Field(default_factory=dict)
 
     # Fallback Configuration
@@ -229,19 +230,23 @@ class ImageInput:
         if self.is_path:
             path = Path(self.source)
             ext = path.suffix.lower()
-            
+
             # Try to get mime types from config
             try:
                 from .config import load_project_defaults
+
                 project_defaults = load_project_defaults()
-                mime_map = project_defaults.get("files", {}).get("mime_types", {
-                    ".jpg": "image/jpeg",
-                    ".jpeg": "image/jpeg",
-                    ".png": "image/png",
-                    ".gif": "image/gif",
-                    ".webp": "image/webp",
-                    ".bmp": "image/bmp",
-                })
+                mime_map = project_defaults.get("files", {}).get(
+                    "mime_types",
+                    {
+                        ".jpg": "image/jpeg",
+                        ".jpeg": "image/jpeg",
+                        ".png": "image/png",
+                        ".gif": "image/gif",
+                        ".webp": "image/webp",
+                        ".bmp": "image/bmp",
+                    },
+                )
             except Exception:
                 # Fallback to hardcoded if config loading fails
                 mime_map = {
@@ -252,7 +257,7 @@ class ImageInput:
                     ".webp": "image/webp",
                     ".bmp": "image/bmp",
                 }
-                
+
             return mime_map.get(ext, "image/jpeg")
 
         return "image/jpeg"  # Default

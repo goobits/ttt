@@ -4,11 +4,11 @@ import importlib
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Dict, Type, Optional, List, Any
-from .backends.base import BaseBackend
-from .utils import get_logger
-from .exceptions import PluginLoadError, PluginValidationError
+from typing import Any, Dict, List, Optional, Type
 
+from .backends.base import BaseBackend
+from .exceptions import PluginLoadError, PluginValidationError
+from .utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -85,7 +85,7 @@ class PluginRegistry:
             **metadata: Additional metadata (version, description, etc.)
         """
         if not issubclass(backend_class, BaseBackend):
-            raise TypeError(f"Backend class must inherit from BaseBackend")
+            raise TypeError("Backend class must inherit from BaseBackend")
 
         plugin = BackendPlugin(name, backend_class, **metadata)
         self.register_plugin(plugin)

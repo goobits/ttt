@@ -1,8 +1,9 @@
 """Foundation example showing recommended testing patterns for the AI library."""
 
-import pytest
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import AsyncMock, Mock, patch
+
 import httpx
+import pytest
 
 # Example 1: Testing the calculate tool with edge cases
 from ttt.tools.builtins import calculate
@@ -22,7 +23,7 @@ class TestCalculateToolFoundation:
             ("sqrt(16)", "4"),
             ("abs(-5)", "5"),
         ]
-        
+
         for expression, expected in test_cases:
             result = calculate(expression)
             assert f"Result: {expected}" in result
@@ -32,15 +33,15 @@ class TestCalculateToolFoundation:
         # Division by zero
         result = calculate("1 / 0")
         assert "Error: Division by zero" in result
-        
+
         # Invalid syntax
         result = calculate("2 +")
         assert "Error" in result
-        
+
         # Empty expression
         result = calculate("")
         assert "Error" in result
-        
+
         # Unsafe operations (should be blocked)
         result = calculate("__import__('os')")
         assert "Error" in result
@@ -49,7 +50,7 @@ class TestCalculateToolFoundation:
         """Test complex mathematical expressions."""
         result = calculate("(2 + 3) * 4 - sqrt(16)")
         assert "Result: 16" in result
-        
+
         result = calculate("sin(pi/2)")
         assert "Result: 1" in result
 
@@ -64,10 +65,9 @@ class TestLocalBackendFoundation:
     @pytest.fixture
     def backend(self):
         """Create a test backend instance."""
-        return LocalBackend({
-            "base_url": "http://localhost:11434",
-            "default_model": "test-model"
-        })
+        return LocalBackend(
+            {"base_url": "http://localhost:11434", "default_model": "test-model"}
+        )
 
     @pytest.mark.asyncio
     async def test_ask_success_mocked(self, backend):
@@ -90,7 +90,9 @@ class TestLocalBackendFoundation:
             # Set up the async context manager
             mock_client = AsyncMock()
             mock_client.post = AsyncMock(return_value=mock_response)
-            mock_client_class.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client_class.return_value.__aenter__ = AsyncMock(
+                return_value=mock_client
+            )
             mock_client_class.return_value.__aexit__ = AsyncMock(return_value=None)
 
             # Make the request
@@ -108,7 +110,7 @@ class TestLocalBackendFoundation:
             mock_client.post.assert_called_once()
             call_args = mock_client.post.call_args
             assert call_args[0][0] == "http://localhost:11434/api/generate"
-            
+
             request_data = call_args[1]["json"]
             assert request_data["prompt"] == "Hello, AI!"
             assert request_data["model"] == "test-model"
@@ -122,18 +124,19 @@ class TestLocalBackendFoundation:
             mock_response = Mock()
             mock_response.status_code = 404
             mock_response.text = "Model not found"
-            
+
             http_error = httpx.HTTPStatusError(
-                "404 Not Found",
-                request=Mock(),
-                response=mock_response
+                "404 Not Found", request=Mock(), response=mock_response
             )
             mock_client.post = AsyncMock(side_effect=http_error)
-            mock_client_class.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client_class.return_value.__aenter__ = AsyncMock(
+                return_value=mock_client
+            )
             mock_client_class.return_value.__aexit__ = AsyncMock(return_value=None)
 
             # Should raise our custom exception
             from ttt.exceptions import ModelNotFoundError
+
             with pytest.raises(ModelNotFoundError) as exc_info:
                 await backend.ask("Test prompt", model="test-model")
 
@@ -143,6 +146,7 @@ class TestLocalBackendFoundation:
 
 # Example 3: Testing CLI with Click's CliRunner
 from click.testing import CliRunner
+
 from ttt.cli import main
 
 
@@ -155,31 +159,29 @@ class TestCLIFoundation:
 
     def test_backend_status_command(self):
         """Test status command invocation."""
-        with patch('ttt.cli.show_backend_status') as mock_status:
+        with patch("ttt.cli.show_backend_status") as mock_status:
             result = self.runner.invoke(main, ["--status"])
-            
+
             assert result.exit_code == 0
             mock_status.assert_called_once()
 
     def test_ask_command_argument_parsing(self):
         """Test direct prompt parses arguments correctly."""
-        with patch('ttt.ask') as mock_ask:
+        with patch("ttt.ask") as mock_ask:
             mock_response = Mock()
             mock_response.__str__ = lambda x: "Mock response"
             mock_response.model = "gpt-4"
             mock_response.backend = "cloud"
             mock_response.time = 1.23
             mock_ask.return_value = mock_response
-            
-            result = self.runner.invoke(main, [
-                "What is Python?",
-                "--model", "gpt-4",
-                "--verbose"
-            ])
-            
+
+            result = self.runner.invoke(
+                main, ["What is Python?", "--model", "gpt-4", "--verbose"]
+            )
+
             assert result.exit_code == 0
             mock_ask.assert_called_once()
-            
+
             # Check parsed arguments
             call_args = mock_ask.call_args
             assert call_args[0][0] == "What is Python?"
@@ -189,7 +191,7 @@ class TestCLIFoundation:
     def test_help_output(self):
         """Test help output contains expected information."""
         result = self.runner.invoke(main, ["--help"])
-        
+
         assert result.exit_code == 0
         assert "TTT - Text-to-Text Processing Library" in result.stdout
         assert "--chat" in result.stdout
@@ -199,14 +201,14 @@ class TestCLIFoundation:
     def test_invalid_command_handling(self):
         """Test handling of invalid commands."""
         result = self.runner.invoke(main, ["nonexistent-command"])
-        
+
         assert result.exit_code != 0
         # Click automatically handles unknown commands
 
     def test_missing_argument_handling(self):
         """Test handling of missing required arguments."""
         result = self.runner.invoke(main, ["ask"])  # Missing prompt
-        
+
         assert result.exit_code != 0
         # Click puts error messages in output
         assert "Missing argument" in result.output or "Error" in result.output
@@ -220,19 +222,19 @@ class TestAsyncFoundation:
     async def test_async_function_example(self):
         """Example of testing async functions."""
         from ttt.api import ask_async
-        
-        with patch('ttt.routing.router.smart_route') as mock_route:
+
+        with patch("ttt.routing.router.smart_route") as mock_route:
             # Mock backend and response
             mock_backend = AsyncMock()
             mock_response = Mock()
             mock_response.__str__ = lambda x: "Test response"
             mock_backend.ask = AsyncMock(return_value=mock_response)
-            
+
             mock_route.return_value = (mock_backend, "test-model")
-            
+
             # Test the async function
             result = await ask_async("Test prompt")
-            
+
             assert str(result) == "Test response"
             mock_backend.ask.assert_called_once()
 

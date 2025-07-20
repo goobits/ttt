@@ -4,9 +4,10 @@ import asyncio
 import sys
 from typing import Awaitable, TypeVar
 
-from .logger import get_logger
-from .async_utils import optimized_run_async, run_coro_in_background
 from rich.console import Console
+
+from .async_utils import optimized_run_async, run_coro_in_background
+from .logger import get_logger
 
 console = Console()
 
@@ -16,4 +17,10 @@ T = TypeVar("T")
 run_async = optimized_run_async
 
 
-__all__ = ["get_logger", "console", "run_async", "run_coro_in_background", "optimized_run_async"]
+__all__ = [
+    "get_logger",
+    "console",
+    "run_async",
+    "run_coro_in_background",
+    "optimized_run_async",
+]
