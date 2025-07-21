@@ -375,9 +375,9 @@ def main(
 
     \b
     [bold yellow]🔑 First-time Setup:[/bold yellow]
-      1. Set your API key: [green]export OPENROUTER_API_KEY=your-key[/green]
-      2. Verify installation: [green]ttt status[/green]
-      3. Start transforming: [green]ttt "Translate to French: Hello"[/green]
+      1. Set your API key:     [green]export OPENROUTER_API_KEY=your-key[/green]
+      2. Verify installation:  [green]ttt status[/green]
+      3. Start transforming:   [green]ttt "Translate to French: Hello"[/green]
 
     📚 For detailed help on a command, run: [green]ttt [COMMAND] --help[/green]
     """
