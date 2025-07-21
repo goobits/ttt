@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 """Modern Click-based CLI for the AI library with subcommand structure."""
 
+import rich_click as click
+
+# Configure rich-click to enable markup - MUST be first!
+click.rich_click.USE_RICH_MARKUP = True
+
+# Apply Dracula theme colors
+click.rich_click.STYLE_OPTION = "#ff79c6"      # Dracula Pink - for option flags
+click.rich_click.STYLE_ARGUMENT = "#8be9fd"    # Dracula Cyan - for argument types  
+click.rich_click.STYLE_COMMAND = "#50fa7b"     # Dracula Green - for subcommands
+click.rich_click.STYLE_USAGE = "#bd93f9"       # Dracula Purple - for "Usage:" line
+click.rich_click.STYLE_HELPTEXT = "#b3b8c0"  # Light gray - for help descriptions
+
 import io
 import os
 import sys
@@ -8,7 +20,8 @@ import warnings
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
 
-import click
+from rich_click import RichCommand, RichGroup
+
 from dotenv import load_dotenv
 from rich.console import Console
 
@@ -267,127 +280,110 @@ def parse_tools_arg(tools: Optional[str]) -> Optional[str]:
     return ",".join(expanded_tools) if expanded_tools else tools
 
 
-class VersionAwareGroup(click.Group):
-    """Custom group that adds version to help text."""
+    
 
-    def get_help(self, ctx: click.Context) -> str:
-        # Get the original help text
-        original_help = super().get_help(ctx)
 
-        # Replace the title line with version included
-        lines = original_help.split("\n")
-        for i, line in enumerate(lines):
-            if line.strip().startswith("🚀 TTT - Transform"):
-                lines[i] = (
-                    f"  🚀 TTT {get_ttt_version()} - Transform any text with intelligent AI processing"
-                )
-                break
-
-        return "\n".join(lines)
 
 
 @click.group(
-    cls=VersionAwareGroup,
+    cls=RichGroup,
     invoke_without_command=True,
-    context_settings={"allow_interspersed_args": True},
 )
 @click.pass_context
-@click.option("--version", is_flag=True, help="📋 Show version and system information")
+@click.version_option(version=get_ttt_version(), prog_name="TTT")
 @click.option(
-    "--model", "-m", help="🤖 Select your AI model (e.g., @claude, @gpt4, gpt-4o)"
-)
-@click.option(
-    "--system",
-    "-s",
-    help="🎭 Define AI behavior and expertise with custom instructions",
-)
-@click.option(
-    "--temperature",
-    "-t",
-    type=float,
-    help="🌡️  Balance creativity vs precision (0=focused, 1=creative)",
-)
-@click.option(
-    "--max-tokens",
-    type=int,
-    help="📝 Control response length for concise or detailed output",
-)
-@click.option(
-    "--tools",
-    default=None,
-    help="🔧 Enable AI tools (categories: web,file,code,math,time or specific: web_search,read_file)",
-)
-@click.option(
-    "--stream", is_flag=True, help="⚡ Watch responses appear in real-time as AI thinks"
-)
-@click.option(
-    "--verbose",
-    "-v",
+    "--code",
     is_flag=True,
-    help="🔍 Show detailed processing information and diagnostics",
+    help="💻 Enable coding optimizations",
 )
 @click.option(
     "--debug",
     is_flag=True,
-    help="🐛 Enable comprehensive debugging for troubleshooting",
-)
-@click.option(
-    "--code",
-    is_flag=True,
-    help="💻 Optimize AI responses for programming and development tasks",
+    help="🐛 Show debug output",
 )
 @click.option(
     "--json",
     "json_output",
     is_flag=True,
-    help="📦 Export results as JSON for automation and scripting",
+    help="📦 Output results as JSON",
+)
+@click.option(
+    "--max-tokens",
+    type=int,
+    help="📝 Response length limit",
+)
+@click.option(
+    "--model", "-m", help="🤖 AI model to use (@claude, @gpt4, gpt-4o)"
+)
+@click.option(
+    "--stream", is_flag=True, help="⚡ Stream responses live"
+)
+@click.option(
+    "--system",
+    "-s",
+    help="🎭 Custom system prompt for AI behavior",
+)
+@click.option(
+    "--temperature",
+    "-t",
+    type=float,
+    help="🌡️ Creativity level (0=focused, 1=creative)",
+)
+@click.option(
+    "--tools",
+    default=None,
+    help="🔧 Enable tools (web,file,code,math,time)",
+)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="🔍 Detailed output",
 )
 def main(
     ctx: click.Context,
-    version: bool,
+    code: bool,
+    debug: bool,
+    json_output: bool,
+    max_tokens: Optional[int],
     model: Optional[str],
+    stream: bool,
     system: Optional[str],
     temperature: Optional[float],
-    max_tokens: Optional[int],
     tools: Optional[str],
-    stream: bool,
     verbose: bool,
-    debug: bool,
-    code: bool,
-    json_output: bool,
 ) -> None:
-    """🚀 TTT - Transform any text with intelligent AI processing
+    """🔮 [bold cyan]TTT[/bold cyan] - Transform any text with intelligent AI processing
 
+    \b
     TTT empowers developers, writers, and creators to process text with precision.
-    From simple transformations to complex analysis - AI-powered and pipeline-ready.
+    From grammar fixes to data analysis - AI-powered and pipeline-ready.
 
     \b
-    💡 Quick Examples:
-      ttt "Fix grammar in this text"           # Instant text cleanup
-      ttt @claude "Summarize this article"     # Use Claude model
-      echo "data.txt" | ttt "Convert to JSON"  # Pipeline integration
-      ttt chat                                 # Interactive AI conversation
+    [bold yellow]💡 Quick Examples:[/bold yellow]
+      [green]ttt "Fix grammar in this text"[/green]           [italic]# Instant text cleanup[/italic]
+      [green]ttt @claude "Summarize this article"[/green]     [italic]# Use Claude model[/italic]
+      [green]echo "data.txt" | ttt "Convert to JSON"[/green]  [italic]# Pipeline integration[/italic]
+      [green]ttt chat[/green]                                 [italic]# Interactive AI conversation[/italic]
 
     \b
-    🎯 Subcommands:
-      chat     💬 Launch interactive conversation mode
-      status   ⚡ Verify system health and API connectivity
-      models   🤖 Browse available AI models
-      config   ⚙️  Manage configuration settings
+    [bold yellow]🎯 Core Commands:[/bold yellow]
+      [green]chat[/green]     💬 Launch interactive conversation mode
+      [green]status[/green]   ⚡ Check system health and API status
+      [green]models[/green]   🤖 Browse available AI models
+      [green]config[/green]   ⚙️ Manage settings and API keys
 
     \b
-    🔑 Quick Setup:
-      export OPENROUTER_API_KEY=your-key-here
-      ttt status  # Verify your installation
+    [bold yellow]🔑 First-time Setup:[/bold yellow]
+      1. Set your API key: [green]export OPENROUTER_API_KEY=your-key[/green]
+      2. Verify installation: [green]ttt status[/green]
+      3. Start transforming: [green]ttt "Translate to French: Hello"[/green]
+
+    📚 For detailed help on a command, run: [green]ttt [COMMAND] --help[/green]
     """
 
     # Setup logging based on verbosity
     setup_logging_level(verbose, debug, json_output)
-
-    if version:
-        pkg_version = get_ttt_version()
-        click.echo(f"TTT Library v{pkg_version}")
-        return
 
     # If no subcommand, treat remaining args as direct prompt
     if ctx.invoked_subcommand is None:
@@ -455,7 +451,7 @@ def chat(
     system: Optional[str],
     tools: Optional[str],
 ) -> None:
-    """💬 Launch interactive conversation mode with memory."""
+    """💬 Interactive AI conversation with context."""
     from ttt.chat_sessions import ChatSessionManager
 
     # Initialize session manager
@@ -619,14 +615,19 @@ def chat(
                 except Exception as e:
                     console.print(f"[red]Error: {e}[/red]")
 
+    except (EOFError, KeyboardInterrupt):
+        # Normal exit, don't show error
+        pass
     except Exception as e:
-        console.print(f"[red]Error starting chat session: {e}[/red]")
+        # Only show error if it's not an empty exception
+        if str(e).strip():
+            console.print(f"[red]Error starting chat session: {e}[/red]")
 
 
 @main.command()
 @click.pass_context
 def status(ctx: click.Context) -> None:
-    """⚡ Verify system health and API connectivity."""
+    """⚡ Check system health and API status."""
     json_output = ctx.parent.params.get("json_output", False) if ctx.parent else False
     show_backend_status(json_output)
 
@@ -634,7 +635,7 @@ def status(ctx: click.Context) -> None:
 @main.command()
 @click.pass_context
 def models(ctx: click.Context) -> None:
-    """🤖 Browse all available AI models and their capabilities."""
+    """🤖 List available AI models."""
     json_output = ctx.parent.params.get("json_output", False) if ctx.parent else False
     show_models_list(json_output)
 
@@ -652,7 +653,7 @@ def config(
     value: Optional[str],
     reset: bool,
 ) -> None:
-    """⚙️ Access configuration management and preferences.
+    """⚙️ Manage configuration settings.
 
     \b
     Examples:
