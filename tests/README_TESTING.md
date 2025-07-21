@@ -1,173 +1,251 @@
-# Testing Foundation for TTT Library
+# Testing Guide for TTT Library
 
-This document outlines the testing foundation and patterns established for the AI library.
+This document outlines the testing foundation and patterns for the TTT (Talk to Transformer) library.
 
 ## Test Structure
 
-The testing suite is built on pytest with the following key components:
+The testing suite is built on pytest with comprehensive coverage across all components:
 
-### 1. **Core Tool Testing** (`test_builtin_tools.py`)
-- **Calculate Tool**: Comprehensive tests covering valid expressions, edge cases (division by zero), invalid inputs, and security (blocking unsafe operations)
-- **File Operations**: Tests for read/write operations with error handling
-- **Web Search**: Mocked HTTP requests and error handling
-- **Code Execution**: Python code execution with timeout and error handling
+### **Core Components**
 
-### 2. **Backend Testing** (`test_local_backend.py`)
-- **LocalBackend**: Uses `pytest-mock`'s `mocker` fixture to patch `httpx.AsyncClient`
-- **Mocked Responses**: Simulates Ollama API responses for ask/stream operations
-- **Error Handling**: Tests HTTP errors, connection failures, and model not found scenarios
-- **Async Testing**: Proper async/await patterns with `@pytest.mark.asyncio`
+#### 1. **API Testing** (`test_api_*.py`)
+- **Core API** (`test_api_core.py`): Basic ask/stream/chat functionality
+- **Streaming API** (`test_api_streaming.py`): Streaming responses and async operations
+- **Response objects**: AIResponse, error handling, metadata validation
 
-### 3. **CLI Testing** (`test_modern_cli.py`)
-- **Click CliRunner**: Uses Click's built-in testing utilities for reliable CLI testing
-- **Command Testing**: Tests all CLI functionality (direct prompts, chat, status, models, tools, etc.)
-- **Argument Parsing**: Verifies proper parsing of flags and options
-- **Help Output**: Tests help text generation and error handling
+#### 2. **Backend Testing** (`test_backends_*.py`) 
+- **Cloud Backend** (`test_backends_cloud.py`): LiteLLM integration, provider routing
+- **Local Backend** (`test_backends_local.py`): Ollama integration with mocked HTTP calls
+- **Error Handling**: Rate limits, authentication, model availability
+
+#### 3. **CLI Testing** (`test_cli_modern.py`)
+- **Click Framework**: Modern Click-based CLI with rich-click styling
+- **Command Testing**: All commands (ask, chat, list, config, tools, status, models, info, export)
+- **Hook System**: Integration with app_hooks.py for command execution
+- **Help & Validation**: Help text, option parsing, error handling
+
+#### 4. **Tool System** (`test_tools_*.py`)
+- **Built-in Tools** (`test_tools_builtin.py`): calculate, web_search, code_execution, file operations
+- **Custom Tools** (`test_tools_custom.py`): Tool registration and decoration patterns
+- **Tool Integration** (`test_tools_chat.py`): Tool usage in chat sessions
+
+#### 5. **Configuration & Routing**
+- **Configuration** (`test_config_loading.py`): YAML loading, environment variables, hierarchy
+- **Model Routing** (`test_routing.py`): Provider selection, model registry, fallbacks
+- **Models** (`test_models.py`): Model definitions, capabilities, metadata
 
 ## Key Testing Patterns
 
-### Tool Testing Pattern
+### CLI Testing Pattern (New Click Interface)
 ```python
-def test_calculate_edge_cases(self):
-    """Test edge cases and error conditions."""
-    # Division by zero
-    result = calculate("1 / 0")
-    assert "Error: Division by zero" in result
+from click.testing import CliRunner
+from ttt.cli import main
+
+def test_ask_command():
+    """Test the modern Click-based CLI."""
+    runner = CliRunner()
     
-    # Invalid syntax
-    result = calculate("2 +")
-    assert "Error" in result
-    
-    # Security: unsafe operations should be blocked
-    result = calculate("__import__('os')")
-    assert "Error" in result
+    with patch("ttt.app_hooks.on_ask") as mock_hook:
+        result = runner.invoke(main, ["ask", "What is Python?"])
+        
+        assert result.exit_code == 0
+        mock_hook.assert_called_once()
 ```
 
-### Backend Testing Pattern
+### Backend Testing Pattern (Mocked HTTP)
 ```python
 @pytest.mark.asyncio
-async def test_ask_success_mocked(self, backend):
-    """Test successful ask request with mocked httpx.AsyncClient."""
+async def test_local_backend():
+    """Test LocalBackend with mocked httpx."""
     with patch("httpx.AsyncClient") as mock_client_class:
-        # Set up mock response
         mock_response = Mock()
         mock_response.json.return_value = {"response": "Hello!"}
         
-        # Configure async context manager
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(return_value=mock_response)
         mock_client_class.return_value.__aenter__ = AsyncMock(return_value=mock_client)
         
-        # Test the backend
+        backend = LocalBackend()
         response = await backend.ask("Hello, AI!")
         assert str(response) == "Hello!"
 ```
 
-### CLI Testing Pattern
+### Tool Testing Pattern (Security & Edge Cases)
 ```python
-def test_direct_prompt_basic(self):
-    """Test basic direct prompt functionality."""
+def test_calculate_tool_security():
+    """Test that unsafe operations are blocked."""
+    from ttt.tools.builtins import calculate
+    
+    # Valid operation
+    result = calculate("2 + 2")
+    assert "Result: 4" in result
+    
+    # Security: unsafe operations should be blocked
+    result = calculate("__import__('os')")
+    assert "Error" in result
+    
+    # Edge case: division by zero
+    result = calculate("1 / 0")
+    assert "Error: Division by zero" in result
+```
+
+### Hook System Testing
+```python
+@patch("ttt.app_hooks.on_chat")
+def test_chat_command_integration(mock_hook):
+    """Test CLI integration with hook system."""
     runner = CliRunner()
-    with patch('ai.ask') as mock_ask:
-        mock_response = Mock()
-        mock_response.__str__ = lambda x: "Mock response"
-        mock_ask.return_value = mock_response
-        
-        result = runner.invoke(main, ["What is Python?"])
-        
-        assert result.exit_code == 0
-        mock_ask.assert_called_once()
-        call_args = mock_ask.call_args
-        assert call_args[0][0] == "What is Python?"
+    mock_hook.return_value = None  # Avoid actual chat loop
+    
+    result = runner.invoke(main, [
+        "chat", "--model", "gpt-4", "--session", "test"
+    ])
+    
+    assert result.exit_code == 0
+    mock_hook.assert_called_once()
 ```
 
 ## Running Tests
 
-### Basic Test Execution
+### **Using the Test Script (Recommended)**
+```bash
+# Run unit tests (fast, no API calls)
+./test.sh unit
+
+# Run integration tests (requires API keys, costs money)
+./test.sh integration  
+
+# Run all tests
+./test.sh all
+
+# Run with coverage
+./test.sh unit --coverage
+
+# Run specific test files
+./test.sh --test test_cli_modern.py
+```
+
+### **Direct pytest Usage**
 ```bash
 # Run all tests
 pytest tests/
 
 # Run specific test file
-pytest tests/test_builtin_tools.py
+pytest tests/test_cli_modern.py -v
 
-# Run with verbose output
-pytest tests/ -v
+# Run with markers
+pytest tests/ -m "not integration"  # Skip integration tests
+pytest tests/ -m "not slow"         # Skip slow tests
 
 # Run with coverage
-pytest tests/ --cov=ai --cov-report=html
+pytest tests/ --cov=ttt --cov-report=html
 ```
 
-### Test Categories
-```bash
-# Run only unit tests
-pytest tests/ -m unit
+### **Test Categories**
 
-# Run only integration tests  
-pytest tests/ -m integration
+Tests are marked with these pytest markers:
 
-# Skip slow tests
-pytest tests/ -m "not slow"
+- `unit`: Fast tests with mocking, no external dependencies
+- `integration`: Real API calls, requires API keys and costs money  
+- `slow`: Time-intensive tests
+- `asyncio`: Async test functions
 
-# Run real API tests (requires API keys)
-pytest tests/ -m real_api
-```
+## CLI Testing Details
 
-### Specific Test Patterns
-```bash
-# Run calculate tool tests
-pytest tests/test_builtin_tools.py::TestCalculate -v
+### **Commands Tested**
 
-# Run LocalBackend tests
-pytest tests/test_local_backend.py::TestLocalBackend -v
+The new Click CLI includes these commands, all tested in `test_cli_modern.py`:
 
-# Run CLI tests
-pytest tests/test_modern_cli.py::TestClickCLI -v
-```
+- `ttt ask "question"` - Single question/answer
+- `ttt chat` - Interactive chat session
+- `ttt list models|sessions|tools` - List resources
+- `ttt config get|set|list` - Configuration management
+- `ttt tools enable|disable|list` - Tool management
+- `ttt status` - Backend health check
+- `ttt models` - List available models
+- `ttt info MODEL` - Model details
+- `ttt export SESSION` - Export chat history
+
+### **Hook System**
+
+Commands are implemented via hooks in `app_hooks.py`:
+- `on_ask()` - Handles ask commands
+- `on_chat()` - Handles interactive chat
+- `on_list()` - Handles list commands
+- `on_config_*()` - Configuration operations
+- `on_tools_*()` - Tool management
+- etc.
+
+Tests mock these hooks to verify CLI integration without executing actual functionality.
+
+## Integration Tests & Rate Limiting
+
+See `README_RATE_LIMITING.md` for details on:
+- API rate limit management
+- Environment variable configuration  
+- `delayed_ask`, `delayed_stream`, `delayed_chat` fixtures
+- Cost awareness for integration tests
 
 ## Dependencies
 
-### Required Dependencies
-- `pytest = "^7.0.0"` (already in pyproject.toml)
-- `pytest-asyncio = "^0.21.0"` (already in pyproject.toml)
-- `pytest-cov = "^4.0.0"` (already in pyproject.toml)
+### **Required (already in pyproject.toml)**
+- `pytest ^7.0.0`
+- `pytest-asyncio ^0.21.0` 
+- `pytest-cov ^4.0.0`
 
-### Recommended Addition
-Add to `pyproject.toml` under `[tool.poetry.group.dev.dependencies]`:
-```toml
-pytest-mock = "^3.11.0"
+### **CLI Testing**
+- `click` - CLI framework
+- `rich-click` - Enhanced Click with rich formatting
+
+## Best Practices
+
+### **1. Test Isolation**
+- Use mocking to isolate units under test
+- Patch external dependencies (HTTP, file system, etc.)
+- Each test should be independent and repeatable
+
+### **2. Comprehensive Edge Cases**
+- Test valid inputs, invalid inputs, edge cases, error conditions
+- Include security testing for code execution and file operations
+- Test rate limiting, authentication failures, network errors
+
+### **3. CLI Testing**
+- Use Click's CliRunner for reliable CLI testing
+- Mock app hooks to test CLI integration without side effects
+- Test help text, option parsing, command validation
+
+### **4. Async Testing** 
+- Use `@pytest.mark.asyncio` for async test functions
+- Use `AsyncMock` for async dependencies
+- Proper async context manager mocking with `__aenter__`
+
+### **5. Integration Testing**
+- Mark with `@pytest.mark.integration`
+- Use rate limiting fixtures (`delayed_ask`, etc.)  
+- Require explicit API keys and cost acknowledgment
+
+## File Organization
+
+```
+tests/
+├── conftest.py                 # Pytest configuration and fixtures
+├── test_api_*.py              # API functionality tests  
+├── test_backends_*.py         # Backend implementation tests
+├── test_cli_modern.py         # Modern Click CLI tests
+├── test_tools_*.py            # Tool system tests
+├── test_config_loading.py     # Configuration tests
+├── test_*_streaming.py        # Streaming functionality tests
+├── test_integration.py        # Real API integration tests
+└── README_*.md               # Testing documentation
 ```
 
-## Test Markers
+## Examples
 
-Current markers defined in `pyproject.toml`:
-```toml
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
-    "unit: marks tests as unit tests", 
-    "benchmark: marks tests as performance benchmarks",
-    "examples: marks tests as usage examples",
-    "real_api: marks tests that make real API calls",
-    "asyncio: marks tests as async tests",
-]
-```
+See individual test files for comprehensive examples:
 
-## Foundation Examples
+- **CLI Testing**: `test_cli_modern.py` 
+- **Backend Testing**: `test_backends_local.py`, `test_backends_cloud.py`
+- **Tool Testing**: `test_tools_builtin.py`
+- **Integration Testing**: `test_integration.py`
 
-See `test_foundation_example.py` for comprehensive examples of:
-1. **Tool Testing**: Calculate tool with edge cases and security testing
-2. **Backend Testing**: LocalBackend with properly mocked httpx client
-3. **CLI Testing**: Click CLI with CliRunner and argument validation
-4. **Async Testing**: Proper async/await patterns with mocking
-
-## Key Principles
-
-1. **Comprehensive Edge Cases**: Test valid inputs, invalid inputs, edge cases, and error conditions
-2. **Proper Mocking**: Use `unittest.mock` and `pytest-mock` to isolate units under test
-3. **CLI Testing**: Use Click's CliRunner for reliable CLI testing instead of subprocess
-4. **Async Patterns**: Use `@pytest.mark.asyncio` and `AsyncMock` for async testing
-5. **Security Testing**: Ensure unsafe operations are properly blocked
-6. **Error Handling**: Test all error paths and exception scenarios
-
-This foundation provides a robust starting point for maintaining and expanding the test suite as the AI library evolves.
+This testing foundation ensures robust coverage across all TTT components while maintaining fast unit tests and comprehensive integration testing.
