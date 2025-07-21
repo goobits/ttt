@@ -371,7 +371,7 @@ def main(
       [green]chat[/green]     💬 Launch interactive conversation mode
       [green]status[/green]   ⚡ Check system health and API status
       [green]models[/green]   🤖 Browse available AI models
-      [green]config[/green]   ⚙️ Manage settings and API keys
+      [green]config[/green]   ⚙️  Manage settings and API keys
 
     \b
     [bold yellow]🔑 First-time Setup:[/bold yellow]
