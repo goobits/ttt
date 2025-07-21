@@ -288,104 +288,47 @@ def parse_tools_arg(tools: Optional[str]) -> Optional[str]:
 @click.group(
     cls=RichGroup,
     invoke_without_command=True,
+    name="goobits-ttt",
 )
 @click.pass_context
 @click.version_option(version=get_ttt_version(), prog_name="TTT")
-@click.option(
-    "--code",
-    is_flag=True,
-    help="💻 Enable coding optimizations",
-)
-@click.option(
-    "--debug",
-    is_flag=True,
-    help="🐛 Show debug output",
-)
-@click.option(
-    "--json",
-    "json_output",
-    is_flag=True,
-    help="📦 Output results as JSON",
-)
-@click.option(
-    "--max-tokens",
-    type=int,
-    help="📝 Response length limit",
-)
-@click.option(
-    "--model", "-m", help="🤖 AI model to use (@claude, @gpt4, gpt-4o)"
-)
-@click.option(
-    "--stream", is_flag=True, help="⚡ Stream responses live"
-)
-@click.option(
-    "--system",
-    "-s",
-    help="🎭 Custom system prompt for AI behavior",
-)
-@click.option(
-    "--temperature",
-    "-t",
-    type=float,
-    help="🌡️ Creativity level (0=focused, 1=creative)",
-)
-@click.option(
-    "--tools",
-    default=None,
-    help="🔧 Enable tools (web,file,code,math,time)",
-)
-@click.option(
-    "--verbose",
-    "-v",
-    is_flag=True,
-    help="🔍 Detailed output",
-)
-def main(
-    ctx: click.Context,
-    code: bool,
-    debug: bool,
-    json_output: bool,
-    max_tokens: Optional[int],
-    model: Optional[str],
-    stream: bool,
-    system: Optional[str],
-    temperature: Optional[float],
-    tools: Optional[str],
-    verbose: bool,
-) -> None:
-    """🔮 [bold cyan]TTT[/bold cyan] - Transform any text with intelligent AI processing
+def main(ctx: click.Context) -> None:
+    """🔮 TTT - Your universal AI command-line companion.
 
     \b
-    TTT empowers developers, writers, and creators to process text with precision.
-    From grammar fixes to data analysis - AI-powered and pipeline-ready.
+    Ask it to write, rewrite, summarize, translate, or analyze any text.
+    Pipeline-ready and built for your terminal.
 
     \b
-    [bold yellow]💡 Quick Examples:[/bold yellow]
-      [green]ttt "Fix grammar in this text"[/green]           [italic]# Instant text cleanup[/italic]
-      [green]ttt @claude "Summarize this article"[/green]     [italic]# Use Claude model[/italic]
-      [green]echo "data.txt" | ttt "Convert to JSON"[/green]  [italic]# Pipeline integration[/italic]
-      [green]ttt chat[/green]                                 [italic]# Interactive AI conversation[/italic]
+    [bold yellow]💡 Quick Start:[/bold yellow]
+      [green]ttt "Fix grammar in this text"[/green]              [italic]# Instant fix (implicit 'ask')[/italic]
+      [green]ttt ask -m @claude "Summarize this article"[/green] [italic]# Use a specific model[/italic]
+      [green]echo "Piped input" | ttt ask[/green]                [italic]# Process piped text[/italic]
+      [green]ttt chat[/green]                                    [italic]# Start an interactive chat[/italic]
 
     \b
     [bold yellow]🎯 Core Commands:[/bold yellow]
-      [green]chat[/green]     💬 Launch interactive conversation mode
-      [green]status[/green]   ⚡ Check system health and API status
-      [green]models[/green]   🤖 Browse available AI models
+      [green]ask[/green]      🪄 Ask the AI to perform a single task (default command)
+      [green]chat[/green]     💬 Start an interactive, stateful conversation
       [green]config[/green]   ⚙️  Manage settings and API keys
+      [green]status[/green]   ⚡ Check system health and API status
+
+    \b
+    [bold yellow]🤖 Model Management:[/bold yellow]
+      [green]models[/green]   🤖 List available AI models and their capabilities
+      [green]info[/green]     👀 Get detailed information about a specific model
 
     \b
     [bold yellow]🔑 First-time Setup:[/bold yellow]
-      1. Set your API key:     [green]export OPENROUTER_API_KEY=your-key[/green]
-      2. Verify installation:  [green]ttt status[/green]
-      3. Start transforming:   [green]ttt "Translate to French: Hello"[/green]
+      1. Set your API key:     [green]ttt config set openrouter_api_key YOUR_KEY[/green]
+      2. Check provider status: [green]ttt status[/green]
+      3. See available models:  [green]ttt models[/green]
+      4. Start asking:         [green]ttt "Translate 'hello world' to French"[/green]
 
     📚 For detailed help on a command, run: [green]ttt [COMMAND] --help[/green]
     """
 
-    # Setup logging based on verbosity
-    setup_logging_level(verbose, debug, json_output)
-
-    # If no subcommand, treat remaining args as direct prompt
+    # If no subcommand, treat remaining args as direct prompt (backward compatibility)
     if ctx.invoked_subcommand is None:
         # Get remaining args after options as prompt
         remaining_args = ctx.args
@@ -412,26 +355,74 @@ def main(
                     # Fallback: assume we should wait for stdin
                     pass
 
-        # Resolve model alias
-        if model:
-            model = resolve_model_alias(model)
-
-        # Parse tools argument
-        tools = parse_tools_arg(tools)
-
+        # Call ask command with defaults for backward compatibility
         ask_command(
             prompt_text,
-            model,
-            system,
-            temperature,
-            max_tokens,
-            tools,
-            stream,
-            verbose,
-            code,
-            json_output,
+            None,  # model
+            None,  # system
+            None,  # temperature
+            None,  # max_tokens
+            None,  # tools
+            False, # stream
+            False, # verbose
+            False, # code
+            False, # json_output
             allow_empty=False,
         )
+
+
+@main.command()
+@click.argument("prompt", required=False)
+@click.option("--model", "-m", help="🤖 AI model to use (@claude, @gpt4, gpt-4o)")
+@click.option("--system", "-s", help="🎭 Custom system prompt for AI behavior")
+@click.option("--temperature", "-t", type=float, help="🌡️ Creativity level (0=focused, 1=creative)")
+@click.option("--max-tokens", type=int, help="📝 Response length limit")
+@click.option("--tools", help="🔧 Enable tools (web,file,code,math,time)")
+@click.option("--stream", is_flag=True, help="⚡ Stream responses live")
+@click.option("--verbose", "-v", is_flag=True, help="🔍 Detailed output")
+@click.option("--debug", is_flag=True, help="🐛 Show debug output")
+@click.option("--code", is_flag=True, help="💻 Enable coding optimizations")
+@click.option("--json", "json_output", is_flag=True, help="📦 Output results as JSON")
+@click.pass_context
+def ask(
+    ctx: click.Context,
+    prompt: Optional[str],
+    model: Optional[str],
+    system: Optional[str],
+    temperature: Optional[float],
+    max_tokens: Optional[int],
+    tools: Optional[str],
+    stream: bool,
+    verbose: bool,
+    debug: bool,
+    code: bool,
+    json_output: bool,
+) -> None:
+    """🪄 Ask the AI to perform a single task (default command)."""
+    # Setup logging based on verbosity
+    setup_logging_level(verbose, debug, json_output)
+    
+    # Resolve model alias
+    if model:
+        model = resolve_model_alias(model)
+
+    # Parse tools argument
+    parsed_tools = parse_tools_arg(tools)
+
+    # Call the existing ask_command logic
+    ask_command(
+        prompt,
+        model,
+        system,
+        temperature,
+        max_tokens,
+        parsed_tools,
+        stream,
+        verbose,
+        code,
+        json_output,
+        allow_empty=True,
+    )
 
 
 @main.command()
@@ -441,6 +432,10 @@ def main(
 @click.option("--model", "-m", help="🤖 Select AI model (overrides default)")
 @click.option("--system", "-s", help="🎭 Set system prompt for the session")
 @click.option("--tools", help="🔧 Enable tools for this session")
+@click.option("--temperature", "-t", type=float, help="🌡️ Creativity level (0=focused, 1=creative)")
+@click.option("--stream", is_flag=True, help="⚡ Stream responses live")
+@click.option("--verbose", "-v", is_flag=True, help="🔍 Detailed output")
+@click.option("--debug", is_flag=True, help="🐛 Show debug output")
 @click.pass_context
 def chat(
     ctx: click.Context,
@@ -450,10 +445,17 @@ def chat(
     model: Optional[str],
     system: Optional[str],
     tools: Optional[str],
+    temperature: Optional[float],
+    stream: bool,
+    verbose: bool,
+    debug: bool,
 ) -> None:
-    """💬 Interactive AI conversation with context."""
+    """💬 Start an interactive, stateful conversation."""
     from ttt.chat_sessions import ChatSessionManager
 
+    # Setup logging based on verbosity
+    setup_logging_level(verbose, debug, False)  # JSON mode doesn't make sense for interactive chat
+    
     # Initialize session manager
     session_manager = ChatSessionManager()
 
@@ -542,6 +544,10 @@ def chat(
         chat_kwargs["system"] = session.system_prompt
     if session.tools:
         chat_kwargs["tools"] = resolve_tools(session.tools)
+    if temperature is not None:
+        chat_kwargs["temperature"] = temperature
+    if stream:
+        chat_kwargs["stream"] = stream
 
     # Create chat session with context from previous messages
     messages: List[Dict[str, str]] = []
@@ -625,19 +631,25 @@ def chat(
 
 
 @main.command()
-@click.pass_context
-def status(ctx: click.Context) -> None:
+@click.option("--json", "json_output", is_flag=True, help="📦 Output results as JSON")
+def status(json_output: bool) -> None:
     """⚡ Check system health and API status."""
-    json_output = ctx.parent.params.get("json_output", False) if ctx.parent else False
     show_backend_status(json_output)
 
 
 @main.command()
-@click.pass_context
-def models(ctx: click.Context) -> None:
-    """🤖 List available AI models."""
-    json_output = ctx.parent.params.get("json_output", False) if ctx.parent else False
+@click.option("--json", "json_output", is_flag=True, help="📦 Output results as JSON")
+def models(json_output: bool) -> None:
+    """🤖 List available AI models and their capabilities."""
     show_models_list(json_output)
+
+
+@main.command()
+@click.argument("model_name")
+@click.option("--json", "json_output", is_flag=True, help="📦 Output results as JSON")
+def info(model_name: str, json_output: bool) -> None:
+    """👀 Get detailed information about a specific model."""
+    show_model_info(model_name, json_output)
 
 
 @main.command()
@@ -645,28 +657,28 @@ def models(ctx: click.Context) -> None:
 @click.argument("key", required=False)
 @click.argument("value", required=False)
 @click.option("--reset", is_flag=True, help="Reset configuration to defaults")
-@click.pass_context
+@click.option("--json", "json_output", is_flag=True, help="📦 Output results as JSON")
 def config(
-    ctx: click.Context,
     action: Optional[str],
     key: Optional[str],
     value: Optional[str],
     reset: bool,
+    json_output: bool,
 ) -> None:
-    """⚙️ Manage configuration settings.
+    """⚙️ Manage configuration settings and API keys.
 
     \b
     Examples:
-      ttt config                          # Show all configuration
-      ttt config get models.default       # Show specific value
-      ttt config set models.default gpt-4 # Set a value
-      ttt config set alias.work gpt-4     # Set a model alias
-      ttt config --reset                  # Reset to defaults
+      ttt config                              # Show all configuration
+      ttt config get models.default           # Show specific value
+      ttt config set models.default gpt-4     # Set a value
+      ttt config set openrouter_api_key YOUR_KEY  # Set API key
+      ttt config set alias.work gpt-4         # Set a model alias
+      ttt config --reset                      # Reset to defaults
     """
     from ttt.config_manager import ConfigManager
 
     config_manager = ConfigManager()
-    json_output = ctx.parent.params.get("json_output", False) if ctx.parent else False
 
     # Handle reset
     if reset:
@@ -1084,6 +1096,85 @@ def show_models_list(json_output: bool = False) -> None:
 
         console.print()
         console.print("  • And many more via OpenRouter...")
+
+
+def show_model_info(model_name: str, json_output: bool = False) -> None:
+    """Show detailed information about a specific model."""
+    try:
+        from ttt.config_loader import get_project_config
+        
+        config = get_project_config()
+        available_models = config.get("models", {}).get("available", {})
+        aliases = config.get("models", {}).get("aliases", {})
+        
+        # Check if it's an alias (handle both @alias and alias formats)
+        resolved_model = model_name
+        is_alias = False
+        alias_to_check = model_name.lstrip('@')  # Remove @ if present
+        
+        if alias_to_check in aliases:
+            resolved_model = aliases[alias_to_check]
+            is_alias = True
+        elif model_name in aliases:
+            resolved_model = aliases[model_name]
+            is_alias = True
+            
+        # Try to find the model info
+        model_info = available_models.get(resolved_model, {})
+        
+        # If not found, try to find a base model name (strip openrouter/ prefix)
+        if not model_info and resolved_model.startswith('openrouter/'):
+            base_model = resolved_model.split('/')[-1]  # Get last part after /
+            model_info = available_models.get(base_model, {})
+            if model_info:
+                resolved_model = base_model
+                
+        # If still not found, try direct alias lookup in available models
+        if not model_info:
+            for model_key, info in available_models.items():
+                if isinstance(info, dict) and 'aliases' in info:
+                    if alias_to_check in info['aliases']:
+                        model_info = info
+                        resolved_model = model_key
+                        is_alias = True
+                        break
+        
+        if json_output:
+            import json
+            output = {
+                "model": resolved_model,
+                "alias": model_name if is_alias else None,
+                "info": model_info
+            }
+            console.print(json.dumps(output, indent=2))
+        else:
+            if not model_info:
+                console.print(f"[red]Model '{model_name}' not found[/red]")
+                console.print()
+                console.print("Available models:")
+                console.print("• Run 'ttt models' to see all available models")
+                console.print("• Check 'ttt config get models.aliases' for available aliases")
+                return
+                
+            console.print(f"[bold blue]Model Information: {resolved_model}[/bold blue]")
+            if is_alias:
+                console.print(f"[dim]Alias: @{model_name}[/dim]")
+            console.print()
+            
+            if isinstance(model_info, dict):
+                for key, value in model_info.items():
+                    if key == "aliases" and isinstance(value, list):
+                        console.print(f"[green]{key.title()}:[/green] {', '.join([f'@{alias}' for alias in value])}")
+                    else:
+                        console.print(f"[green]{key.title()}:[/green] {value}")
+            else:
+                console.print(f"[green]Details:[/green] {model_info}")
+    except Exception as e:
+        if json_output:
+            import json
+            console.print(json.dumps({"error": str(e)}))
+        else:
+            console.print(f"[red]Error getting model info: {e}[/red]")
 
 
 def show_tools_list() -> None:

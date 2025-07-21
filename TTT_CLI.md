@@ -1,13 +1,15 @@
 # TTT CLI Command Checklist
 
 ## Basic Commands
-- [x] `ttt "prompt"` ✅ WORKS
-- [x] `ttt @model "prompt"` ✅ WORKS (tested with @flash)
-- [x] `ttt chat` ✅ WORKS (starts but has error)
-- [x] `ttt status` ✅ WORKS
-- [x] `ttt models` ✅ WORKS
-- [x] `ttt config` ✅ WORKS
-- [x] `ttt --version` ✅ WORKS
+- [x] `ttt "prompt"` ✅ WORKS - Tested with "translate hello to Spanish"
+- [x] `ttt @model "prompt"` ✅ WORKS - Tested with @fast
+- [x] `ttt ask "prompt"` ✅ WORKS - NEW command works perfectly!
+- [x] `ttt info <model>` ✅ WORKS - NEW command shows model details
+- [x] `ttt chat` ✅ WORKS - Interactive chat working
+- [x] `ttt status` ✅ WORKS - Shows backend status
+- [x] `ttt models` ✅ WORKS - Lists all models
+- [x] `ttt config` ✅ WORKS - Shows configuration
+- [x] `ttt --version` ✅ WORKS - Shows version 1.0.0rc4
 
 ## Model Selection Options
 - [x] `ttt --model gpt-4o "prompt"` ✅ WORKS
@@ -50,7 +52,8 @@
 - [x] `ttt config get models.default` ✅ WORKS
 - [x] `ttt config set models.default gpt-4` ✅ WORKS (tested with alias)
 - [x] `ttt config set alias.work gpt-4` ✅ WORKS (tested with test alias)
-- [ ] `ttt config --reset` ❌ Option not found
+- [x] `ttt config set openrouter_api_key YOUR_KEY` ✅ WORKS - NEW feature sets env var & saves to config!
+- [ ] `ttt config --reset` ❌ Option exists but not tested
 
 ## JSON Output Combinations
 - [x] `ttt --json "prompt"` ✅ WORKS
@@ -127,5 +130,14 @@ The CLI fixes have been **highly successful**! Previously reported as having 55+
 3. **All output modes work** (previously all broken)
 4. **Model aliases work including @coding** (previously had invalid model ID)
 5. **Flexible argument placement works** (e.g., `ttt "prompt" --json`)
+
+### 🆕 New Features Added (per proposal)
+1. **`ttt ask` subcommand** - Formal subcommand structure while maintaining backward compatibility
+2. **`ttt info <model>` command** - Get detailed information about any model
+3. **`ttt config set openrouter_api_key YOUR_KEY`** - Sets API keys as environment variables and saves to config
+4. **Updated help layout** - Organized into sections with emojis matching the proposal exactly
+5. **Refined copywriting** - All command descriptions updated to be more concise and impactful
+6. **Clean main help screen** - Only shows `--version` and `--help` in Options box (like stt)
+7. **Operational options moved to subcommands** - `--model`, `--temperature`, etc. now belong to `ask` and `chat`
 
 The only significant remaining issues are with the tool system and chat subcommand options.

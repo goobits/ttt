@@ -141,6 +141,7 @@ class ConfigModel(BaseModel):
     anthropic_api_key: Optional[str] = None
     google_api_key: Optional[str] = None
     openrouter_api_key: Optional[str] = None
+    api_keys: Dict[str, str] = Field(default_factory=dict)
 
     # Ollama Configuration
     ollama_base_url: Optional[str] = None

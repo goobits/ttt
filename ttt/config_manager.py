@@ -46,6 +46,23 @@ class ConfigManager:
 
         # Ensure user config directory exists
         self.user_config_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Load API keys from config into environment variables if not already set
+        self._load_api_keys_from_config()
+
+    def _load_api_keys_from_config(self) -> None:
+        """Load API keys from config file into environment variables if not already set."""
+        try:
+            user_config = self.get_user_config()
+            api_keys = user_config.get("api_keys", {})
+            
+            for key, value in api_keys.items():
+                env_key = key.upper()
+                if not os.environ.get(env_key):
+                    os.environ[env_key] = value
+        except Exception:
+            # Silently fail if config loading fails during initialization
+            pass
 
     def get_user_config(self) -> Dict[str, Any]:
         """Load user configuration if it exists."""
@@ -194,6 +211,20 @@ class ConfigManager:
 
         # Parse the key path (e.g., "models.default" or "alias.work")
         parts = key.split(".")
+
+        # Special handling for API keys - set both config and environment variable
+        if key.endswith("_api_key"):
+            env_key = key.upper()
+            os.environ[env_key] = value
+            console.print(f"[green]Set {env_key} environment variable[/green]")
+            
+            # Also store in config for persistence
+            if "api_keys" not in user_config:
+                user_config["api_keys"] = {}
+            user_config["api_keys"][key] = value
+            self._save_user_config(user_config)
+            console.print(f"[green]Saved {key} to config file[/green]")
+            return
 
         # Special handling for aliases
         if parts[0] == "alias" and len(parts) == 2:
