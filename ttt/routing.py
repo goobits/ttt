@@ -8,6 +8,7 @@ from .models import AIResponse, ImageInput
 if HAS_LOCAL_BACKEND:
     from .backends import LocalBackend
 from .config import get_config
+
 # Import model_registry lazily to avoid import-time initialization
 from .exceptions import (
     BackendNotAvailableError,
@@ -235,6 +236,7 @@ class Router:
 
         # Try to resolve alias
         from .config import model_registry
+
         resolved = model_registry.resolve_model_name(model)
         logger.debug(f"Resolved model '{model}' to '{resolved}'")
         return resolved
@@ -284,6 +286,7 @@ class Router:
         if model is not None:
             # First check if it's in the registry
             from .config import model_registry
+
             model_info = model_registry.get_model(model)
             if model_info:
                 if model_info.provider == "local":

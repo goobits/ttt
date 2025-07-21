@@ -22,7 +22,8 @@ class ConfigManager:
 
         # Try multiple locations for default config
         possible_config_paths = [
-            Path(__file__).parent / "config.yaml",         # Installed in ttt package (preferred)
+            Path(__file__).parent
+            / "config.yaml",  # Installed in ttt package (preferred)
             Path(__file__).parent.parent / "config.yaml",  # Development
             Path(__file__).parent.parent.parent / "config.yaml",  # Installed at root
         ]
@@ -37,8 +38,11 @@ class ConfigManager:
         if self.default_config_path is None:
             # Only show warning if not in JSON mode
             import os
-            if os.environ.get('TTT_JSON_MODE', '').lower() != 'true':
-                console.print("[yellow]Warning: Default config.yaml not found, using minimal defaults[/yellow]")
+
+            if os.environ.get("TTT_JSON_MODE", "").lower() != "true":
+                console.print(
+                    "[yellow]Warning: Default config.yaml not found, using minimal defaults[/yellow]"
+                )
 
         # Ensure user config directory exists
         self.user_config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -81,11 +85,9 @@ class ConfigManager:
                     "gemini": "openrouter/google/gemini-pro",
                     "mixtral": "openrouter/mistralai/mixtral-8x7b-instruct",
                     "flash": "openrouter/google/gemini-2.5-flash",
-                }
+                },
             },
-            "backends": {
-                "default": "cloud"
-            }
+            "backends": {"default": "cloud"},
         }
 
     def get_merged_config(self) -> Dict[str, Any]:

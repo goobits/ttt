@@ -13,9 +13,9 @@ from dotenv import load_dotenv
 from rich.console import Console
 
 # Set environment variable for JSON mode BEFORE any imports
-if '--json' in sys.argv:
-    os.environ['TTT_JSON_MODE'] = 'true'
-    
+if "--json" in sys.argv:
+    os.environ["TTT_JSON_MODE"] = "true"
+
 import ttt
 
 # Suppress the common aiohttp warning about pending tasks being destroyed
@@ -106,7 +106,9 @@ def get_ttt_version() -> str:
             return getattr(ttt, "__version__", "unknown")
 
 
-def setup_logging_level(verbose: bool = False, debug: bool = False, json_output: bool = False) -> None:
+def setup_logging_level(
+    verbose: bool = False, debug: bool = False, json_output: bool = False
+) -> None:
     """Setup logging level based on verbosity flags."""
     import asyncio
     import logging
@@ -237,7 +239,7 @@ def resolve_model_alias(model: str) -> str:
 
 
 def parse_tools_arg(tools: Optional[str]) -> Optional[str]:
-    """Parse the tools argument according to new spec."""
+    """Parse tools argument and expand categories."""
     if tools is None:
         return None
 
@@ -247,8 +249,22 @@ def parse_tools_arg(tools: Optional[str]) -> Optional[str]:
         # which should enable all tools
         return "all"
 
-    # Otherwise return the comma-separated list as-is
-    return tools
+    # Import here to avoid circular imports
+    from ttt.tools.builtins import TOOL_CATEGORIES
+
+    # Expand categories to actual tool names
+    expanded_tools = []
+    for item in tools.split(","):
+        item = item.strip()
+        if item in TOOL_CATEGORIES:
+            # Get all tools in this category
+            category_tools = TOOL_CATEGORIES[item]
+            expanded_tools.extend(category_tools)
+        else:
+            # Assume it's a specific tool name
+            expanded_tools.append(item)
+
+    return ",".join(expanded_tools) if expanded_tools else tools
 
 
 class VersionAwareGroup(click.Group):
@@ -297,7 +313,9 @@ class VersionAwareGroup(click.Group):
     help="📝 Control response length for concise or detailed output",
 )
 @click.option(
-    "--tools", default=None, help="🔧 Enable AI tools (empty=all, or specify: web,code)"
+    "--tools",
+    default=None,
+    help="🔧 Enable AI tools (categories: web,file,code,math,time or specific: web_search,read_file)",
 )
 @click.option(
     "--stream", is_flag=True, help="⚡ Watch responses appear in real-time as AI thinks"
@@ -428,7 +446,15 @@ def main(
 @click.option("--system", "-s", help="🎭 Set system prompt for the session")
 @click.option("--tools", help="🔧 Enable tools for this session")
 @click.pass_context
-def chat(ctx: click.Context, resume: bool, session_id: Optional[str], list_sessions: bool, model: Optional[str], system: Optional[str], tools: Optional[str]) -> None:
+def chat(
+    ctx: click.Context,
+    resume: bool,
+    session_id: Optional[str],
+    list_sessions: bool,
+    model: Optional[str],
+    system: Optional[str],
+    tools: Optional[str],
+) -> None:
     """💬 Launch interactive conversation mode with memory."""
     from ttt.chat_sessions import ChatSessionManager
 
@@ -601,7 +627,7 @@ def chat(ctx: click.Context, resume: bool, session_id: Optional[str], list_sessi
 @click.pass_context
 def status(ctx: click.Context) -> None:
     """⚡ Verify system health and API connectivity."""
-    json_output = ctx.parent.params.get('json_output', False) if ctx.parent else False
+    json_output = ctx.parent.params.get("json_output", False) if ctx.parent else False
     show_backend_status(json_output)
 
 
@@ -609,7 +635,7 @@ def status(ctx: click.Context) -> None:
 @click.pass_context
 def models(ctx: click.Context) -> None:
     """🤖 Browse all available AI models and their capabilities."""
-    json_output = ctx.parent.params.get('json_output', False) if ctx.parent else False
+    json_output = ctx.parent.params.get("json_output", False) if ctx.parent else False
     show_models_list(json_output)
 
 
@@ -619,7 +645,13 @@ def models(ctx: click.Context) -> None:
 @click.argument("value", required=False)
 @click.option("--reset", is_flag=True, help="Reset configuration to defaults")
 @click.pass_context
-def config(ctx: click.Context, action: Optional[str], key: Optional[str], value: Optional[str], reset: bool) -> None:
+def config(
+    ctx: click.Context,
+    action: Optional[str],
+    key: Optional[str],
+    value: Optional[str],
+    reset: bool,
+) -> None:
     """⚙️ Access configuration management and preferences.
 
     \b
@@ -633,7 +665,7 @@ def config(ctx: click.Context, action: Optional[str], key: Optional[str], value:
     from ttt.config_manager import ConfigManager
 
     config_manager = ConfigManager()
-    json_output = ctx.parent.params.get('json_output', False) if ctx.parent else False
+    json_output = ctx.parent.params.get("json_output", False) if ctx.parent else False
 
     # Handle reset
     if reset:
@@ -647,6 +679,7 @@ def config(ctx: click.Context, action: Optional[str], key: Optional[str], value:
         # No action specified - show all config
         if json_output:
             import json
+
             config = config_manager.get_merged_config()
             click.echo(json.dumps(config, indent=2))
         else:
@@ -655,10 +688,11 @@ def config(ctx: click.Context, action: Optional[str], key: Optional[str], value:
         # Get specific value
         if json_output:
             import json
+
             config = config_manager.get_merged_config()
             # Navigate to the key
             config_value: Any = config
-            for part in key.split('.'):
+            for part in key.split("."):
                 if isinstance(config_value, dict) and part in config_value:
                     config_value = config_value[part]
                 else:
@@ -672,6 +706,7 @@ def config(ctx: click.Context, action: Optional[str], key: Optional[str], value:
         config_manager.set_value(key, value)
         if json_output:
             import json
+
             click.echo(json.dumps({"status": "success", "key": key, "value": value}))
     elif action == "set" and key and not value:
         # Special case: "ttt config set alias.foo" should show error
@@ -810,7 +845,7 @@ def ask_command(
         apply_coding_optimization(kwargs)
 
     # JSON mode warnings are now handled by environment variable TTT_JSON_MODE
-    
+
     try:
         if stream:
             # Stream response
@@ -835,11 +870,11 @@ def ask_command(
 
                 content = str(response)
                 # If content contains JSON, parse it as an object
-                if content.strip().startswith('```json'):
+                if content.strip().startswith("```json"):
                     try:
                         # Extract JSON from markdown code block
-                        json_start = content.find('{')
-                        json_end = content.rfind('}') + 1
+                        json_start = content.find("{")
+                        json_end = content.rfind("}") + 1
                         if json_start != -1 and json_end > json_start:
                             content = json.loads(content[json_start:json_end])
                     except (json.JSONDecodeError, ValueError):
@@ -856,7 +891,7 @@ def ask_command(
                 if hasattr(response, "tokens_in") and response.tokens_in:
                     output["tokens_in"] = response.tokens_in
                     output["tokens_out"] = response.tokens_out
-                click.echo(json.dumps(output, separators=(',', ':')))
+                click.echo(json.dumps(output, separators=(",", ":")))
             else:
                 click.echo(str(response).rstrip())
 
@@ -894,14 +929,11 @@ def show_backend_status(json_output: bool = False) -> None:
         local_status = {
             "available": local.is_available,
             "base_url": local.base_url,
-            "default_model": local.default_model
+            "default_model": local.default_model,
         }
         status_data["backends"]["local"] = local_status
     except Exception as e:
-        status_data["backends"]["local"] = {
-            "available": False,
-            "error": str(e)
-        }
+        status_data["backends"]["local"] = {"available": False, "error": str(e)}
 
     # Check cloud backend
     try:
@@ -923,18 +955,16 @@ def show_backend_status(json_output: bool = False) -> None:
         cloud_status = {
             "available": cloud.is_available,
             "default_model": cloud.default_model,
-            "api_keys": keys_found
+            "api_keys": keys_found,
         }
         status_data["backends"]["cloud"] = cloud_status
     except Exception as e:
-        status_data["backends"]["cloud"] = {
-            "available": False,
-            "error": str(e)
-        }
+        status_data["backends"]["cloud"] = {"available": False, "error": str(e)}
 
     # Output results
     if json_output:
         import json
+
         click.echo(json.dumps(status_data, indent=2))
     else:
         console.print("[bold blue]Backend Status:[/bold blue]")
@@ -975,9 +1005,11 @@ def show_models_list(json_output: bool = False) -> None:
     # Get local models
     try:
         import ttt.backends.local as local_module
+
         local = local_module.LocalBackend()
         if local.is_available:
             import httpx
+
             try:
                 response = httpx.get(f"{local.base_url}/api/tags", timeout=5.0)
                 if response.status_code == 200:
@@ -991,6 +1023,7 @@ def show_models_list(json_output: bool = False) -> None:
     # Get cloud models from config
     try:
         from ttt.config_loader import get_project_config
+
         config = get_project_config()
         available_models = config.get("models", {}).get("available", {})
         aliases = config.get("models", {}).get("aliases", {})
@@ -1014,6 +1047,7 @@ def show_models_list(json_output: bool = False) -> None:
     # Output results
     if json_output:
         import json
+
         click.echo(json.dumps(models_data, indent=2))
     else:
         console.print("[bold blue]Available Models:[/bold blue]")
@@ -1153,38 +1187,59 @@ def cli_entry() -> None:
     except click.UsageError as e:
         if "No such command" in str(e):
             import sys
-            # Extract just the args that aren't options
+
+            # Only treat it as a prompt if the first argument isn't a known command
             args = sys.argv[1:]
+
+            # Known commands that should never be treated as prompts
+            known_commands = {"chat", "status", "models", "config"}
+
+            # Check if this is a subcommand with options
+            first_non_option = None
+            for arg in args:
+                if not arg.startswith("-"):
+                    first_non_option = arg
+                    break
+
+            # If it's a known command, re-raise the error so Click handles it properly
+            if first_non_option in known_commands:
+                raise
+
+            # Otherwise, treat as prompt...
             prompt_args = []
-            
+
             # Collect non-option arguments
             skip_next = False
             for i, arg in enumerate(args):
                 if skip_next:
                     skip_next = False
                     continue
-                if arg.startswith('-'):
-                    if arg in {'-m', '--model', '-s', '--system', '-t', '--temperature', '--max-tokens', '--tools'}:
+                if arg.startswith("-"):
+                    if arg in {
+                        "-m",
+                        "--model",
+                        "-s",
+                        "--system",
+                        "-t",
+                        "--temperature",
+                        "--max-tokens",
+                        "--tools",
+                    }:
                         skip_next = True
                 else:
                     prompt_args.extend(args[i:])  # Take this and all remaining args
                     break
-            
+
             if prompt_args:
                 # Manually invoke main with a context that has the prompt args
                 from click import Context
-                ctx = main.make_context('ttt', [arg for arg in args if arg not in prompt_args])
+
+                ctx = main.make_context(
+                    "ttt", [arg for arg in args if arg not in prompt_args]
+                )
                 ctx.args = prompt_args
                 ctx.invoked_subcommand = None
                 return main.invoke(ctx)
-        
+
         # Re-raise other errors
         raise
-
-
-
-
-
-
-
-

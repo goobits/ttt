@@ -15,7 +15,9 @@ _project_config_cache: Optional[Dict[str, Any]] = None
 
 # Check if we should suppress warnings (JSON mode)
 import os
-_suppress_warnings = os.environ.get('TTT_JSON_MODE', '').lower() == 'true'
+
+_suppress_warnings = os.environ.get("TTT_JSON_MODE", "").lower() == "true"
+
 
 def set_suppress_warnings(suppress: bool) -> None:
     """Set whether to suppress warnings (used in JSON mode)."""
@@ -52,22 +54,26 @@ def get_project_config() -> Dict[str, Any]:
                     return _project_config_cache
             except Exception as e:
                 import os
-                if os.environ.get('TTT_JSON_MODE', '').lower() != 'true':
-                    logger.warning(f"Failed to load project config from {config_path}: {e}")
+
+                if os.environ.get("TTT_JSON_MODE", "").lower() != "true":
+                    logger.warning(
+                        f"Failed to load project config from {config_path}: {e}"
+                    )
 
     # Return empty dict if no config found
     # Check suppress warnings both from variable and environment
     import os
-    json_mode = os.environ.get('TTT_JSON_MODE', '').lower() == 'true'
-    
+
+    json_mode = os.environ.get("TTT_JSON_MODE", "").lower() == "true"
+
     # Debug: Always suppress this warning in any JSON-related context
     # The warning will be included in the JSON response instead
-    if '--json' in getattr(sys, 'argv', []) or json_mode or _suppress_warnings:
+    if "--json" in getattr(sys, "argv", []) or json_mode or _suppress_warnings:
         # Suppress the warning - it will be included in JSON response
         pass
     else:
         logger.warning("Project config.yaml not found")
-    
+
     _project_config_cache = {}
     return _project_config_cache
 

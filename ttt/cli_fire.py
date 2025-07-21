@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Set environment variable BEFORE any imports if JSON mode is detected
-if '--json' in sys.argv:
-    os.environ['TTT_JSON_MODE'] = 'true'
+if "--json" in sys.argv:
+    os.environ["TTT_JSON_MODE"] = "true"
 
 import fire
 from dotenv import load_dotenv
@@ -73,7 +73,6 @@ for env_path in env_paths:
 console = Console()
 
 
-
 class TTT:
     """Fire-based CLI for TTT - Transform any text with intelligent AI processing"""
 
@@ -81,9 +80,20 @@ class TTT:
         """Initialize TTT CLI."""
         pass
 
-    def __call__(self, *args: str, model: Optional[str] = None, system: Optional[str] = None, temperature: Optional[float] = None,
-                 max_tokens: Optional[int] = None, tools: Optional[str] = None, stream: bool = False, verbose: bool = False,
-                 debug: bool = False, code: bool = False, json: bool = False) -> None:
+    def __call__(
+        self,
+        *args: str,
+        model: Optional[str] = None,
+        system: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        tools: Optional[str] = None,
+        stream: bool = False,
+        verbose: bool = False,
+        debug: bool = False,
+        code: bool = False,
+        json: bool = False,
+    ) -> None:
         """Main prompt handler - supports @model syntax and flexible flags.
 
         Args:
@@ -101,14 +111,15 @@ class TTT:
         """
         # Setup logging based on verbosity
         from ttt.cli import setup_logging_level
+
         setup_logging_level(verbose, debug, json)
 
         # Handle @model syntax (simple 3-line conversion)
-        if args and args[0].startswith('@'):
+        if args and args[0].startswith("@"):
             model = args[0]  # Will be resolved by resolve_model_alias
-            prompt = ' '.join(args[1:])
+            prompt = " ".join(args[1:])
         else:
-            prompt = ' '.join(args)
+            prompt = " ".join(args)
 
         # If no prompt, check for piped input or show help
         if not prompt or not prompt.strip():
@@ -119,6 +130,7 @@ class TTT:
             else:
                 # Check for piped input with timeout
                 import select
+
                 try:
                     if not select.select([sys.stdin], [], [], 30)[0]:
                         print(self._get_help())
@@ -137,21 +149,23 @@ class TTT:
 
         # Import locally to avoid early config loading
         from ttt.cli import ask_command, parse_tools_arg, resolve_model_alias
-        
+
         # Resolve model alias
         if model:
             model = resolve_model_alias(model)
         import ttt.cli
-        
+
         # Set up early warnings for JSON mode
         early_warnings = []
         if json:
             cwd = os.getcwd()
-            config_path = os.path.join(cwd, 'config.yaml')
+            config_path = os.path.join(cwd, "config.yaml")
             if not os.path.exists(config_path):
-                early_warnings.append("Project config.yaml not found, using minimal defaults")
+                early_warnings.append(
+                    "Project config.yaml not found, using minimal defaults"
+                )
         ttt.cli.early_warnings = early_warnings
-        
+
         # Parse tools argument
         tools = parse_tools_arg(tools)
 
@@ -173,20 +187,30 @@ class TTT:
     def version(self) -> None:
         """Show version and system information."""
         from ttt.cli import get_ttt_version
+
         pkg_version = get_ttt_version()
         print(f"TTT Library v{pkg_version}")
 
     def status(self, json: bool = False) -> None:
         """Verify system health and API connectivity."""
         from ttt.cli import show_backend_status
+
         show_backend_status(json)
 
     def models(self, json: bool = False) -> None:
         """Browse all available AI models and their capabilities."""
         from ttt.cli import show_models_list
+
         show_models_list(json)
 
-    def config(self, action: Optional[str] = None, key: Optional[str] = None, value: Optional[str] = None, reset: bool = False, json: bool = False) -> None:
+    def config(
+        self,
+        action: Optional[str] = None,
+        key: Optional[str] = None,
+        value: Optional[str] = None,
+        reset: bool = False,
+        json: bool = False,
+    ) -> None:
         """Access configuration management and preferences.
 
         Examples:
@@ -212,6 +236,7 @@ class TTT:
             # No action specified - show all config
             if json:
                 import json as json_lib
+
                 config = config_manager.get_merged_config()
                 print(json_lib.dumps(config, indent=2))
             else:
@@ -220,10 +245,11 @@ class TTT:
             # Get specific value
             if json:
                 import json as json_lib
+
                 config = config_manager.get_merged_config()
                 # Navigate to the key
                 config_value: Any = config
-                for part in key.split('.'):
+                for part in key.split("."):
                     if isinstance(config_value, dict) and part in config_value:
                         config_value = config_value[part]
                     else:
@@ -237,6 +263,7 @@ class TTT:
             config_manager.set_value(key, value)
             if json:
                 import json as json_lib
+
                 print(json_lib.dumps({"status": "success", "key": key, "value": value}))
         elif action == "set" and key and not value:
             # Special case: missing value for set command
@@ -251,14 +278,29 @@ class TTT:
                 console.print("[red]Invalid config command[/red]")
                 console.print()
                 console.print("Usage:")
-                console.print("  ttt config                          # Show all configuration")
-                console.print("  ttt config get KEY                  # Show specific value")
+                console.print(
+                    "  ttt config                          # Show all configuration"
+                )
+                console.print(
+                    "  ttt config get KEY                  # Show specific value"
+                )
                 console.print("  ttt config set KEY VALUE            # Set a value")
-                console.print("  ttt config set alias.NAME MODEL     # Set a model alias")
-                console.print("  ttt config --reset                  # Reset to defaults")
+                console.print(
+                    "  ttt config set alias.NAME MODEL     # Set a model alias"
+                )
+                console.print(
+                    "  ttt config --reset                  # Reset to defaults"
+                )
 
-    def chat(self, resume: bool = False, session_id: Optional[str] = None, list_sessions: bool = False,
-             model: Optional[str] = None, system: Optional[str] = None, tools: Optional[str] = None) -> None:
+    def chat(
+        self,
+        resume: bool = False,
+        session_id: Optional[str] = None,
+        list_sessions: bool = False,
+        model: Optional[str] = None,
+        system: Optional[str] = None,
+        tools: Optional[str] = None,
+    ) -> None:
         """Launch interactive conversation mode with memory.
 
         Args:
@@ -282,12 +324,14 @@ class TTT:
         # Resolve model alias if provided
         if model:
             from ttt.cli import resolve_model_alias
+
             model = resolve_model_alias(model)
 
         # Parse tools
         parsed_tools: Optional[List[str]] = None
         if tools:
             from ttt.cli import parse_tools_arg
+
             parsed_tools_str = parse_tools_arg(tools)
             if parsed_tools_str == "all":
                 parsed_tools = None  # Will enable all tools
@@ -361,6 +405,7 @@ class TTT:
             chat_kwargs["system"] = session.system_prompt
         if session.tools:
             from ttt.cli import resolve_tools
+
             chat_kwargs["tools"] = resolve_tools(session.tools)
 
         # Create chat session with context from previous messages
@@ -429,7 +474,9 @@ class TTT:
                             session,
                             "assistant",
                             str(response),
-                            model=response.model if hasattr(response, "model") else None,
+                            model=(
+                                response.model if hasattr(response, "model") else None
+                            ),
                         )
 
                     except Exception as e:
@@ -441,6 +488,7 @@ class TTT:
     def _get_help(self) -> str:
         """Generate help text."""
         from ttt.cli import get_ttt_version
+
         return f"""🚀 TTT {get_ttt_version()} - Transform any text with intelligent AI processing
 
 TTT empowers developers, writers, and creators to process text with precision.
@@ -480,19 +528,19 @@ From simple transformations to complex analysis - AI-powered and pipeline-ready.
 def main() -> None:
     """Entry point for Fire CLI."""
     # Check for JSON mode BEFORE Fire processes anything
-    if '--json' in sys.argv:
+    if "--json" in sys.argv:
         import logging
-        
+
         # Completely disable all logging output for JSON mode
         logging.disable(logging.CRITICAL)
-        
+
         # Also redirect stderr to suppress any direct prints
         original_stderr = sys.stderr
         sys.stderr = io.StringIO()
-        
+
         # Set environment variable for any code that checks it
-        os.environ['TTT_JSON_MODE'] = 'true'
-        
+        os.environ["TTT_JSON_MODE"] = "true"
+
         try:
             fire.Fire(TTT)
         finally:

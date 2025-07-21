@@ -9,7 +9,8 @@ from rich.traceback import install
 
 # Check for JSON mode early and configure accordingly
 import os
-_json_mode = os.environ.get('TTT_JSON_MODE', '').lower() == 'true'
+
+_json_mode = os.environ.get("TTT_JSON_MODE", "").lower() == "true"
 
 if not _json_mode:
     # Only install rich traceback handler if not in JSON mode
@@ -21,6 +22,7 @@ console = Console()
 # Configure root logger for JSON mode if needed
 if _json_mode:
     import logging
+
     # Completely disable all logging
     logging.disable(logging.CRITICAL)
     # Also configure root logger to suppress everything
@@ -55,14 +57,15 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
             name = "ai"
 
     logger = logging.getLogger(name)
-    
+
     # Configure logger for JSON mode if not already configured
     import os
-    if os.environ.get('TTT_JSON_MODE', '').lower() == 'true' and not logger.handlers:
+
+    if os.environ.get("TTT_JSON_MODE", "").lower() == "true" and not logger.handlers:
         # In JSON mode, use a null handler to suppress all output
         logger.addHandler(logging.NullHandler())
         logger.propagate = False
-    
+
     return logger
 
 

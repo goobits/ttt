@@ -27,19 +27,19 @@ def load_project_defaults() -> Dict[str, Any]:
         Dictionary containing default configuration values
     """
     global _project_defaults_cache
-    
+
     # Return cached value if available
     if _project_defaults_cache is not None:
         return _project_defaults_cache
-    
+
     # Use the centralized config loader to avoid duplicate warnings
     from .config_loader import get_project_config
-    
+
     config = get_project_config()
     if config:
         _project_defaults_cache = config
         return config
-    
+
     # Fallback to minimal defaults if config.yaml not found
     # No need to warn again - get_project_config already warned
     _project_defaults_cache = {
@@ -142,9 +142,17 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
                     )
 
             if file_config:
-                # Extract models separately
+                # Extract models separately - the models section has subsections
                 if "models" in file_config:
-                    models_data = file_config.pop("models", [])
+                    models_dict = file_config.pop("models", {})
+                    # Extract the 'available' section which contains actual model definitions
+                    if isinstance(models_dict, dict) and "available" in models_dict:
+                        available_models = models_dict.get("available", {})
+                        # Convert dict format to list format
+                        for model_name, model_info in available_models.items():
+                            if isinstance(model_info, dict):
+                                model_info["name"] = model_name
+                                models_data.append(model_info)
 
                 config_data.update(file_config)
                 logger.debug(f"Loaded config from {config_path}")
@@ -431,14 +439,18 @@ class ModelRegistry:
                 logger.debug(f"Loaded model from config: {model_name}")
             except Exception as e:
                 import os
-                if os.environ.get('TTT_JSON_MODE', '').lower() != 'true':
-                    logger.warning(f"Failed to load model {model_name} from config: {e}")
+
+                if os.environ.get("TTT_JSON_MODE", "").lower() != "true":
+                    logger.warning(
+                        f"Failed to load model {model_name} from config: {e}"
+                    )
 
         # If no models loaded from config, use minimal hardcoded defaults
         if not self.models:
             # Check if warnings are suppressed (JSON mode) - double check environment
             import os
-            if os.environ.get('TTT_JSON_MODE', '').lower() != 'true':
+
+            if os.environ.get("TTT_JSON_MODE", "").lower() != "true":
                 logger.warning("No models loaded from config, using minimal defaults")
             # Minimal fallback models
             self.add_model(
@@ -509,6 +521,7 @@ class ModelRegistry:
 # Global model registry - lazy initialization
 _model_registry: Optional[ModelRegistry] = None
 
+
 def get_model_registry() -> ModelRegistry:
     """Get the global model registry, creating it if needed."""
     global _model_registry
@@ -516,9 +529,11 @@ def get_model_registry() -> ModelRegistry:
         _model_registry = ModelRegistry()
     return _model_registry
 
+
 # Backward compatibility - this will be lazily initialized when accessed
 class LazyModelRegistry:
     def __getattr__(self, name):
         return getattr(get_model_registry(), name)
+
 
 model_registry = LazyModelRegistry()

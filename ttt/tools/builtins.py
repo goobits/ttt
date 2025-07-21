@@ -778,6 +778,15 @@ def load_builtin_tools() -> None:
     pass
 
 
+# Tool categories mapping for easy discovery
+TOOL_CATEGORIES = {
+    "web": ["web_search", "http_request"],
+    "file": ["read_file", "write_file", "list_directory"],
+    "code": ["run_python"],
+    "time": ["get_current_time"],
+    "math": ["calculate"],
+}
+
 # Auto-load built-in tools when module is imported
 load_builtin_tools()
 
@@ -792,4 +801,5 @@ __all__ = [
     "calculate",
     "list_directory",
     "load_builtin_tools",
+    "TOOL_CATEGORIES",
 ]

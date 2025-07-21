@@ -425,7 +425,10 @@ class CloudBackend(BaseBackend):
                     # Format image for the provider
                     if item.is_url:
                         content.append(
-                            {"type": "image_url", "image_url": {"url": str(item.source)}}
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": str(item.source)},
+                            }
                         )
                     else:
                         # Base64 encode for non-URL images
@@ -542,6 +545,7 @@ class CloudBackend(BaseBackend):
         """
         # Get all model definitions from the registry
         from ..config import model_registry
+
         all_model_info = model_registry.models.values()
 
         # Filter for models that are NOT from the 'local' provider
@@ -565,6 +569,7 @@ class CloudBackend(BaseBackend):
         """
         # Get all non-local models from the registry
         from ..config import model_registry
+
         all_model_info = [
             model
             for model in model_registry.models.values()
