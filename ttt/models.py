@@ -149,6 +149,7 @@ class ConfigModel(BaseModel):
     # Default Settings
     default_backend: Optional[str] = None
     default_model: Optional[str] = None
+    model: Optional[str] = None  # User-specified model (alias for default_model)
     timeout: Optional[int] = None
     max_retries: Optional[int] = None
 

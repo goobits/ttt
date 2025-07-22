@@ -1,15 +1,98 @@
-"""Tests for persistent chat functionality."""
+"""Tests for chat functionality including persistent sessions and streaming."""
 
 import json
 import pickle
-from datetime import datetime
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
+
 from ttt import AIResponse, PersistentChatSession, chat
+from ttt.backends import BaseBackend
+from ttt.chat import _estimate_tokens
+from ttt.exceptions import (
+    InvalidParameterError,
+    SessionLoadError,
+    SessionSaveError,
+)
+from ttt.models import ImageInput
+
+
+class MockBackend(BaseBackend):
+    """Mock backend for testing."""
+
+    def __init__(self, name="mock"):
+        self.name_value = name
+        self._is_available = True
+        self.responses = ["Response 1", "Response 2", "Response 3"]
+        self.response_index = 0
+
+    @property
+    def name(self):
+        return self.name_value
+
+    @property
+    def is_available(self):
+        return self._is_available
+
+    @property
+    def models(self):
+        return ["mock-model-1", "mock-model-2"]
+
+    async def status(self):
+        return {"available": self._is_available, "name": self.name_value}
+
+    async def ask(self, prompt, **kwargs):
+        response = self.responses[self.response_index % len(self.responses)]
+        self.response_index += 1
+
+        # Handle both string and list prompts
+        if isinstance(prompt, list):
+            # Extract text content from list
+            text_parts = [item for item in prompt if isinstance(item, str)]
+            prompt_text = " ".join(text_parts)
+        else:
+            prompt_text = prompt
+
+        return AIResponse(
+            content=response,
+            model=kwargs.get("model", "mock-model"),
+            backend=self.name,
+            time_taken=0.1,
+            tokens_in=len(prompt_text.split()) * 2,
+            tokens_out=len(response.split()) * 2,
+            cost=0.001,
+        )
+
+    async def astream(self, prompt, **kwargs):
+        """Stream a response."""
+        response = self.responses[self.response_index % len(self.responses)]
+        self.response_index += 1
+
+        for chunk in response.split():
+            yield chunk + " "
+
+
+@pytest.fixture
+def mock_backend():
+    """Provide a mock backend."""
+    return MockBackend()
+
+
+@pytest.fixture
+def mock_router(mock_backend):
+    """Mock router to return our backend."""
+    with patch("ttt.routing.router") as mock:
+        mock.smart_route.return_value = (mock_backend, "mock-model")
+        mock.resolve_backend.return_value = mock_backend
+        mock.resolve_model.return_value = "mock-model"
+        yield mock
 
 
 class TestPersistentChatSession:
-    """Test the PersistentChatSession class."""
+    """Test the PersistentChatSession class - basic functionality."""
 
     def test_session_initialization(self):
         """Test creating a new persistent session."""
@@ -295,7 +378,7 @@ class TestPersistentChatSession:
     @patch("ttt.routing.router")
     def test_multimodal_in_persistent_session(self, mock_router):
         """Test multi-modal content in persistent sessions."""
-        from ai import ImageInput
+        from ttt import ImageInput
 
         # Setup mock
         mock_backend = Mock()
@@ -316,6 +399,136 @@ class TestPersistentChatSession:
         assert isinstance(session.history[0]["content"], list)
         assert len(session.history[0]["content"]) == 2
         assert session.history[0]["content"][0] == "What's in this image?"
+
+
+class TestPersistentChatSessionAdvanced:
+    """Advanced tests for PersistentChatSession - comprehensive functionality."""
+
+    def test_init_with_all_parameters(self, mock_router, mock_backend):
+        """Test initialization with all parameters."""
+        session = PersistentChatSession(
+            system="Custom system prompt",
+            model="specific-model",
+            backend=mock_backend,
+            session_id="custom-id",
+            temperature=0.7,
+        )
+
+        assert session.system == "Custom system prompt"
+        assert session.model == "specific-model"
+        assert session.metadata["session_id"] == "custom-id"
+        assert session.kwargs["temperature"] == 0.7
+        assert session.history == []
+        assert "created_at" in session.metadata
+
+    def test_auto_generate_session_id(self, mock_router):
+        """Test automatic session ID generation."""
+        # Need to patch the _generate_session_id method directly
+        with patch.object(
+            PersistentChatSession, "_generate_session_id"
+        ) as mock_generate:
+            mock_generate.return_value = "chat_20240101_120000_abcd1234"
+
+            session = PersistentChatSession()
+
+            assert session.metadata["session_id"] == "chat_20240101_120000_abcd1234"
+
+    def test_ask_with_multimodal_content(self, mock_router, mock_backend):
+        """Test asking with multimodal content."""
+        session = PersistentChatSession(backend=mock_backend)
+
+        response = session.ask(["What's in this image?", ImageInput("test.jpg")])
+
+        assert str(response) == "Response 1"
+        assert len(session.history) == 2
+
+        # Check message storage
+        user_msg = session.history[0]
+        assert user_msg["role"] == "user"
+        assert isinstance(user_msg["content"], list)
+        assert user_msg["content"][0] == "What's in this image?"
+
+    def test_metadata_tracking_comprehensive(self, mock_router, mock_backend):
+        """Test comprehensive metadata tracking."""
+        session = PersistentChatSession(model="test-model", backend=mock_backend)
+
+        # Make several asks to accumulate metadata
+        session.ask("First question")
+        session.ask("Second question", model="different-model")
+        session.ask("Third question")
+
+        metadata = session.metadata
+
+        # Check token counts
+        assert metadata["total_tokens_in"] > 0
+        assert metadata["total_tokens_out"] > 0
+        assert metadata["total_cost"] > 0
+
+        # Check model usage
+        assert "test-model" in metadata["model_usage"]
+        assert "different-model" in metadata["model_usage"]
+        assert metadata["model_usage"]["test-model"]["count"] == 2
+        assert metadata["model_usage"]["different-model"]["count"] == 1
+
+        # Check backend usage
+        assert "mock" in metadata["backend_usage"]
+        assert metadata["backend_usage"]["mock"]["count"] == 3
+
+    def test_save_invalid_format(self, mock_router, mock_backend):
+        """Test saving with invalid format."""
+        session = PersistentChatSession(backend=mock_backend)
+
+        with pytest.raises(InvalidParameterError) as exc_info:
+            session.save("test.xml", format="xml")
+
+        assert exc_info.value.details["parameter"] == "format"
+        assert exc_info.value.details["value"] == "xml"
+
+    def test_save_permission_error(self, mock_router, mock_backend):
+        """Test handling permission errors during save."""
+        session = PersistentChatSession(backend=mock_backend)
+
+        # Try to save to a path that will fail
+        with patch("builtins.open", side_effect=PermissionError("Access denied")):
+            with pytest.raises(SessionSaveError) as exc_info:
+                session.save("/root/test.json")
+
+        assert "Access denied" in str(exc_info.value)
+
+    def test_load_corrupted_json(self, mock_router):
+        """Test loading corrupted JSON file."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write("{invalid json}")
+            temp_path = Path(f.name)
+
+        try:
+            with pytest.raises(SessionLoadError) as exc_info:
+                PersistentChatSession.load(temp_path)
+
+            assert "Invalid JSON" in str(exc_info.value)
+
+        finally:
+            temp_path.unlink()
+
+    def test_export_messages_invalid_format(self, mock_router, mock_backend):
+        """Test exporting with invalid format."""
+        session = PersistentChatSession(backend=mock_backend)
+
+        with pytest.raises(ValueError) as exc_info:
+            session.export_messages(format="pdf")
+
+        assert "Unknown format" in str(exc_info.value)
+
+    def test_multimodal_metadata(self, mock_router, mock_backend):
+        """Test metadata tracking with multimodal inputs."""
+        session = PersistentChatSession(backend=mock_backend)
+
+        # Ask with images
+        session.ask(["First image", ImageInput("img1.jpg"), ImageInput("img2.jpg")])
+
+        # Check metadata
+        assert session.metadata["multimodal_messages"] == 1
+        assert session.metadata["total_images"] == 2
 
 
 class TestChatContextManager:
@@ -403,3 +616,66 @@ class TestDurationCalculation:
 
         duration = session._calculate_duration()
         assert duration == "2d 4h 30m"
+
+    def test_duration_with_iso_timestamps(self, mock_router, mock_backend):
+        """Test duration calculation with ISO timestamps."""
+        session = PersistentChatSession(backend=mock_backend)
+
+        # Set specific timestamps for created_at and add message with specific timestamp
+        start = datetime(2024, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
+        end = datetime(2024, 1, 1, 10, 30, 45, tzinfo=timezone.utc)
+
+        session.metadata["created_at"] = start.isoformat()
+        # Add a message with specific timestamp
+        session.history.append(
+            {"role": "user", "content": "test message", "timestamp": end.isoformat()}
+        )
+
+        summary = session.get_summary()
+
+        # Should be 30.75 minutes (30 minutes and 45 seconds)
+        assert abs(summary["duration_minutes"] - 30.75) < 0.01
+
+    def test_duration_with_datetime_objects(self, mock_router, mock_backend):
+        """Test duration calculation with one hour duration."""
+        session = PersistentChatSession(backend=mock_backend)
+
+        # Set created_at and add message with 1 hour difference
+        start = datetime(2024, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
+        end = datetime(2024, 1, 1, 11, 0, 0, tzinfo=timezone.utc)
+
+        session.metadata["created_at"] = start.isoformat()
+        # Add a message with specific timestamp
+        session.history.append(
+            {"role": "user", "content": "test message", "timestamp": end.isoformat()}
+        )
+
+        summary = session.get_summary()
+
+        assert summary["duration_minutes"] == 60.0
+
+
+class TestTokenEstimation:
+    """Test token estimation functionality."""
+
+    def test_estimate_tokens_text(self):
+        """Test token estimation for text."""
+        # Estimate is len(text) // 4
+        assert _estimate_tokens("Hello world") == len("Hello world") // 4  # 11 // 4 = 2
+        assert (
+            _estimate_tokens("This is a longer sentence with more words")
+            == len("This is a longer sentence with more words") // 4
+        )
+
+    def test_estimate_tokens_multimodal(self):
+        """Test token estimation for multimodal content."""
+        content = ["What's in this image?", ImageInput("test.jpg")]
+
+        # Should estimate text tokens + fixed amount for image
+        tokens = _estimate_tokens(content)
+        assert tokens > 50  # Images add significant tokens
+
+    def test_estimate_tokens_empty(self):
+        """Test token estimation for empty input."""
+        assert _estimate_tokens("") == 0
+        assert _estimate_tokens([]) == 0
