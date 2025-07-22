@@ -5,10 +5,16 @@ import sys
 import importlib.util
 from pathlib import Path
 import rich_click as click
+from rich_click import RichGroup, RichCommand
 
-# Rich-click theme configuration - Dracula theme colors
-click.rich_click.USE_RICH_MARKUP = True
-click.rich_click.USE_MARKDOWN = True
+# Set up rich-click configuration globally
+click.rich_click.USE_RICH_MARKUP = True  
+click.rich_click.USE_MARKDOWN = False  # Disable markdown to avoid conflicts
+click.rich_click.MARKUP_MODE = "rich"
+
+# Environment variables for additional control
+os.environ["RICH_CLICK_USE_RICH_MARKUP"] = "1"
+os.environ["RICH_CLICK_FORCE_TERMINAL"] = "1"
 click.rich_click.SHOW_ARGUMENTS = True
 click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
 click.rich_click.SHOW_METAVARS_COLUMN = False
@@ -17,6 +23,8 @@ click.rich_click.STYLE_ERRORS_SUGGESTION = "#ff5555"
 click.rich_click.ERRORS_SUGGESTION = "Try running the '--help' flag for more information."
 click.rich_click.ERRORS_EPILOGUE = "To find out more, visit https://github.com/anthropics/claude-code"
 click.rich_click.MAX_WIDTH = 120
+click.rich_click.WIDTH = None  # Let terminal determine width
+click.rich_click.COLOR_SYSTEM = "auto"
 click.rich_click.SHOW_SUBCOMMAND_ALIASES = True
 click.rich_click.ALIGN_OPTIONS_SWITCHES = True
 click.rich_click.STYLE_OPTION = "#ff79c6"      # Dracula Pink - for option flags
@@ -37,32 +45,7 @@ click.rich_click.STYLE_REQUIRED_LONG = "#ff5555"      # Dracula Red
 click.rich_click.STYLE_OPTIONS_PANEL_BORDER = "#6272a4"  # Dracula Comment
 
 
-# Command groups configuration
-click.rich_click.COMMAND_GROUPS = {
-    "ttt": [
-        
-        {
-            "name": "Core Commands",
-            "commands": ['ask', 'chat', 'list', 'status'],
-        },
-        
-        {
-            "name": "Model Management",
-            "commands": ['models', 'info'],
-        },
-        
-        {
-            "name": "Configuration",
-            "commands": ['config', 'tools'],
-        },
-        
-        {
-            "name": "Data Management",
-            "commands": ['export'],
-        },
-        
-    ]
-}
+# Command groups will be set after main function is defined
 
 
 # Hooks system - try to import app_hooks module
@@ -126,47 +109,67 @@ def load_plugins(cli_group):
 
 
 
-@click.group(invoke_without_command=True, context_settings={"help_option_names": ["-h", "--help"]})
+@click.group(cls=RichGroup, invoke_without_command=True, context_settings={"help_option_names": ["-h", "--help"], "max_content_width": 120})
+@click.version_option(package_name="goobits-ttt")
 @click.pass_context
 def main(ctx):
-    """[bold cyan]ttt[/bold cyan] - Talk to Transformer - Stream text to LLMs via command line
-    
-    
-TTT (Talk to Transformer) is a feature-rich CLI for interacting with
-    language models. It supports streaming responses, context management,
-    tool integration, and multiple LLM backends.
+    """🤖 [bold cyan]ttt[/bold cyan] v2.0.0 - Talk to Transformer - Stream text to LLMs via command line
+        
+        \b
+        TTT (Talk to Transformer) is a feature-rich CLI for interacting with
+        language models. It supports streaming responses, context management,
+        tool integration, and multiple LLM backends.
+        \b
+        [bold yellow]💡 Quick Start:[/bold yellow]
+        \b
+          [green]ttt ask "Explain quantum computing"[/green]               [italic]# Ask a simple question[/italic]
+          [green]ttt ask "What's the weather?" --tools[/green]             [italic]# Use tools for real-time info[/italic]
+          [green]ttt chat --model gpt-4[/green]                            [italic]# Start an interactive chat session[/italic]
+          [green]echo "Debug this" | ttt ask[/green]                       [italic]# Pipe content into TTT[/italic]
+          [green]ttt ask -s chat-1 "Continue our discussion"[/green]       [italic]# Resume a saved conversation[/italic]
 
-    
-    
-    
-    \b
-    [bold yellow]Examples:[/bold yellow]
-    
-    
-    [green]ttt ask "Explain quantum computing"          # Ask a simple question[/green]
-    [green]ttt ask "What's the weather?" --tools        # Use tools for real-time info[/green]
-    [green]ttt chat --model gpt-4                       # Start an interactive chat session[/green]
-    [green]echo "Debug this" | ttt ask                  # Pipe content into TTT[/green]
-    [green]ttt ask -s chat-1 "Continue our discussion"  # Resume a saved conversation[/green]
-    
-    
-    
-    
-    \b
-First-time Setup                :
-      1. Configure your API key     :
-         $ ttt config set api_key YOUR_API_KEY
-      
-      2. Choose your preferred model:
-         $ ttt config set model gpt-4
-      
-      3. Test your setup            :
-         $ ttt ask "Hello, world!"
-    
-    """
+        \b
+        [bold yellow]🔑 First-time Setup:[/bold yellow]
+        \b
+          1. Configure your API key:         [green]ttt config set api_key YOUR_API_KEY[/green]
+          2. Choose your preferred model:    [green]ttt config set model gpt-4[/green]
+          3. Test your setup:                [green]ttt ask "Hello, world!"[/green]
+
+        \b
+        📚 For detailed help on a command, run: ttt [COMMAND] --help
+        """
     # If no command is provided, show help
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
+
+
+# Set command groups after main function is defined
+click.rich_click.COMMAND_GROUPS = {
+    "main": [
+        
+        {
+            "name": "🎯 Core Commands",
+            "commands": ['ask', 'chat', 'list', 'status'],
+        },
+        
+        {
+            "name": "📊 Model Management",
+            "commands": ['models', 'info'],
+        },
+        
+        {
+            "name": "⚙️ Configuration",
+            "commands": ['config', 'tools'],
+        },
+        
+        {
+            "name": "💾 Data Management",
+            "commands": ['export'],
+        },
+        
+    ]
+}
+
 
 
 
@@ -211,7 +214,7 @@ First-time Setup                :
 )
 
 def ask(prompt, model, temperature, max_tokens, tools, session, stream):
-    """Ask a single question (default command)"""
+    """🗣️ Ask a single question (default command)"""
     # Check if hook function exists
     hook_name = f"on_ask"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -273,7 +276,7 @@ def ask(prompt, model, temperature, max_tokens, tools, session, stream):
 )
 
 def chat(model, session, tools, markdown):
-    """Start an interactive chat session"""
+    """💬 Start an interactive chat session"""
     # Check if hook function exists
     hook_name = f"on_chat"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -322,7 +325,7 @@ def chat(model, session, tools, markdown):
 )
 
 def list(resource, format, verbose):
-    """List available resources"""
+    """📋 List available resources"""
     # Check if hook function exists
     hook_name = f"on_list"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -353,7 +356,7 @@ def list(resource, format, verbose):
 
 @main.group()
 def config():
-    """Manage configuration"""
+    """🔧 Manage configuration"""
     pass
 
 
@@ -476,7 +479,7 @@ def list(show_secrets):
 )
 
 def export(session, format, output, include_metadata):
-    """Export chat history"""
+    """📤 Export chat history"""
     # Check if hook function exists
     hook_name = f"on_export"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -509,7 +512,7 @@ def export(session, format, output, include_metadata):
 
 @main.group()
 def tools():
-    """Manage available tools"""
+    """🛠️ Manage available tools"""
     pass
 
 
@@ -606,7 +609,7 @@ def list(show_disabled):
 
 
 def status():
-    """Check system health and API status"""
+    """🩺 Check system health and API status"""
     # Check if hook function exists
     hook_name = f"on_status"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -629,7 +632,7 @@ def status():
 
 
 def models():
-    """List available models"""
+    """🤖 List available models"""
     # Check if hook function exists
     hook_name = f"on_models"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -656,7 +659,7 @@ def models():
 
 
 def info(model):
-    """Get detailed information about a specific model"""
+    """👀 Get detailed information about a specific model"""
     # Check if hook function exists
     hook_name = f"on_info"
     if app_hooks and hasattr(app_hooks, hook_name):
