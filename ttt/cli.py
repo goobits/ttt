@@ -109,38 +109,80 @@ def load_plugins(cli_group):
 
 
 
-@click.group(cls=RichGroup, invoke_without_command=True, context_settings={"help_option_names": ["-h", "--help"], "max_content_width": 120})
-@click.version_option(package_name="goobits-ttt")
+def get_version():
+    """Get version from pyproject.toml or __init__.py"""
+    import re
+    
+    try:
+        # Try to get version from pyproject.toml FIRST (most authoritative)
+        toml_path = Path(__file__).parent.parent / "pyproject.toml"
+        if toml_path.exists():
+            content = toml_path.read_text()
+            match = re.search(r'version\s*=\s*["\']([^"\']+)["\']', content)
+            if match:
+                return match.group(1)
+    except Exception:
+        pass
+    
+    try:
+        # Fallback to __init__.py
+        init_path = Path(__file__).parent / "__init__.py"
+        if init_path.exists():
+            content = init_path.read_text()
+            match = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', content)
+            if match:
+                return match.group(1)
+    except Exception:
+        pass
+        
+    # Final fallback
+    return "2.0.0"
+
+@click.group(cls=RichGroup, context_settings={"help_option_names": ["-h", "--help"], "max_content_width": 120})
+@click.version_option(version=get_version(), prog_name="ttt")
 @click.pass_context
 def main(ctx):
-    """🤖 [bold cyan]ttt[/bold cyan] v2.0.0 - Talk to Transformer - Stream text to LLMs via command line
+    """🤖 [bold cyan]ttt[/bold cyan] - Talk to Transformer - Stream text to LLMs via command line
         
         \b
         TTT (Talk to Transformer) is a feature-rich CLI for interacting with
-        language models. It supports streaming responses, context management,
-        tool integration, and multiple LLM backends.
+language models. It supports streaming responses, context management,
+tool integration, and multiple LLM backends.
+
         \b
         [bold yellow]💡 Quick Start:[/bold yellow]
         \b
+
           [green]ttt ask "Explain quantum computing"[/green]               [italic]# Ask a simple question[/italic]
+
           [green]ttt ask "What's the weather?" --tools[/green]             [italic]# Use tools for real-time info[/italic]
+
           [green]ttt chat --model gpt-4[/green]                            [italic]# Start an interactive chat session[/italic]
+
           [green]echo "Debug this" | ttt ask[/green]                       [italic]# Pipe content into TTT[/italic]
+
           [green]ttt ask -s chat-1 "Continue our discussion"[/green]       [italic]# Resume a saved conversation[/italic]
+
 
         \b
         [bold yellow]🔑 First-time Setup:[/bold yellow]
         \b
+
           1. Configure your API key:         [green]ttt config set api_key YOUR_API_KEY[/green]
+
           2. Choose your preferred model:    [green]ttt config set model gpt-4[/green]
+
           3. Test your setup:                [green]ttt ask "Hello, world!"[/green]
+
 
         \b
         📚 For detailed help on a command, run: ttt [COMMAND] --help
         """
-    # If no command is provided, show help
-    if ctx.invoked_subcommand is None:
-        click.echo(ctx.get_help())
+    pass
+
+# Monkey patch the help to include version
+if main.__doc__ and 'True' == 'True':
+    main.__doc__ = main.__doc__.replace("[bold cyan]ttt[/bold cyan]", f"[bold cyan]ttt[/bold cyan] v{get_version()}", 1)
 
 
 # Set command groups after main function is defined

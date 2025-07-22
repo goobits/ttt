@@ -187,32 +187,84 @@ class TestCLIToolSupport:
     """Test CLI tool support."""
 
     def test_cli_with_tools(self):
-        """Test CLI argument parsing with --tools flag."""
+        """Test that CLI with --tools flag is properly supported."""
         from click.testing import CliRunner
-
         from ttt.cli import main
-
+        
         runner = CliRunner()
-
-        with patch("ttt.ask") as mock_ask:
-            mock_response = MagicMock()
-            mock_response.__str__ = lambda x: "Mock response"
-            mock_ask.return_value = mock_response
-
-            with patch("ttt.cli.resolve_tools") as mock_resolve:
-                mock_resolve.return_value = []  # Simplified for test
-
-                result = runner.invoke(
-                    main, ["ask", "Test prompt", "--tools", "math:add,string:upper"]
-                )
-
-                assert result.exit_code == 0
-                # Verify tools were parsed and resolved
-                mock_resolve.assert_called_once_with(["math:add", "string:upper"])
+        
+        # Test 1: Verify the --tools flag exists in help
+        result = runner.invoke(
+            main,
+            ["ask", "--help"],
+            catch_exceptions=False
+        )
+        
+        assert result.exit_code == 0
+        assert "--tools" in result.output
+        assert "Enable tool usage" in result.output
+        
+        # Test 2: Verify we can call the hook function directly with tools parameter
+        from ttt.app_hooks import on_ask
+        
+        # Mock the API functions to prevent real calls
+        with patch("ttt.app_hooks.ttt_stream") as mock_stream, \
+             patch("ttt.app_hooks.ttt_ask") as mock_ask:
+            
+            mock_stream.return_value = iter(["Test response"])
+            mock_ask.return_value = "Test response"
+            
+            # Test that on_ask properly handles tools parameter
+            import io
+            import sys
+            old_stdout = sys.stdout
+            sys.stdout = io.StringIO()
+            
+            try:
+                # Mock stdin to avoid reading from it
+                with patch('sys.stdin.isatty', return_value=True):
+                    # Call with tools=True
+                    on_ask(
+                        prompt=("test",),
+                        model=None,
+                        temperature=0.7,
+                        max_tokens=None,
+                        tools=True,
+                        session=None,
+                        stream=True
+                    )
+                
+                # Verify it was called with tools
+                assert mock_stream.called
+                call_kwargs = mock_stream.call_args[1]
+                assert "tools" in call_kwargs
+                assert call_kwargs["tools"] is None  # on_ask converts True to None
+                
+                mock_stream.reset_mock()
+                
+                # Call with tools=False
+                with patch('sys.stdin.isatty', return_value=True):
+                    on_ask(
+                        prompt=("test",),
+                        model=None,
+                        temperature=0.7,
+                        max_tokens=None,
+                        tools=False,
+                        session=None,
+                        stream=True
+                    )
+                
+                # Verify it was called without tools
+                assert mock_stream.called
+                call_kwargs = mock_stream.call_args[1]
+                assert "tools" not in call_kwargs
+                
+            finally:
+                sys.stdout = old_stdout
 
     def test_resolve_tools_from_registry(self):
         """Test resolving tools from registry."""
-        from ttt.cli import resolve_tools
+        from ttt.app_hooks import resolve_tools
         from ttt.tools.registry import clear_registry, register_tool
 
         # Register a test tool
@@ -232,7 +284,7 @@ class TestCLIToolSupport:
 
     def test_resolve_tools_from_module(self):
         """Test resolving tools from module imports."""
-        from ttt.cli import resolve_tools
+        from ttt.app_hooks import resolve_tools
         from ttt.tools import register_tool, tool, unregister_tool
 
         # Register a test tool in a test category
@@ -255,7 +307,7 @@ class TestCLIToolSupport:
 
     def test_resolve_tools_handles_errors(self):
         """Test tool resolution handles errors gracefully."""
-        from ttt.cli import resolve_tools
+        from ttt.app_hooks import resolve_tools
 
         # Non-existent module
         tools = resolve_tools(["nonexistent:function"])

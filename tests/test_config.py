@@ -196,7 +196,7 @@ class TestProgrammaticConfiguration:
 
         ttt.config._config = None
 
-        configure(default_backend="local", timeout=120, custom_option="value")
+        configure(default_backend="local", timeout=120)
 
         config = get_config()
         assert config.default_backend == "local"

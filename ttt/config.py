@@ -145,8 +145,12 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
                 # Extract models separately - the models section has subsections
                 if "models" in file_config:
                     models_dict = file_config.pop("models", {})
-                    # Extract the 'available' section which contains actual model definitions
-                    if isinstance(models_dict, dict) and "available" in models_dict:
+                    # Handle both formats: models as list or models.available as dict
+                    if isinstance(models_dict, list):
+                        # Direct list format (as used in tests)
+                        models_data.extend(models_dict)
+                    elif isinstance(models_dict, dict) and "available" in models_dict:
+                        # Dict format with 'available' section
                         available_models = models_dict.get("available", {})
                         # Convert dict format to list format
                         for model_name, model_info in available_models.items():
