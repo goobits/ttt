@@ -94,7 +94,7 @@ cli:
     - step: "4. Start chatting"
       cmd: "ttt chat"
   
-  footer_note: "Made with ❤️  by the Goobits team"
+  footer_note: "📚 For detailed help on a command, run: ttt [COMMAND] --help"
   
   command_groups:
     - name: "Core Commands"

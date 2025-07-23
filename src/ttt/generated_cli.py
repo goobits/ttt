@@ -29,22 +29,23 @@ click.rich_click.SHOW_SUBCOMMAND_ALIASES = True
 click.rich_click.ALIGN_OPTIONS_SWITCHES = True
 click.rich_click.STYLE_OPTION = "#ff79c6"      # Dracula Pink - for option flags
 click.rich_click.STYLE_SWITCH = "#50fa7b"      # Dracula Green - for switches
-click.rich_click.STYLE_METAVAR = "#8be9fd"     # Bright cyan - for argument types  
+click.rich_click.STYLE_METAVAR = "#8BE9FD not bold"   # Light cyan - for argument types (OPTIONS, COMMAND)  
 click.rich_click.STYLE_METAVAR_SEPARATOR = "#6272a4"  # Dracula Comment
 click.rich_click.STYLE_HEADER_TEXT = "bold yellow"    # Bold yellow - for section headers
 click.rich_click.STYLE_EPILOGUE_TEXT = "#6272a4"      # Dracula Comment
 click.rich_click.STYLE_FOOTER_TEXT = "#6272a4"        # Dracula Comment
-click.rich_click.STYLE_USAGE = "#bd93f9"              # Purple - for "Usage:" line
-click.rich_click.STYLE_USAGE_COMMAND = "#50fa7b"      # Dracula Green - for subcommands
+click.rich_click.STYLE_USAGE = "#BD93F9"              # Purple - for "Usage:" line
+click.rich_click.STYLE_USAGE_COMMAND = "bold"         # Bold for main command name
 click.rich_click.STYLE_DEPRECATED = "#ff5555"         # Dracula Red
 click.rich_click.STYLE_HELPTEXT_FIRST_LINE = "#f8f8f2" # Dracula Foreground
-click.rich_click.STYLE_HELPTEXT = "#b3b8c0"           # Dim gray - for help descriptions
+click.rich_click.STYLE_HELPTEXT = "#B3B8C0"           # Light gray - for help descriptions
 click.rich_click.STYLE_OPTION_DEFAULT = "#ffb86c"     # Dracula Orange
 click.rich_click.STYLE_REQUIRED_SHORT = "#ff5555"     # Dracula Red
 click.rich_click.STYLE_REQUIRED_LONG = "#ff5555"      # Dracula Red
 click.rich_click.STYLE_OPTIONS_PANEL_BORDER = "dim"   # Dim for subtle borders
 click.rich_click.STYLE_COMMANDS_PANEL_BORDER = "dim"  # Dim for subtle borders
 click.rich_click.STYLE_COMMAND = "#50fa7b"            # Dracula Green - for command names in list
+click.rich_click.STYLE_COMMANDS_TABLE_COLUMN_WIDTH_RATIO = (1, 3)  # Command:Description ratio (1/4 : 3/4)
 
 
 # Command groups will be set after main function is defined
@@ -193,29 +194,35 @@ class DefaultGroup(RichGroup):
 @click.version_option(version=get_version(), prog_name="TTT CLI")
 @click.pass_context
 def main(ctx):
-    """🤖 [bold cyan]TTT CLI[/bold cyan] v1.0.0 - Talk to Transformer
+    """🤖 [bold color(6)]TTT CLI v1.0.0[/bold color(6)] - Talk to Transformer
     
-
-    [dim]A powerful AI assistant for your terminal that provides seamless access to multiple language models[/dim]
+    \b
+    [#B3B8C0]A powerful AI assistant for your terminal that provides seamless access to multiple language models[/#B3B8C0]
     
-
+    \b
     [bold yellow]💡 Quick Start:[/bold yellow]
     
-    [green]ttt "What is the meaning of life?"[/green]  [dim italic]# Ask a question[/dim italic]
-    [green]ttt chat[/green]  [dim italic]# Start interactive chat[/dim italic]
-    [green]ttt list models[/green]  [dim italic]# List available models[/dim italic]
-    [green]ttt config set model gpt-4[/green]  [dim italic]# Set the default model[/dim italic]
-    
-
+    \b
+      [color(2)]ttt "What is the meaning of life?"[/color(2)]  [italic #B3B8C0]# Ask a question[/italic #B3B8C0]
+    \b
+      [color(2)]ttt chat[/color(2)]  [italic #B3B8C0]# Start interactive chat[/italic #B3B8C0]
+    \b
+      [color(2)]ttt list models[/color(2)]  [italic #B3B8C0]# List available models[/italic #B3B8C0]
+    \b
+      [color(2)]ttt config set model gpt-4[/color(2)]  [italic #B3B8C0]# Set the default model[/italic #B3B8C0]
+    \b
     [bold yellow]🔑 First-time Setup:[/bold yellow]
     
-    [dim]1. Check providers:[/dim]  [green]ttt providers[/green]
-    [dim]2. Set API keys:[/dim]  [green]export OPENROUTER_API_KEY='your-key-here'[/green]
-    [dim]3. Test connection:[/dim]  [green]ttt status[/green]
-    [dim]4. Start chatting:[/dim]  [green]ttt chat[/green]
-    
-
-    [dim italic]Made with ❤️  by the Goobits team[/dim italic]"""
+    \b
+      [#B3B8C0]1. Check providers:[/#B3B8C0]  [color(2)]ttt providers[/color(2)]
+    \b
+      [#B3B8C0]2. Set API keys:[/#B3B8C0]  [color(2)]export OPENROUTER_API_KEY='your-key-here'[/color(2)]
+    \b
+      [#B3B8C0]3. Test connection:[/#B3B8C0]  [color(2)]ttt status[/color(2)]
+    \b
+      [#B3B8C0]4. Start chatting:[/#B3B8C0]  [color(2)]ttt chat[/color(2)]
+    \b
+    [#B3B8C0]📚 For detailed help on a command, run: ttt [COMMAND] --help[/#B3B8C0]"""
     
     pass
 
