@@ -22,27 +22,29 @@ click.rich_click.APPEND_METAVARS_HELP = True
 click.rich_click.STYLE_ERRORS_SUGGESTION = "#ff5555"
 click.rich_click.ERRORS_SUGGESTION = "Try running the '--help' flag for more information."
 click.rich_click.ERRORS_EPILOGUE = "To find out more, visit https://github.com/anthropics/claude-code"
-click.rich_click.MAX_WIDTH = 120
+click.rich_click.MAX_WIDTH = None  # Don't wrap
 click.rich_click.WIDTH = None  # Let terminal determine width
 click.rich_click.COLOR_SYSTEM = "auto"
 click.rich_click.SHOW_SUBCOMMAND_ALIASES = True
 click.rich_click.ALIGN_OPTIONS_SWITCHES = True
 click.rich_click.STYLE_OPTION = "#ff79c6"      # Dracula Pink - for option flags
 click.rich_click.STYLE_SWITCH = "#50fa7b"      # Dracula Green - for switches
-click.rich_click.STYLE_METAVAR = "#8be9fd"     # Dracula Cyan - for argument types  
+click.rich_click.STYLE_METAVAR = "#8be9fd"     # Bright cyan - for argument types  
 click.rich_click.STYLE_METAVAR_SEPARATOR = "#6272a4"  # Dracula Comment
-click.rich_click.STYLE_HEADER_TEXT = "#bd93f9"        # Dracula Purple - for headers
+click.rich_click.STYLE_HEADER_TEXT = "bold yellow"    # Bold yellow - for section headers
 click.rich_click.STYLE_EPILOGUE_TEXT = "#6272a4"      # Dracula Comment
 click.rich_click.STYLE_FOOTER_TEXT = "#6272a4"        # Dracula Comment
-click.rich_click.STYLE_USAGE = "#bd93f9"              # Dracula Purple - for "Usage:" line
+click.rich_click.STYLE_USAGE = "#bd93f9"              # Purple - for "Usage:" line
 click.rich_click.STYLE_USAGE_COMMAND = "#50fa7b"      # Dracula Green - for subcommands
 click.rich_click.STYLE_DEPRECATED = "#ff5555"         # Dracula Red
 click.rich_click.STYLE_HELPTEXT_FIRST_LINE = "#f8f8f2" # Dracula Foreground
-click.rich_click.STYLE_HELPTEXT = "#f8f8f2"           # Dracula Foreground - for help descriptions
+click.rich_click.STYLE_HELPTEXT = "#b3b8c0"           # Dim gray - for help descriptions
 click.rich_click.STYLE_OPTION_DEFAULT = "#ffb86c"     # Dracula Orange
 click.rich_click.STYLE_REQUIRED_SHORT = "#ff5555"     # Dracula Red
 click.rich_click.STYLE_REQUIRED_LONG = "#ff5555"      # Dracula Red
-click.rich_click.STYLE_OPTIONS_PANEL_BORDER = "#6272a4"  # Dracula Comment
+click.rich_click.STYLE_OPTIONS_PANEL_BORDER = "dim"   # Dim for subtle borders
+click.rich_click.STYLE_COMMANDS_PANEL_BORDER = "dim"  # Dim for subtle borders
+click.rich_click.STYLE_COMMAND = "#50fa7b"            # Dracula Green - for command names in list
 
 
 # Command groups will be set after main function is defined
@@ -186,50 +188,38 @@ class DefaultGroup(RichGroup):
 
 
 
-@click.group(cls=DefaultGroup, default='ask', context_settings={"help_option_names": ["-h", "--help"], "max_content_width": 120})
+@click.group(cls=DefaultGroup, default='ask', context_settings={"help_option_names": ["-h", "--help"], "max_content_width": 999})
 
 @click.version_option(version=get_version(), prog_name="TTT CLI")
 @click.pass_context
 def main(ctx):
-    """🤖 [bold cyan]TTT CLI[/bold cyan] - Talk to Transformer - Stream text to LLMs via command line
-        
-        \b
-        [dim]A powerful AI assistant for your terminal that provides seamless access to multiple language models[/dim]
-        \b
-        [bold yellow]Examples:[/bold yellow]
-        \b
-
-        [green]ttt "What is the meaning of life?"[/green]                [dim italic]# Ask a single question[/dim italic]
-
-        [green]ttt chat[/green]                                          [dim italic]# Start an interactive chat session[/dim italic]
-
-        [green]ttt list models[/green]                                   [dim italic]# List all available models[/dim italic]
-
-        [green]ttt config set model gpt-4[/green]                        [dim italic]# Set the default model[/dim italic]
-
-
-        \b
-        
-        [bold yellow]First-time Setup:[/bold yellow]
-        \b
-
-        [dim]Export your API keys[/dim]               [green]export OPENROUTER_API_KEY='your-key-here'[/green]
-
-        [dim]Test the connection[/dim]                [green]ttt status[/green]
-
-        [dim]Start chatting![/dim]                    [green]ttt chat[/green]
-
-
-        \b
-        
-        [italic]Made with ❤️  by the Goobits team[/italic]
-        """
+    """🤖 [bold cyan]TTT CLI[/bold cyan] v1.0.0 - Talk to Transformer
+    
+    \b
+    [dim]A powerful AI assistant for your terminal that provides seamless access to multiple language models[/dim]
+    
+    \b
+    [bold yellow]💡 Quick Start:[/bold yellow]
+    \b
+    [green]ttt "What is the meaning of life?"[/green]  [dim italic]# Ask a question[/dim italic]
+    [green]ttt chat[/green]  [dim italic]# Start interactive chat[/dim italic]
+    [green]ttt list models[/green]  [dim italic]# List available models[/dim italic]
+    [green]ttt config set model gpt-4[/green]  [dim italic]# Set the default model[/dim italic]
+    
+    \b
+    [bold yellow]🔑 First-time Setup:[/bold yellow]
+    \b
+    [dim]1. Check providers:[/dim]  [green]ttt providers[/green]
+    [dim]2. Set API keys:[/dim]  [green]export OPENROUTER_API_KEY='your-key-here'[/green]
+    [dim]3. Test connection:[/dim]  [green]ttt status[/green]
+    [dim]4. Start chatting:[/dim]  [green]ttt chat[/green]
+    
+    \b
+    [dim italic]Made with ❤️  by the Goobits team[/dim italic]"""
     
     pass
 
-# Monkey patch the help to include version
-if main.__doc__ and 'True' == 'True':
-    main.__doc__ = main.__doc__.replace("[bold cyan]TTT CLI[/bold cyan]", f"[bold cyan]TTT CLI[/bold cyan] v{get_version()}", 1)
+# Version is included directly in the docstring if display_version is true
 
 
 # Set command groups after main function is defined
@@ -237,22 +227,22 @@ click.rich_click.COMMAND_GROUPS = {
     "main": [
         
         {
-            "name": "🎯 Core Commands",
+            "name": "Core Commands",
             "commands": ['ask', 'chat', 'list', 'status'],
         },
         
         {
-            "name": "📊 Model Management",
+            "name": "Model Management",
             "commands": ['models', 'info'],
         },
         
         {
-            "name": "⚙️ Configuration",
+            "name": "Configuration",
             "commands": ['config', 'tools'],
         },
         
         {
-            "name": "💾 Data Management",
+            "name": "Data Management",
             "commands": ['export'],
         },
         

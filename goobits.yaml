@@ -72,22 +72,26 @@ cli:
   description: "A powerful AI assistant for your terminal that provides seamless access to multiple language models"
   icon: "🤖"
   
+  examples_section_title: "💡 Quick Start"
   examples:
     - cmd: 'ttt "What is the meaning of life?"'
-      desc: "Ask a single question"
+      desc: "Ask a question"
     - cmd: "ttt chat"
-      desc: "Start an interactive chat session"
+      desc: "Start interactive chat"
     - cmd: "ttt list models"
-      desc: "List all available models"
+      desc: "List available models"
     - cmd: "ttt config set model gpt-4"
       desc: "Set the default model"
   
+  setup_section_title: "🔑 First-time Setup"
   setup_steps:
-    - step: "Export your API keys"
+    - step: "1. Check providers"
+      cmd: "ttt providers"
+    - step: "2. Set API keys"
       cmd: "export OPENROUTER_API_KEY='your-key-here'"
-    - step: "Test the connection"
+    - step: "3. Test connection"
       cmd: "ttt status"
-    - step: "Start chatting!"
+    - step: "4. Start chatting"
       cmd: "ttt chat"
   
   footer_note: "Made with ❤️  by the Goobits team"
@@ -95,17 +99,13 @@ cli:
   command_groups:
     - name: "Core Commands"
       commands: ["ask", "chat", "list", "status"]
-      icon: "🎯"
     - name: "Model Management"
       commands: ["models", "info"]
-      icon: "📊"
     - name: "Configuration"
       commands: ["config", "tools"]
-      icon: "⚙️"
     - name: "Data Management"
       commands: ["export"]
-      icon: "💾"
-  
+
   commands:
     ask:
       desc: "Ask a single question"
