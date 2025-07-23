@@ -22,8 +22,8 @@ click.rich_click.APPEND_METAVARS_HELP = True
 click.rich_click.STYLE_ERRORS_SUGGESTION = "#ff5555"
 click.rich_click.ERRORS_SUGGESTION = "Try running the '--help' flag for more information."
 click.rich_click.ERRORS_EPILOGUE = "To find out more, visit https://github.com/anthropics/claude-code"
-click.rich_click.MAX_WIDTH = None  # Don't wrap
-click.rich_click.WIDTH = None  # Let terminal determine width
+click.rich_click.MAX_WIDTH = 120  # Set reasonable width
+click.rich_click.WIDTH = 120  # Set consistent width
 click.rich_click.COLOR_SYSTEM = "auto"
 click.rich_click.SHOW_SUBCOMMAND_ALIASES = True
 click.rich_click.ALIGN_OPTIONS_SWITCHES = True
@@ -188,33 +188,33 @@ class DefaultGroup(RichGroup):
 
 
 
-@click.group(cls=DefaultGroup, default='ask', context_settings={"help_option_names": ["-h", "--help"], "max_content_width": 999})
+@click.group(cls=DefaultGroup, default='ask', context_settings={"help_option_names": ["-h", "--help"], "max_content_width": 120})
 
 @click.version_option(version=get_version(), prog_name="TTT CLI")
 @click.pass_context
 def main(ctx):
     """🤖 [bold cyan]TTT CLI[/bold cyan] v1.0.0 - Talk to Transformer
     
-    \b
+
     [dim]A powerful AI assistant for your terminal that provides seamless access to multiple language models[/dim]
     
-    \b
+
     [bold yellow]💡 Quick Start:[/bold yellow]
-    \b
+    
     [green]ttt "What is the meaning of life?"[/green]  [dim italic]# Ask a question[/dim italic]
     [green]ttt chat[/green]  [dim italic]# Start interactive chat[/dim italic]
     [green]ttt list models[/green]  [dim italic]# List available models[/dim italic]
     [green]ttt config set model gpt-4[/green]  [dim italic]# Set the default model[/dim italic]
     
-    \b
+
     [bold yellow]🔑 First-time Setup:[/bold yellow]
-    \b
+    
     [dim]1. Check providers:[/dim]  [green]ttt providers[/green]
     [dim]2. Set API keys:[/dim]  [green]export OPENROUTER_API_KEY='your-key-here'[/green]
     [dim]3. Test connection:[/dim]  [green]ttt status[/green]
     [dim]4. Start chatting:[/dim]  [green]ttt chat[/green]
     
-    \b
+
     [dim italic]Made with ❤️  by the Goobits team[/dim italic]"""
     
     pass
