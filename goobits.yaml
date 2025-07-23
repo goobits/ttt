@@ -90,7 +90,7 @@ cli:
     - step: "Start chatting!"
       cmd: "ttt chat"
   
-  footer_note: "Made with ❤️  by the Goobits team"
+  footer_note: "[italic]Made with ❤️  by the Goobits team[/italic]"
   
   command_groups:
     - name: "Core Commands"

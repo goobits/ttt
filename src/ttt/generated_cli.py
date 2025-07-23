@@ -194,33 +194,34 @@ def main(ctx):
     """🤖 [bold cyan]ttt[/bold cyan] - Talk to Transformer - Stream text to LLMs via command line
         
         \b
-        A powerful AI assistant for your terminal that provides seamless access to multiple language models
+        [dim]A powerful AI assistant for your terminal that provides seamless access to multiple language models[/dim]
         \b
         [bold yellow]Examples:[/bold yellow]
         \b
 
-          [green]ttt "What is the meaning of life?"[/green]                [italic]# Ask a single question[/italic]
+        [green]ttt "What is the meaning of life?"[/green]                [dim italic]# Ask a single question[/dim italic]
 
-          [green]ttt chat[/green]                                          [italic]# Start an interactive chat session[/italic]
+        [green]ttt chat[/green]                                          [dim italic]# Start an interactive chat session[/dim italic]
 
-          [green]ttt list models[/green]                                   [italic]# List all available models[/italic]
+        [green]ttt list models[/green]                                   [dim italic]# List all available models[/dim italic]
 
-          [green]ttt config set model gpt-4[/green]                        [italic]# Set the default model[/italic]
+        [green]ttt config set model gpt-4[/green]                        [dim italic]# Set the default model[/dim italic]
 
 
         \b
+        
         [bold yellow]First-time Setup:[/bold yellow]
         \b
 
-          Export your API keys               [green]ttt export OPENROUTER_API_KEY='your-key-here'[/green]
+        Export your API keys               [green]ttt export OPENROUTER_API_KEY='your-key-here'[/green]
 
-          Test the connection                [green]ttt ttt status[/green]
+        Test the connection                [green]ttt ttt status[/green]
 
-          Start chatting!                    [green]ttt ttt chat[/green]
+        Start chatting!                    [green]ttt ttt chat[/green]
 
 
         \b
-        Made with ❤️  by the Goobits team
+        [italic]Made with ❤️  by the Goobits team[/italic]
         """
     
     pass
