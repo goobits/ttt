@@ -65,10 +65,10 @@ messages:
 
 # CLI fields for cli.py generation
 cli:
-  name: "ttt"
+  name: "TTT CLI"
   version: "1.0.0"
   display_version: true
-  tagline: "Talk to Transformer - Stream text to LLMs via command line"
+  tagline: "Talk to Transformer"
   description: "A powerful AI assistant for your terminal that provides seamless access to multiple language models"
   icon: "🤖"
   
@@ -90,7 +90,7 @@ cli:
     - step: "Start chatting!"
       cmd: "ttt chat"
   
-  footer_note: "[italic]Made with ❤️  by the Goobits team[/italic]"
+  footer_note: "Made with ❤️  by the Goobits team"
   
   command_groups:
     - name: "Core Commands"

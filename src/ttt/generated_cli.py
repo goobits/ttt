@@ -71,7 +71,7 @@ def load_plugins(cli_group):
     # Define plugin directories to search
     plugin_dirs = [
         # User-specific plugin directory
-        Path.home() / ".config" / "goobits" / "ttt" / "plugins",
+        Path.home() / ".config" / "goobits" / "TTT CLI" / "plugins",
         # Local plugin directory (same as script)
         Path(__file__).parent / "plugins",
     ]
@@ -188,10 +188,10 @@ class DefaultGroup(RichGroup):
 
 @click.group(cls=DefaultGroup, default='ask', context_settings={"help_option_names": ["-h", "--help"], "max_content_width": 120})
 
-@click.version_option(version=get_version(), prog_name="ttt")
+@click.version_option(version=get_version(), prog_name="TTT CLI")
 @click.pass_context
 def main(ctx):
-    """🤖 [bold cyan]ttt[/bold cyan] - Talk to Transformer - Stream text to LLMs via command line
+    """🤖 [bold cyan]TTT CLI[/bold cyan] - Talk to Transformer - Stream text to LLMs via command line
         
         \b
         [dim]A powerful AI assistant for your terminal that provides seamless access to multiple language models[/dim]
@@ -213,14 +213,15 @@ def main(ctx):
         [bold yellow]First-time Setup:[/bold yellow]
         \b
 
-        Export your API keys               [green]ttt export OPENROUTER_API_KEY='your-key-here'[/green]
+        [dim]Export your API keys[/dim]               [green]export OPENROUTER_API_KEY='your-key-here'[/green]
 
-        Test the connection                [green]ttt ttt status[/green]
+        [dim]Test the connection[/dim]                [green]ttt status[/green]
 
-        Start chatting!                    [green]ttt ttt chat[/green]
+        [dim]Start chatting![/dim]                    [green]ttt chat[/green]
 
 
         \b
+        
         [italic]Made with ❤️  by the Goobits team[/italic]
         """
     
@@ -228,7 +229,7 @@ def main(ctx):
 
 # Monkey patch the help to include version
 if main.__doc__ and 'True' == 'True':
-    main.__doc__ = main.__doc__.replace("[bold cyan]ttt[/bold cyan]", f"[bold cyan]ttt[/bold cyan] v{get_version()}", 1)
+    main.__doc__ = main.__doc__.replace("[bold cyan]TTT CLI[/bold cyan]", f"[bold cyan]TTT CLI[/bold cyan] v{get_version()}", 1)
 
 
 # Set command groups after main function is defined
