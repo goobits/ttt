@@ -47,11 +47,11 @@ messages:
     ✅ Your local changes will be reflected immediately - no reinstalling needed!
     
     Development workflow:
-      - Edit code in ttt/ directory
+      - Edit code in src/ttt/ directory
       - Test immediately with: ttt --stream "test"  
       - Run tests with: ./test.sh
-      - Format code with: ruff format ttt/
-      - Check types with: mypy ttt/
+      - Format code with: ruff format src/ttt/
+      - Check types with: mypy src/ttt/
       
     💡 No need to run ./setup.sh upgrade after code changes!
   
@@ -90,19 +90,19 @@ cli:
     - step: "Start chatting!"
       cmd: "ttt chat"
   
-  footer_note: "Made with ❤️ by the Goobits team"
+  footer_note: "Made with ❤️  by the Goobits team"
   
   command_groups:
-    - name: "🎯 Core Commands"
+    - name: "Core Commands"
       commands: ["ask", "chat", "list", "status"]
       icon: "🎯"
-    - name: "📊 Model Management"
+    - name: "Model Management"
       commands: ["models", "info"]
       icon: "📊"
-    - name: "⚙️ Configuration"
+    - name: "Configuration"
       commands: ["config", "tools"]
       icon: "⚙️"
-    - name: "💾 Data Management"
+    - name: "Data Management"
       commands: ["export"]
       icon: "💾"
   
@@ -192,7 +192,7 @@ cli:
     
     info:
       desc: "Get detailed information about a specific model"
-      icon: "ℹ️"
+      icon: "ℹ️ "
       args:
         - name: "model"
           desc: "Model name"
@@ -221,7 +221,7 @@ cli:
     
     config:
       desc: "Manage configuration"
-      icon: "⚙️"
+      icon: "⚙️ "
       subcommands:
         get:
           desc: "Get a configuration value"

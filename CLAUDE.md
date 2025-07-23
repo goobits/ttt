@@ -13,9 +13,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `./test.sh --markers "not slow"` - Skip slow tests
 
 ### Linting and Code Quality
-- `ruff ttt/ tests/` - Run ruff linter (install with: `pip install ruff`)
-- `black ttt/ tests/` - Format code with black (install with: `pip install black`)
-- `mypy ttt/` - Type checking (install with: `pip install mypy`)
+- `ruff src/ttt/ tests/` - Run ruff linter (install with: `pip install ruff`)
+- `black src/ttt/ tests/` - Format code with black (install with: `pip install black`)
+- `mypy src/ttt/` - Type checking (install with: `pip install mypy`)
 
 ### Installation and Setup
 - `./setup.sh install` - Install with pipx (for end users)
@@ -47,32 +47,32 @@ CLI Interface / Python API
 
 ### Key Components
 
-**API Layer** (`ttt/api.py`): Main interface with `ask()` and `stream()` functions
+**API Layer** (`src/ttt/api.py`): Main interface with `ask()` and `stream()` functions
 - Synchronous and asynchronous APIs
 - Unified interface across all providers
 - Response objects with metadata
 
-**Backend System** (`ttt/backends/`):
+**Backend System** (`src/ttt/backends/`):
 - `cloud.py` - Cloud provider backend using LiteLLM
 - `local.py` - Local Ollama backend for privacy
 - `base.py` - Abstract backend interface
 
-**Routing System** (`ttt/routing.py`):
+**Routing System** (`src/ttt/routing.py`):
 - Automatic backend selection based on model patterns
 - Model registry with provider mappings
 - Fallback mechanisms between providers
 
-**Tool System** (`ttt/tools/`):
+**Tool System** (`src/ttt/tools/`):
 - Function calling with automatic schema generation
 - Built-in tools (web_search, file operations, code execution)
 - Custom tool registration via decorators
 
-**CLI Interface** (`ttt/cli.py`):
+**CLI Interface** (`src/ttt/cli.py`):
 - Direct command execution: `ttt "question"`
 - Pipe support: `echo "text" | ttt`
 - Rich terminal output with error handling
 
-**Configuration System** (`ttt/config.py`, `ttt/config_loader.py`):
+**Configuration System** (`src/ttt/config.py`, `src/ttt/config_loader.py`):
 - Hierarchical config loading (env vars, YAML files)
 - Default configuration in `config.yaml`
 - Runtime configuration management
@@ -80,19 +80,19 @@ CLI Interface / Python API
 ### Key Files
 
 **Entry Points:**
-- `ttt/__main__.py` - CLI entry point
-- `ttt/__init__.py` - Public API exports
-- `ttt/cli.py` - CLI command definitions
+- `src/ttt/__main__.py` - CLI entry point
+- `src/ttt/__init__.py` - Public API exports
+- `src/ttt/cli.py` - CLI command definitions
 
 **Core Logic:**
-- `ttt/api.py` - Main ask/stream/chat functions
-- `ttt/routing.py` - Model/backend routing logic
-- `ttt/models.py` - Model definitions and metadata
-- `ttt/exceptions.py` - Custom exception classes
+- `src/ttt/api.py` - Main ask/stream/chat functions
+- `src/ttt/routing.py` - Model/backend routing logic
+- `src/ttt/models.py` - Model definitions and metadata
+- `src/ttt/exceptions.py` - Custom exception classes
 
 **Supporting:**
-- `ttt/chat.py` - Chat session management  
-- `ttt/plugins.py` - Plugin system for extensions
+- `src/ttt/chat.py` - Chat session management  
+- `src/ttt/plugins.py` - Plugin system for extensions
 - `config.yaml` - Default configuration with model registry
 
 ## Testing Patterns
@@ -189,7 +189,7 @@ Integration tests use special fixtures (`delayed_ask`, `delayed_stream`, `delaye
 - Follow existing patterns in similar files
 
 ### Error Handling
-- Custom exceptions in `ttt/exceptions.py`
+- Custom exceptions in `src/ttt/exceptions.py`
 - User-friendly error messages with actionable suggestions
 - Graceful degradation with provider fallbacks
 
@@ -200,10 +200,10 @@ Integration tests use special fixtures (`delayed_ask`, `delayed_stream`, `delaye
 - Test edge cases and error conditions
 
 ### Tool Development
-- Use `@tool` decorator from `ttt/tools/base.py`
+- Use `@tool` decorator from `src/ttt/tools/base.py`
 - Include comprehensive docstrings for schema generation
 - Test security implications for code execution tools
-- Follow existing patterns in `ttt/tools/builtins.py`
+- Follow existing patterns in `src/ttt/tools/builtins.py`
 
 ### Temporary Files
 When creating temporary debug or test scripts, use `/tmp` directory to keep the project clean.

@@ -14,19 +14,8 @@ export PYTHONDONTWRITEBYTECODE=1
 # Core configuration
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Support being called from wrapper script or directly
-if [[ -f "$SCRIPT_DIR/../../setup-config.yaml" ]]; then
-    # Called from shared-setup directory
-    readonly PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"  # Go up two levels: shared-setup -> ttt -> project root
-elif [[ -f "$(pwd)/setup-config.yaml" ]]; then
-    # Called from project root via wrapper
-    readonly PROJECT_DIR="$(pwd)"
-else
-    # Fallback to calculated path
-    readonly PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
-fi
-
-readonly CONFIG_FILE="$PROJECT_DIR/setup-config.yaml"
+# Since this is a generated script, PROJECT_DIR is where the script lives
+readonly PROJECT_DIR="$SCRIPT_DIR"
 readonly CACHE_DIR="$HOME/.cache/setup-framework"
 readonly CACHE_FILE="$CACHE_DIR/system-info.cache"
 readonly CACHE_TTL=3600  # 3600 in seconds
@@ -184,17 +173,33 @@ version_compare() {
     local version1=$1
     local version2=$2
     
-    # Convert versions to comparable format (e.g., "3.8.10" -> "003008010")
-    local v1=$(echo "$version1" | sed 's/[^0-9.]*//g' | awk -F. '{printf "%03d%03d%03d", $1, $2, $3}')
-    local v2=$(echo "$version2" | sed 's/[^0-9.]*//g' | awk -F. '{printf "%03d%03d%03d", $1, $2, $3}')
+    # Convert versions to arrays
+    IFS='.' read -ra v1_parts <<< "$(echo "$version1" | sed 's/[^0-9.]*//g')"
+    IFS='.' read -ra v2_parts <<< "$(echo "$version2" | sed 's/[^0-9.]*//g')"
     
-    if [[ "$v1" -lt "$v2" ]]; then
-        return 1  # version1 < version2
-    elif [[ "$v1" -gt "$v2" ]]; then
-        return 2  # version1 > version2
-    else
-        return 0  # version1 == version2
-    fi
+    # Pad arrays to same length
+    local max_parts=3
+    for ((i=${#v1_parts[@]}; i<$max_parts; i++)); do
+        v1_parts[i]=0
+    done
+    for ((i=${#v2_parts[@]}; i<$max_parts; i++)); do
+        v2_parts[i]=0
+    done
+    
+    # Compare each part
+    for ((i=0; i<$max_parts; i++)); do
+        # Force base 10 to avoid octal interpretation
+        local p1=$((10#${v1_parts[i]:-0}))
+        local p2=$((10#${v2_parts[i]:-0}))
+        
+        if [[ $p1 -lt $p2 ]]; then
+            return 1  # version1 < version2
+        elif [[ $p1 -gt $p2 ]]; then
+            return 2  # version1 > version2
+        fi
+    done
+    
+    return 0  # version1 == version2
 }
 
 validate_python() {
@@ -381,10 +386,41 @@ install_with_pip() {
 
 upgrade_package() {
     if [[ "$PIPX_AVAILABLE" == "true" ]]; then
-        log_info "Upgrading $DISPLAY_NAME with pipx..."
-        pipx upgrade "$PYPI_NAME" &
-        show_spinner $!
-        wait $!
+        # Check if package is installed via pipx
+        if pipx list | grep -q "$PACKAGE_NAME"; then
+            # Check if it's a local/development installation by looking at the package_or_url
+            local package_info=$(pipx list --json 2>/dev/null)
+            if echo "$package_info" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    pkg_data = data.get('venvs', {}).get('$PACKAGE_NAME', {})
+    pkg_url = pkg_data.get('metadata', {}).get('main_package', {}).get('package_or_url', '')
+    # Check if it's a local path (not from PyPI)
+    if pkg_url and not pkg_url.startswith('$PACKAGE_NAME') and '/' in pkg_url:
+        sys.exit(0)  # It's a local installation
+    else:
+        sys.exit(1)  # It's from PyPI
+except:
+    sys.exit(1)
+" 2>/dev/null; then
+                log_info "Detected local/development installation."
+                log_info "Reinstalling from local directory to update dependencies..."
+                pipx install --force --editable "$PROJECT_DIR" &
+                show_spinner $!
+                wait $!
+            else
+                # Regular PyPI installation
+                log_info "Upgrading $DISPLAY_NAME with pipx..."
+                pipx upgrade "$PACKAGE_NAME" &
+                show_spinner $!
+                wait $!
+            fi
+        else
+            log_error "Package '$PACKAGE_NAME' not found in pipx installations."
+            log_error "Please install first with: $0 install"
+            return 1
+        fi
     else
         log_info "Upgrading $DISPLAY_NAME with pip..."
         python3 -m pip install --upgrade "$PYPI_NAME" --user &
@@ -443,11 +479,11 @@ show_dev_success_message() {
 ✅ Your local changes will be reflected immediately - no reinstalling needed!
 
 Development workflow:
-  - Edit code in ttt/ directory
+  - Edit code in src/ttt/ directory
   - Test immediately with: ttt --stream "test"  
   - Run tests with: ./test.sh
-  - Format code with: ruff format ttt/
-  - Check types with: mypy ttt/
+  - Format code with: ruff format src/ttt/
+  - Check types with: mypy src/ttt/
   
 💡 No need to run ./setup.sh upgrade after code changes!
 "
