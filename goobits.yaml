@@ -71,6 +71,8 @@ cli:
   tagline: "Talk to Transformer"
   description: "AI-powered conversations, straight from your command line"
   icon: "🤖"
+  enable_recursive_help: true
+  enable_help_json: true
   
   header_sections:
     - title: "💡 Quick Start"
@@ -79,6 +81,7 @@ cli:
         - { item: "ttt chat", desc: "Interactive session", style: "example" }
         - { item: "ttt models", desc: "Explore available models", style: "example" }
         - { item: "ttt config set model gpt-4", desc: "Set your preferred model", style: "example" }
+
 
     - title: "🔑 Initial Setup"
       items:

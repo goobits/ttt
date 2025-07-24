@@ -142,6 +142,497 @@ def get_version():
     return "1.0.0"
 
 
+def show_help_json(ctx, param, value):
+    """Callback for --help-json option."""
+    if not value or ctx.resilient_parsing:
+        return
+    # The triple quotes are important to correctly handle the multi-line JSON string
+    click.echo('''{
+  "name": "GOOBITS TTT CLI",
+  "version": "1.0.0",
+  "display_version": true,
+  "tagline": "Talk to Transformer",
+  "description": "AI-powered conversations, straight from your command line",
+  "icon": "🤖",
+  "header_sections": [
+    {
+      "title": "💡 Quick Start",
+      "icon": null,
+      "items": [
+        {
+          "item": "ttt \\"What is the meaning of life?\\"",
+          "desc": "Instant response",
+          "style": "example"
+        },
+        {
+          "item": "ttt chat",
+          "desc": "Interactive session",
+          "style": "example"
+        },
+        {
+          "item": "ttt models",
+          "desc": "Explore available models",
+          "style": "example"
+        },
+        {
+          "item": "ttt config set model gpt-4",
+          "desc": "Set your preferred model",
+          "style": "example"
+        }
+      ]
+    },
+    {
+      "title": "🔑 Initial Setup",
+      "icon": null,
+      "items": [
+        {
+          "item": "1. See providers",
+          "desc": "ttt providers",
+          "style": "setup"
+        },
+        {
+          "item": "2. Add API key",
+          "desc": "export OPENROUTER_API_KEY='your-key-here'",
+          "style": "setup"
+        },
+        {
+          "item": "3. Check setup",
+          "desc": "ttt status",
+          "style": "setup"
+        },
+        {
+          "item": "4. Start chatting",
+          "desc": "ttt chat",
+          "style": "setup"
+        }
+      ]
+    }
+  ],
+  "footer_note": "📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6]",
+  "commands": {
+    "ask": {
+      "desc": "Quickly ask one-off questions",
+      "icon": "💬",
+      "is_default": true,
+      "args": [
+        {
+          "name": "prompt",
+          "desc": "The question or prompt",
+          "nargs": "*",
+          "choices": null
+        }
+      ],
+      "options": [
+        {
+          "name": "model",
+          "short": "m",
+          "type": "str",
+          "desc": "LLM model to use",
+          "default": null,
+          "choices": null
+        },
+        {
+          "name": "temperature",
+          "short": "t",
+          "type": "float",
+          "desc": "Sampling temperature (0.0-2.0)",
+          "default": 0.7,
+          "choices": null
+        },
+        {
+          "name": "max-tokens",
+          "short": null,
+          "type": "int",
+          "desc": "Maximum response length",
+          "default": null,
+          "choices": null
+        },
+        {
+          "name": "tools",
+          "short": null,
+          "type": "bool",
+          "desc": "Enable tool usage",
+          "default": false,
+          "choices": null
+        },
+        {
+          "name": "session",
+          "short": "s",
+          "type": "str",
+          "desc": "Session ID for context",
+          "default": null,
+          "choices": null
+        },
+        {
+          "name": "stream",
+          "short": null,
+          "type": "bool",
+          "desc": "Stream the response",
+          "default": true,
+          "choices": null
+        },
+        {
+          "name": "json",
+          "short": null,
+          "type": "flag",
+          "desc": "Output response in JSON format",
+          "default": null,
+          "choices": null
+        }
+      ],
+      "subcommands": null
+    },
+    "chat": {
+      "desc": "Chat interactively with AI",
+      "icon": "💬",
+      "is_default": false,
+      "args": [],
+      "options": [
+        {
+          "name": "model",
+          "short": "m",
+          "type": "str",
+          "desc": "LLM model to use",
+          "default": null,
+          "choices": null
+        },
+        {
+          "name": "session",
+          "short": "s",
+          "type": "str",
+          "desc": "Session ID to resume or create",
+          "default": null,
+          "choices": null
+        },
+        {
+          "name": "tools",
+          "short": null,
+          "type": "bool",
+          "desc": "Enable tool usage in chat",
+          "default": false,
+          "choices": null
+        },
+        {
+          "name": "markdown",
+          "short": null,
+          "type": "bool",
+          "desc": "Render markdown in responses",
+          "default": true,
+          "choices": null
+        }
+      ],
+      "subcommands": null
+    },
+    "list": {
+      "desc": "See available resources",
+      "icon": "📜",
+      "is_default": false,
+      "args": [
+        {
+          "name": "resource",
+          "desc": "Type of resource to list",
+          "nargs": null,
+          "choices": [
+            "models",
+            "sessions",
+            "tools"
+          ]
+        }
+      ],
+      "options": [
+        {
+          "name": "format",
+          "short": "f",
+          "type": "str",
+          "desc": "Output format",
+          "default": "table",
+          "choices": [
+            "table",
+            "json",
+            "yaml"
+          ]
+        },
+        {
+          "name": "verbose",
+          "short": "v",
+          "type": "bool",
+          "desc": "Show detailed information",
+          "default": false,
+          "choices": null
+        }
+      ],
+      "subcommands": null
+    },
+    "status": {
+      "desc": "Verify system and API health",
+      "icon": "✅",
+      "is_default": false,
+      "args": [],
+      "options": [
+        {
+          "name": "json",
+          "short": null,
+          "type": "flag",
+          "desc": "Output status in JSON format",
+          "default": null,
+          "choices": null
+        }
+      ],
+      "subcommands": null
+    },
+    "models": {
+      "desc": "View AI models",
+      "icon": "🧠",
+      "is_default": false,
+      "args": [],
+      "options": [
+        {
+          "name": "json",
+          "short": null,
+          "type": "flag",
+          "desc": "Output models in JSON format",
+          "default": null,
+          "choices": null
+        }
+      ],
+      "subcommands": null
+    },
+    "info": {
+      "desc": "Detailed model information",
+      "icon": "ℹ️",
+      "is_default": false,
+      "args": [
+        {
+          "name": "model",
+          "desc": "Model name",
+          "nargs": null,
+          "choices": null
+        }
+      ],
+      "options": [
+        {
+          "name": "json",
+          "short": null,
+          "type": "flag",
+          "desc": "Output model info in JSON format",
+          "default": null,
+          "choices": null
+        }
+      ],
+      "subcommands": null
+    },
+    "export": {
+      "desc": "Save your chat history",
+      "icon": "💾",
+      "is_default": false,
+      "args": [
+        {
+          "name": "session",
+          "desc": "Session ID to export",
+          "nargs": null,
+          "choices": null
+        }
+      ],
+      "options": [
+        {
+          "name": "format",
+          "short": "f",
+          "type": "str",
+          "desc": "Export format",
+          "default": "markdown",
+          "choices": [
+            "markdown",
+            "json",
+            "txt"
+          ]
+        },
+        {
+          "name": "output",
+          "short": "o",
+          "type": "str",
+          "desc": "Output file path",
+          "default": null,
+          "choices": null
+        },
+        {
+          "name": "include-metadata",
+          "short": null,
+          "type": "bool",
+          "desc": "Include timestamps and model info",
+          "default": false,
+          "choices": null
+        }
+      ],
+      "subcommands": null
+    },
+    "config": {
+      "desc": "Customize your setup",
+      "icon": "⚙️",
+      "is_default": false,
+      "args": [],
+      "options": [],
+      "subcommands": {
+        "get": {
+          "desc": "Get a configuration value",
+          "icon": null,
+          "is_default": false,
+          "args": [
+            {
+              "name": "key",
+              "desc": "Configuration key",
+              "nargs": null,
+              "choices": null
+            }
+          ],
+          "options": [],
+          "subcommands": null
+        },
+        "set": {
+          "desc": "Set a configuration value",
+          "icon": null,
+          "is_default": false,
+          "args": [
+            {
+              "name": "key",
+              "desc": "Configuration key",
+              "nargs": null,
+              "choices": null
+            },
+            {
+              "name": "value",
+              "desc": "Configuration value",
+              "nargs": null,
+              "choices": null
+            }
+          ],
+          "options": [],
+          "subcommands": null
+        },
+        "list": {
+          "desc": "List all configuration",
+          "icon": null,
+          "is_default": false,
+          "args": [],
+          "options": [
+            {
+              "name": "show-secrets",
+              "short": null,
+              "type": "bool",
+              "desc": "Include API keys in output",
+              "default": false,
+              "choices": null
+            }
+          ],
+          "subcommands": null
+        }
+      }
+    },
+    "tools": {
+      "desc": "Manage CLI tools and extensions",
+      "icon": "🛠️",
+      "is_default": false,
+      "args": [],
+      "options": [],
+      "subcommands": {
+        "enable": {
+          "desc": "Enable a tool",
+          "icon": null,
+          "is_default": false,
+          "args": [
+            {
+              "name": "tool_name",
+              "desc": "Name of the tool to enable",
+              "nargs": null,
+              "choices": null
+            }
+          ],
+          "options": [],
+          "subcommands": null
+        },
+        "disable": {
+          "desc": "Disable a tool",
+          "icon": null,
+          "is_default": false,
+          "args": [
+            {
+              "name": "tool_name",
+              "desc": "Name of the tool to disable",
+              "nargs": null,
+              "choices": null
+            }
+          ],
+          "options": [],
+          "subcommands": null
+        },
+        "list": {
+          "desc": "List all tools",
+          "icon": null,
+          "is_default": false,
+          "args": [],
+          "options": [
+            {
+              "name": "show-disabled",
+              "short": null,
+              "type": "bool",
+              "desc": "Include disabled tools",
+              "default": false,
+              "choices": null
+            }
+          ],
+          "subcommands": null
+        }
+      }
+    }
+  },
+  "command_groups": [
+    {
+      "name": "Core Commands",
+      "commands": [
+        "ask",
+        "chat",
+        "list",
+        "status"
+      ],
+      "icon": null
+    },
+    {
+      "name": "Model Management",
+      "commands": [
+        "models",
+        "info"
+      ],
+      "icon": null
+    },
+    {
+      "name": "Configuration",
+      "commands": [
+        "config",
+        "tools"
+      ],
+      "icon": null
+    },
+    {
+      "name": "Data Management",
+      "commands": [
+        "export"
+      ],
+      "icon": null
+    }
+  ],
+  "config": {
+    "rich_help_panel": true,
+    "show_metavars_column": false,
+    "append_metavars_help": true,
+    "style_errors_suggestion": true,
+    "max_width": 120
+  },
+  "enable_recursive_help": true,
+  "enable_help_json": true
+}''')
+    ctx.exit()
+
+
+
 
 
   
@@ -179,7 +670,7 @@ class DefaultGroup(RichGroup):
             return super().resolve_command(ctx, args)
         except click.UsageError:
             # If no command found and we have a default, use it
-            if self.default_command and args:
+            if self.default_command and args and not any(arg in ['--help-all', '--help-json'] for arg in args):
                 # Get the default command object
                 cmd = self.commands.get(self.default_command)
                 if cmd:
@@ -193,7 +684,13 @@ class DefaultGroup(RichGroup):
 
 @click.version_option(version=get_version(), prog_name="GOOBITS TTT CLI")
 @click.pass_context
-def main(ctx):
+
+@click.option('--help-json', is_flag=True, callback=show_help_json, is_eager=True, help='Output CLI structure as JSON.', hidden=True)
+
+
+@click.option('--help-all', is_flag=True, is_eager=True, help='Show help for all commands.', hidden=True)
+
+def main(ctx, help_all=False):
     """🤖 [bold color(6)]GOOBITS TTT CLI v1.0.0[/bold color(6)] - Talk to Transformer
 
     
@@ -220,7 +717,31 @@ def main(ctx):
     
        [#B3B8C0]📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6][/#B3B8C0]
     """
+
     
+    if help_all:
+        # Print main help
+        click.echo(ctx.get_help())
+        click.echo() # Add a blank line for spacing
+
+        # Get a list of all command names
+        commands_to_show = sorted(ctx.command.list_commands(ctx))
+
+        for cmd_name in commands_to_show:
+            command = ctx.command.get_command(ctx, cmd_name)
+
+            # Create a new context for the subcommand
+            sub_ctx = click.Context(command, info_name=cmd_name, parent=ctx)
+
+            # Print a separator and the subcommand's help
+            click.echo("="*20 + f" HELP FOR: {cmd_name} " + "="*20)
+            click.echo(sub_ctx.get_help())
+            click.echo() # Add a blank line for spacing
+
+        # Exit after printing all help
+        ctx.exit()
+    
+
     pass
 
 
