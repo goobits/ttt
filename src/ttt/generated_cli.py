@@ -202,27 +202,25 @@ def main(ctx):
     \b
     [bold yellow]💡 Quick Start:[/bold yellow]
     
-    \b
-      [color(2)]ttt "What is the meaning of life?"[/color(2)]  [italic #B3B8C0]# Ask a question[/italic #B3B8C0]
-    \b
-      [color(2)]ttt chat[/color(2)]  [italic #B3B8C0]# Start interactive chat[/italic #B3B8C0]
-    \b
-      [color(2)]ttt list models[/color(2)]  [italic #B3B8C0]# List available models[/italic #B3B8C0]
-    \b
-      [color(2)]ttt config set model gpt-4[/color(2)]  [italic #B3B8C0]# Set the default model[/italic #B3B8C0]
+      [#B3B8C0]  [/#B3B8C0][color(2)]ttt "What is the meaning of life?"[/color(2)]  [italic #B3B8C0]# Ask a question[/italic #B3B8C0]
+      [#B3B8C0]  [/#B3B8C0][color(2)]ttt chat[/color(2)]  [italic #B3B8C0]# Start interactive chat[/italic #B3B8C0]
+      [#B3B8C0]  [/#B3B8C0][color(2)]ttt list models[/color(2)]  [italic #B3B8C0]# List available models[/italic #B3B8C0]
+      [#B3B8C0]  [/#B3B8C0][color(2)]ttt config set model gpt-4[/color(2)]  [italic #B3B8C0]# Set the default model[/italic #B3B8C0]
     \b
     [bold yellow]🔑 First-time Setup:[/bold yellow]
     
+    
+      [#B3B8C0]1. Check providers:     [/#B3B8C0][color(2)]ttt providers[/color(2)]
+    
+      [#B3B8C0]2. Set API keys:        [/#B3B8C0][color(2)]export OPENROUTER_API_KEY='your-key-here'[/color(2)]
+    
+      [#B3B8C0]3. Test connection:     [/#B3B8C0][color(2)]ttt status[/color(2)]
+    
+      [#B3B8C0]4. Start chatting:      [/#B3B8C0][color(2)]ttt chat[/color(2)]
+    
+
     \b
-      [#B3B8C0]1. Check providers:[/#B3B8C0]  [color(2)]ttt providers[/color(2)]
-    \b
-      [#B3B8C0]2. Set API keys:[/#B3B8C0]  [color(2)]export OPENROUTER_API_KEY='your-key-here'[/color(2)]
-    \b
-      [#B3B8C0]3. Test connection:[/#B3B8C0]  [color(2)]ttt status[/color(2)]
-    \b
-      [#B3B8C0]4. Start chatting:[/#B3B8C0]  [color(2)]ttt chat[/color(2)]
-    \b
-    [#B3B8C0]📚 For detailed help on a command, run: ttt [COMMAND] --help[/#B3B8C0]"""
+    [#B3B8C0]📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6][/#B3B8C0]"""
     
     pass
 
@@ -778,7 +776,13 @@ def cli_entry():
     """Entry point for the CLI when installed via pipx."""
     # Load plugins before running the CLI
     load_plugins(main)
-    main()
+    try:
+        main()
+    except SystemExit as e:
+        # Add a final newline after help output
+        if e.code == 0:  # Successful exit (like --help)
+            print()
+        raise
 
 if __name__ == "__main__":
     cli_entry()

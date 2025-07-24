@@ -94,7 +94,7 @@ cli:
     - step: "4. Start chatting"
       cmd: "ttt chat"
   
-  footer_note: "📚 For detailed help on a command, run: ttt [COMMAND] --help"
+  footer_note: "📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6]"
   
   command_groups:
     - name: "Core Commands"
