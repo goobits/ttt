@@ -151,14 +151,12 @@ class TestSystemPromptOptions:
         """Test: ttt ask --system help availability - Tested 2025-07-24"""
         result = run_ttt_command(["ask", "--help"])
         assert result.returncode == 0
-        # Should show session option (--session) which is what replaced --system
+        # Should show both session and system options
         assert "--session" in result.stdout
+        assert "--system" in result.stdout
     
-    @pytest.mark.skip(reason="--system option not implemented in CLI, though API supports it")
     def test_ask_system_prompt(self):
         """Test: ttt ask --system 'system prompt' 'user prompt' - Tested 2025-07-24"""
-        # Note: The API supports system prompts, but the CLI doesn't have a --system option
-        # This functionality can be achieved through chat sessions which support system prompts
         if not has_valid_api_key():
             pytest.skip("Requires API key")
         

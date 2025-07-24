@@ -230,6 +230,7 @@ class TestCLIToolSupport:
                         max_tokens=None,
                         tools=True,
                         session=None,
+                        system=None,
                         stream=True,
                         json=False
                     )
@@ -251,6 +252,7 @@ class TestCLIToolSupport:
                         max_tokens=None,
                         tools=False,
                         session=None,
+                        system=None,
                         stream=True,
                         json=False
                     )

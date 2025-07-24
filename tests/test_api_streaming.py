@@ -93,9 +93,9 @@ class TestAskFunction:
 
     def test_ask_basic(self):
         """Test basic ask functionality."""
-        with patch("ttt.core.routing.router") as mock_router:
-            mock_backend = MockBackend()
-            mock_router.smart_route.return_value = (mock_backend, "mock-model")
+        mock_backend = MockBackend()
+        with patch("ttt.core.routing.router.smart_route") as mock_route:
+            mock_route.return_value = (mock_backend, "mock-model")
             
             response = ask("Test prompt")
 
@@ -104,15 +104,15 @@ class TestAskFunction:
             assert response.backend == "mock"
 
             # Verify router was called
-            mock_router.smart_route.assert_called_once()
-            call_args = mock_router.smart_route.call_args
+            mock_route.assert_called_once()
+            call_args = mock_route.call_args
             assert call_args[0][0] == "Test prompt"
 
     def test_ask_with_all_parameters(self):
         """Test ask with all parameters."""
-        with patch("ttt.core.routing.router") as mock_router:
-            mock_backend = MockBackend()
-            mock_router.smart_route.return_value = (mock_backend, "specific-model")
+        mock_backend = MockBackend()
+        with patch("ttt.core.routing.router.smart_route") as mock_route:
+            mock_route.return_value = (mock_backend, "specific-model")
             
             response = ask(
                 "Test prompt",
@@ -125,7 +125,7 @@ class TestAskFunction:
             )
 
             # Verify parameters were passed to router
-            call_args = mock_router.smart_route.call_args
+            call_args = mock_route.call_args
             assert call_args[1]["model"] == "specific-model"
             assert call_args[1]["backend"] == "cloud"
             assert call_args[1]["custom_param"] == "value"
@@ -137,9 +137,9 @@ class TestAskFunction:
 
     def test_ask_with_images(self):
         """Test ask with image inputs."""
-        with patch("ttt.core.routing.router") as mock_router:
-            mock_backend = MockBackend()
-            mock_router.smart_route.return_value = (mock_backend, "mock-model")
+        mock_backend = MockBackend()
+        with patch("ttt.core.routing.router.smart_route") as mock_route:
+            mock_route.return_value = (mock_backend, "mock-model")
             
             response = ask(["What's in this image?", ImageInput(b"fake_image_data_for_testing")])
 
@@ -154,10 +154,10 @@ class TestStreamFunction:
 
     def test_stream_basic(self):
         """Test basic streaming functionality."""
-        with patch("ttt.core.routing.router") as mock_router:
-            mock_backend = MockBackend()
-            mock_backend.response_text = "Hello world test"
-            mock_router.smart_route.return_value = (mock_backend, "mock-model")
+        mock_backend = MockBackend()
+        mock_backend.response_text = "Hello world test"
+        with patch("ttt.core.routing.router.smart_route") as mock_route:
+            mock_route.return_value = (mock_backend, "mock-model")
             
             chunks = list(stream("Test prompt"))
 
@@ -166,9 +166,9 @@ class TestStreamFunction:
 
     def test_stream_with_parameters(self):
         """Test streaming with all parameters."""
-        with patch("ttt.core.routing.router") as mock_router:
-            mock_backend = MockBackend()
-            mock_router.smart_route.return_value = (mock_backend, "specific-model")
+        mock_backend = MockBackend()
+        with patch("ttt.core.routing.router.smart_route") as mock_route:
+            mock_route.return_value = (mock_backend, "specific-model")
             
             list(
                 stream(
@@ -188,9 +188,9 @@ class TestStreamFunction:
 
     def test_stream_with_images(self):
         """Test streaming with image inputs."""
-        with patch("ttt.core.routing.router") as mock_router:
-            mock_backend = MockBackend()
-            mock_router.smart_route.return_value = (mock_backend, "mock-model")
+        mock_backend = MockBackend()
+        with patch("ttt.core.routing.router.smart_route") as mock_route:
+            mock_route.return_value = (mock_backend, "mock-model")
             
             chunks = list(stream(["Describe this", ImageInput(b"fake_image_data_for_testing")]))
 
@@ -422,7 +422,7 @@ class TestErrorHandling:
 
     def test_stream_with_failing_backend(self):
         """Test streaming when backend fails."""
-        with patch("ttt.core.routing.router") as mock_router:
+        with patch("ttt.core.routing.router.smart_route") as mock_route:
             # Create a backend that fails during streaming
             class FailingBackend(MockBackend):
                 async def astream(self, prompt, **kwargs):
@@ -430,7 +430,7 @@ class TestErrorHandling:
                     raise Exception("Stream failed")
 
             failing_backend = FailingBackend()
-            mock_router.smart_route.return_value = (failing_backend, "model")
+            mock_route.return_value = (failing_backend, "model")
 
             # Should get partial results before failure
             chunks = []
@@ -451,11 +451,11 @@ class TestBackendSelection:
         """Test passing backend instance directly."""
         custom_backend = MockBackend("custom")
 
-        with patch("ttt.core.routing.router") as mock_router:
-            mock_router.smart_route.return_value = (custom_backend, "model")
+        with patch("ttt.core.routing.router.smart_route") as mock_route:
+            mock_route.return_value = (custom_backend, "model")
 
             ask("Test", backend=custom_backend)
 
             # Router should receive the backend instance
-            call_args = mock_router.smart_route.call_args
+            call_args = mock_route.call_args
             assert call_args[1]["backend"] == custom_backend

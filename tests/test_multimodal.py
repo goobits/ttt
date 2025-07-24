@@ -80,16 +80,17 @@ class TestMultiModalAPI:
 
     def test_ask_with_image(self):
         """Test ask() with image input."""
-        with patch("ttt.core.routing.router") as mock_router:
-            # Setup mock
-            mock_backend = Mock()
-            mock_backend.ask = AsyncMock(
-                return_value=AIResponse(
-                    "This is a dog", model="gpt-4-vision-preview", backend="cloud"
-                )
+        # Setup mock
+        mock_backend = Mock()
+        mock_backend.ask = AsyncMock(
+            return_value=AIResponse(
+                "This is a dog", model="gpt-4-vision-preview", backend="cloud"
             )
-            mock_backend.name = "mock"
-            mock_router.smart_route.return_value = (mock_backend, "gpt-4-vision-preview")
+        )
+        mock_backend.name = "mock"
+        
+        with patch("ttt.core.routing.router.smart_route") as mock_route:
+            mock_route.return_value = (mock_backend, "gpt-4-vision-preview")
 
             # Test with image
             response = ask(
@@ -100,8 +101,8 @@ class TestMultiModalAPI:
             assert response.model == "gpt-4-vision-preview"
 
             # Verify routing was called correctly
-            mock_router.smart_route.assert_called_once()
-            call_args = mock_router.smart_route.call_args
+            mock_route.assert_called_once()
+            call_args = mock_route.call_args
             assert isinstance(call_args[0][0], list)
             assert len(call_args[0][0]) == 2
             assert call_args[0][0][0] == "What's in this image?"
@@ -109,17 +110,18 @@ class TestMultiModalAPI:
 
     def test_stream_with_image(self):
         """Test stream() with image input."""
-        with patch("ttt.core.routing.router") as mock_router:
-            # Setup mock
-            mock_backend = Mock()
-            mock_backend.name = "mock"
+        # Setup mock
+        mock_backend = Mock()
+        mock_backend.name = "mock"
 
-            async def mock_astream(*args, **kwargs):
-                for chunk in ["This ", "is ", "a ", "cat"]:
-                    yield chunk
+        async def mock_astream(*args, **kwargs):
+            for chunk in ["This ", "is ", "a ", "cat"]:
+                yield chunk
 
-            mock_backend.astream = mock_astream
-            mock_router.smart_route.return_value = (mock_backend, "gpt-4-vision-preview")
+        mock_backend.astream = mock_astream
+        
+        with patch("ttt.core.routing.router.smart_route") as mock_route:
+            mock_route.return_value = (mock_backend, "gpt-4-vision-preview")
 
             # Test streaming with image
             chunks = list(stream(["Describe this image:", ImageInput(b"fake image data")]))
