@@ -219,7 +219,8 @@ def show_help_json(ctx, param, value):
           "name": "prompt",
           "desc": "The question or prompt",
           "nargs": "*",
-          "choices": null
+          "choices": null,
+          "required": true
         }
       ],
       "options": [
@@ -336,7 +337,8 @@ def show_help_json(ctx, param, value):
             "models",
             "sessions",
             "tools"
-          ]
+          ],
+          "required": true
         }
       ],
       "options": [
@@ -406,7 +408,8 @@ def show_help_json(ctx, param, value):
           "name": "model",
           "desc": "Model name",
           "nargs": null,
-          "choices": null
+          "choices": null,
+          "required": true
         }
       ],
       "options": [
@@ -430,7 +433,8 @@ def show_help_json(ctx, param, value):
           "name": "session",
           "desc": "Session ID to export",
           "nargs": null,
-          "choices": null
+          "choices": null,
+          "required": true
         }
       ],
       "options": [
@@ -481,7 +485,8 @@ def show_help_json(ctx, param, value):
               "name": "key",
               "desc": "Configuration key",
               "nargs": null,
-              "choices": null
+              "choices": null,
+              "required": true
             }
           ],
           "options": [],
@@ -496,13 +501,15 @@ def show_help_json(ctx, param, value):
               "name": "key",
               "desc": "Configuration key",
               "nargs": null,
-              "choices": null
+              "choices": null,
+              "required": true
             },
             {
               "name": "value",
               "desc": "Configuration value",
               "nargs": null,
-              "choices": null
+              "choices": null,
+              "required": true
             }
           ],
           "options": [],
@@ -543,7 +550,8 @@ def show_help_json(ctx, param, value):
               "name": "tool_name",
               "desc": "Name of the tool to enable",
               "nargs": null,
-              "choices": null
+              "choices": null,
+              "required": true
             }
           ],
           "options": [],
@@ -558,7 +566,8 @@ def show_help_json(ctx, param, value):
               "name": "tool_name",
               "desc": "Name of the tool to disable",
               "nargs": null,
-              "choices": null
+              "choices": null,
+              "required": true
             }
           ],
           "options": [],
@@ -690,7 +699,7 @@ class DefaultGroup(RichGroup):
 
 @click.option('--help-all', is_flag=True, is_eager=True, help='Show help for all commands.', hidden=True)
 
-def main(ctx, help_all=False):
+def main(ctx, help_json=False, help_all=False):
     """🤖 [bold color(6)]GOOBITS TTT CLI v1.0.0[/bold color(6)] - Talk to Transformer
 
     
@@ -779,7 +788,8 @@ click.rich_click.COMMAND_GROUPS = {
 
 @click.argument(
     "PROMPT",
-    nargs=-1
+    nargs=-1,
+    required=True
 )
 
 
