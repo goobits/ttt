@@ -198,26 +198,28 @@ def main(ctx):
 
     
     \b
-    [#B3B8C0]A powerful AI assistant for your terminal that provides seamless access to multiple language models[/#B3B8C0]
+    [#B3B8C0]AI-powered conversations, straight from your command line[/#B3B8C0]
     
 
     
     \b
     [bold yellow]💡 Quick Start:[/bold yellow]
-       [color(2)]ttt "What is the meaning of life?"    [/color(2)] [italic][#B3B8C0]# Ask a question[/#B3B8C0][/italic]
-       [color(2)]ttt chat                              [/color(2)] [italic][#B3B8C0]# Start interactive chat[/#B3B8C0][/italic]
-       [color(2)]ttt list models                       [/color(2)] [italic][#B3B8C0]# List available models[/#B3B8C0][/italic]
-       [color(2)]ttt config set model gpt-4            [/color(2)] [italic][#B3B8C0]# Set the default model[/#B3B8C0][/italic]
+       [color(2)]ttt "What is the meaning of life?"    [/color(2)] [italic][#B3B8C0]# Instant response[/#B3B8C0][/italic]
+       [color(2)]ttt chat                              [/color(2)] [italic][#B3B8C0]# Interactive session[/#B3B8C0][/italic]
+       [color(2)]ttt models                            [/color(2)] [italic][#B3B8C0]# Explore available models[/#B3B8C0][/italic]
+       [color(2)]ttt config set model gpt-4            [/color(2)] [italic][#B3B8C0]# Set your preferred model[/#B3B8C0][/italic]
 
     
     \b
     [bold yellow]🔑 First-time Setup:[/bold yellow]
     
-       \b    1. Set API keys:      [color(2)]export OPENROUTER_API_KEY='your-key-here'[/color(2)]
+       \b    1. See providers:    [color(2)]ttt providers[/color(2)]
     
-       \b    2. Test connection:   [color(2)]ttt status[/color(2)]
+       \b    2. Add API key:      [color(2)]export OPENROUTER_API_KEY='your-key-here'[/color(2)]
     
-       \b    3. Start chatting:    [color(2)]ttt chat[/color(2)]
+       \b    3. Check setup:      [color(2)]ttt status[/color(2)]
+    
+       \b    4. Start chatting:   [color(2)]ttt chat[/color(2)]
     
     
     \b
@@ -300,7 +302,7 @@ click.rich_click.COMMAND_GROUPS = {
 )
 
 def ask(prompt, model, temperature, max_tokens, tools, session, stream):
-    """💬 Ask a single question"""
+    """💬 Quickly ask one-off questions"""
     # Check if hook function exists
     hook_name = f"on_ask"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -363,7 +365,7 @@ def ask(prompt, model, temperature, max_tokens, tools, session, stream):
 )
 
 def chat(model, session, tools, markdown):
-    """💬 Start an interactive chat session"""
+    """💬 Chat interactively with AI"""
     # Check if hook function exists
     hook_name = f"on_chat"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -413,7 +415,7 @@ def chat(model, session, tools, markdown):
 )
 
 def list(resource, format, verbose):
-    """📋 List available resources"""
+    """📋 See available resources"""
     # Check if hook function exists
     hook_name = f"on_list"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -446,7 +448,7 @@ def list(resource, format, verbose):
 
 
 def status():
-    """🩺 Check system health and API status"""
+    """🩺 Verify system and API health"""
     # Check if hook function exists
     hook_name = f"on_status"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -469,7 +471,7 @@ def status():
 
 
 def models():
-    """🧠 List available models"""
+    """🧠 View AI models"""
     # Check if hook function exists
     hook_name = f"on_models"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -496,7 +498,7 @@ def models():
 
 
 def info(model):
-    """ℹ️  Get detailed information about a specific model"""
+    """ℹ️  Detailed model information"""
     # Check if hook function exists
     hook_name = f"on_info"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -544,7 +546,7 @@ def info(model):
 )
 
 def export(session, format, output, include_metadata):
-    """💾 Export chat history"""
+    """💾 Save your chat history"""
     # Check if hook function exists
     hook_name = f"on_export"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -577,7 +579,7 @@ def export(session, format, output, include_metadata):
 
 @main.group()
 def config():
-    """⚙️  Manage configuration"""
+    """⚙️  Customize your setup"""
     pass
 
 
@@ -679,7 +681,7 @@ def list(show_secrets):
 
 @main.group()
 def tools():
-    """🔧 Manage available tools"""
+    """🔧 Manage CLI tools and extensions"""
     pass
 
 

@@ -69,27 +69,29 @@ cli:
   version: "1.0.0"
   display_version: true
   tagline: "Talk to Transformer"
-  description: "A powerful AI assistant for your terminal that provides seamless access to multiple language models"
+  description: "AI-powered conversations, straight from your command line"
   icon: "🤖"
   
   examples_section_title: "💡 Quick Start"
   examples:
     - cmd: 'ttt "What is the meaning of life?"'
-      desc: "Ask a question"
+      desc: "Instant response"
     - cmd: "ttt chat"
-      desc: "Start interactive chat"
-    - cmd: "ttt list models"
-      desc: "List available models"
+      desc: "Interactive session"
+    - cmd: "ttt models"
+      desc: "Explore available models"
     - cmd: "ttt config set model gpt-4"
-      desc: "Set the default model"
+      desc: "Set your preferred model"
   
-  setup_section_title: "🔑 First-time Setup"
+  setup_section_title: "🔑 Initial Setup"
   setup_steps:
-    - step: "1. Set API keys"
+    - step: "1. See providers"
+      cmd: "ttt providers"
+    - step: "2. Add API key"
       cmd: "export OPENROUTER_API_KEY='your-key-here'"
-    - step: "2. Test connection"
+    - step: "3. Check setup"
       cmd: "ttt status"
-    - step: "3. Start chatting"
+    - step: "4. Start chatting"
       cmd: "ttt chat"
   
   footer_note: "📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6]"
@@ -106,7 +108,7 @@ cli:
 
   commands:
     ask:
-      desc: "Ask a single question"
+      desc: "Quickly ask one-off questions"
       icon: "💬"
       is_default: true
       args:
@@ -140,7 +142,7 @@ cli:
           default: true
     
     chat:
-      desc: "Start an interactive chat session"
+      desc: "Chat interactively with AI"
       icon: "💬"
       options:
         - name: "model"
@@ -161,7 +163,7 @@ cli:
           default: true
     
     list:
-      desc: "List available resources"
+      desc: "See available resources"
       icon: "📋"
       args:
         - name: "resource"
@@ -181,22 +183,22 @@ cli:
           default: false
     
     status:
-      desc: "Check system health and API status"
+      desc: "Verify system and API health"
       icon: "🩺"
     
     models:
-      desc: "List available models"
+      desc: "View AI models"
       icon: "🧠"
     
     info:
-      desc: "Get detailed information about a specific model"
+      desc: "Detailed model information"
       icon: "ℹ️ "
       args:
         - name: "model"
           desc: "Model name"
     
     export:
-      desc: "Export chat history"
+      desc: "Save your chat history"
       icon: "💾"
       args:
         - name: "session"
@@ -218,7 +220,7 @@ cli:
           default: false
     
     config:
-      desc: "Manage configuration"
+      desc: "Customize your setup"
       icon: "⚙️ "
       subcommands:
         get:
@@ -242,7 +244,7 @@ cli:
               default: false
     
     tools:
-      desc: "Manage available tools"
+      desc: "Manage CLI tools and extensions"
       icon: "🔧"
       subcommands:
         enable:
