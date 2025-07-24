@@ -230,7 +230,7 @@ class Router:
                     return str(backend.default_model)
 
                 # Get fallback from config
-                from .config_loader import get_config_value
+                from ..config.loader import get_config_value
 
                 return str(get_config_value("models.default", "gpt-3.5-turbo"))
 
@@ -298,9 +298,9 @@ class Router:
 
             # If not in registry, detect cloud models by naming patterns
             # Get patterns from config
-            from ..config.loader import load_project_defaults
+            from ..config.loader import get_project_config
 
-            project_defaults = load_project_defaults()
+            project_defaults = get_project_config()
             cloud_model_patterns = project_defaults.get("routing", {}).get(
                 "cloud_model_patterns",
                 [

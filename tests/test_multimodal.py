@@ -78,51 +78,53 @@ class TestImageInput:
 class TestMultiModalAPI:
     """Test multi-modal API functionality."""
 
-    @patch("ttt.api.router")
-    def test_ask_with_image(self, mock_router):
+    def test_ask_with_image(self):
         """Test ask() with image input."""
-        # Setup mock
-        mock_backend = Mock()
-        mock_backend.ask = AsyncMock(
-            return_value=AIResponse(
-                "This is a dog", model="gpt-4-vision-preview", backend="cloud"
+        with patch("ttt.core.routing.router") as mock_router:
+            # Setup mock
+            mock_backend = Mock()
+            mock_backend.ask = AsyncMock(
+                return_value=AIResponse(
+                    "This is a dog", model="gpt-4-vision-preview", backend="cloud"
+                )
             )
-        )
-        mock_router.smart_route.return_value = (mock_backend, "gpt-4-vision-preview")
+            mock_backend.name = "mock"
+            mock_router.smart_route.return_value = (mock_backend, "gpt-4-vision-preview")
 
-        # Test with image
-        response = ask(
-            ["What's in this image?", ImageInput("https://example.com/dog.jpg")]
-        )
+            # Test with image
+            response = ask(
+                ["What's in this image?", ImageInput("https://example.com/dog.jpg")]
+            )
 
-        assert response == "This is a dog"
-        assert response.model == "gpt-4-vision-preview"
+            assert response == "This is a dog"
+            assert response.model == "gpt-4-vision-preview"
 
-        # Verify routing was called correctly
-        mock_router.smart_route.assert_called_once()
-        call_args = mock_router.smart_route.call_args
-        assert isinstance(call_args[0][0], list)
-        assert len(call_args[0][0]) == 2
-        assert call_args[0][0][0] == "What's in this image?"
-        assert isinstance(call_args[0][0][1], ImageInput)
+            # Verify routing was called correctly
+            mock_router.smart_route.assert_called_once()
+            call_args = mock_router.smart_route.call_args
+            assert isinstance(call_args[0][0], list)
+            assert len(call_args[0][0]) == 2
+            assert call_args[0][0][0] == "What's in this image?"
+            assert isinstance(call_args[0][0][1], ImageInput)
 
-    @patch("ttt.api.router")
-    def test_stream_with_image(self, mock_router):
+    def test_stream_with_image(self):
         """Test stream() with image input."""
-        # Setup mock
-        mock_backend = Mock()
+        with patch("ttt.core.routing.router") as mock_router:
+            # Setup mock
+            mock_backend = Mock()
+            mock_backend.name = "mock"
 
-        async def mock_astream(*args, **kwargs):
-            for chunk in ["This ", "is ", "a ", "cat"]:
-                yield chunk
+            async def mock_astream(*args, **kwargs):
+                for chunk in ["This ", "is ", "a ", "cat"]:
+                    yield chunk
 
-        mock_backend.astream = mock_astream
-        mock_router.smart_route.return_value = (mock_backend, "gpt-4-vision-preview")
+            mock_backend.astream = mock_astream
+            mock_router.smart_route.return_value = (mock_backend, "gpt-4-vision-preview")
 
-        # Test streaming with image
-        chunks = list(stream(["Describe this image:", ImageInput(b"fake image data")]))
+            # Test streaming with image
+            chunks = list(stream(["Describe this image:", ImageInput(b"fake image data")]))
 
-        assert chunks == ["This ", "is ", "a ", "cat"]
+            assert chunks == ["This ", "is ", "a ", "cat"]
 
 
 class TestCloudBackendMultiModal:

@@ -226,7 +226,7 @@ class TestToolsOptions:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
         
-        result = run_ttt_command(["ask", "--tools", "hello"])
+        result = run_ttt_command(["ask", "--tools", "true", "hello"])
         assert result.returncode in [0, 124]
 
 
@@ -466,7 +466,7 @@ class TestComplexCombinations:
         
         result = run_ttt_command([
             "ask", "--model", "@claude", "--temperature", "0.2", 
-            "--tools", "--json", "write a simple function"
+            "--tools", "true", "--json", "write a simple function"
         ])
         assert result.returncode in [0, 124]
     
@@ -489,7 +489,7 @@ class TestComplexCombinations:
             pytest.skip("Requires API key")
         
         result = run_ttt_command([
-            "ask", "-m", "@gpt4", "--stream", "--json", "explain sorting"
+            "ask", "-m", "@gpt4", "--stream", "true", "--json", "explain sorting"
         ])
         assert result.returncode in [0, 124]
     
@@ -500,7 +500,7 @@ class TestComplexCombinations:
             pytest.skip("Requires API key")
         
         result = run_ttt_command([
-            "ask", "--model", "@claude", "--tools", "--json", "analyze this data"
+            "ask", "--model", "@claude", "--tools", "true", "--json", "analyze this data"
         ], input_text="sample data for analysis")
         assert result.returncode in [0, 124]
     
@@ -512,7 +512,7 @@ class TestComplexCombinations:
         
         result = run_ttt_command([
             "ask", "--model", "@claude", "--temperature", "0.7", 
-            "--max-tokens", "1000", "--tools", "research Python"
+            "--max-tokens", "1000", "--tools", "true", "research Python"
         ])
         assert result.returncode in [0, 124]
     

@@ -78,7 +78,7 @@ class TestAskCommand:
                 "ask", "Debug this code",
                 "--model", "gpt-4",
                 "--temperature", "0.7",
-                "--tools",
+                "--tools", "true",
                 "--session", "test-session"
             ])
             
@@ -133,7 +133,7 @@ class TestChatCommand:
                 "chat",
                 "--model", "gpt-4", 
                 "--session", "my-session",
-                "--tools"
+                "--tools", "true"
             ])
             
             assert result.exit_code == 0
@@ -249,7 +249,7 @@ class TestConfigCommand:
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_config_list = Mock()
             
-            result = self.runner.invoke(main, ["config", "list", "--show-secrets"])
+            result = self.runner.invoke(main, ["config", "list", "--show-secrets", "true"])
             
             assert result.exit_code == 0
 
@@ -392,7 +392,7 @@ class TestExportCommand:
                 "export", "session-1",
                 "--format", "json",
                 "--output", "output.json",
-                "--include-metadata"
+                "--include-metadata", "true"
             ])
             
             assert result.exit_code == 0

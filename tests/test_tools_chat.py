@@ -28,7 +28,7 @@ class TestChatSessionTools:
         def test_tool(x: int) -> int:
             return x * 2
 
-        with patch("ttt.routing.router.smart_route") as mock_route:
+        with patch("ttt.core.routing.router.smart_route") as mock_route:
             backend_instance = Mock()
             backend_instance.ask = AsyncMock(
                 return_value=AIResponse("Response", model="test", backend="test")
@@ -230,7 +230,8 @@ class TestCLIToolSupport:
                         max_tokens=None,
                         tools=True,
                         session=None,
-                        stream=True
+                        stream=True,
+                        json=False
                     )
                 
                 # Verify it was called with tools

@@ -78,7 +78,7 @@ def mock_backend():
 @pytest.fixture
 def mock_router(mock_backend):
     """Mock router to return our backend."""
-    with patch("ttt.routing.router") as mock:
+    with patch("ttt.core.routing.router") as mock:
         mock.smart_route.return_value = (mock_backend, "mock-model")
         mock.resolve_backend.return_value = mock_backend
         mock.resolve_model.return_value = "mock-model"
@@ -108,7 +108,7 @@ class TestPersistentChatSession:
         assert session.metadata["session_id"].startswith("chat_")
         assert len(session.metadata["session_id"]) > 10
 
-    @patch("ttt.routing.router")
+    @patch("ttt.core.routing.router")
     def test_ask_updates_history(self, mock_router):
         """Test that ask() updates conversation history."""
         # Setup mock backend
@@ -144,7 +144,7 @@ class TestPersistentChatSession:
         assert session.history[1]["tokens_out"] == 20
         assert session.history[1]["cost"] == 0.001
 
-    @patch("ttt.routing.router")
+    @patch("ttt.core.routing.router")
     def test_metadata_tracking(self, mock_router):
         """Test that metadata is properly tracked."""
         # Setup mock backend
@@ -369,7 +369,7 @@ class TestPersistentChatSession:
         # Metadata should be preserved
         assert session.metadata["session_id"] is not None
 
-    @patch("ttt.routing.router")
+    @patch("ttt.core.routing.router")
     def test_multimodal_in_persistent_session(self, mock_router):
         """Test multi-modal content in persistent sessions."""
         from ttt import ImageInput

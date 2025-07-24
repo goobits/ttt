@@ -360,7 +360,7 @@ class TestToolIntegration:
             return f"Tool received: {message}"
 
         # Mock the router and backend
-        with patch("ttt.api.router") as mock_router:
+        with patch("ttt.core.routing.router") as mock_router:
             mock_backend = Mock()
             mock_response = AIResponse(
                 "AI response with tool usage", model="test-model", backend="cloud"
