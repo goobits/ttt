@@ -3,7 +3,7 @@
 import logging
 import sys
 from io import StringIO
-from typing import List, Optional
+from typing import List
 
 
 class WarningCapture:

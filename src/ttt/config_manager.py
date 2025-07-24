@@ -46,7 +46,7 @@ class ConfigManager:
 
         # Ensure user config directory exists
         self.user_config_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Load API keys from config into environment variables if not already set
         self._load_api_keys_from_config()
 
@@ -55,7 +55,7 @@ class ConfigManager:
         try:
             user_config = self.get_user_config()
             api_keys = user_config.get("api_keys", {})
-            
+
             for key, value in api_keys.items():
                 env_key = key.upper()
                 if not os.environ.get(env_key):
@@ -217,7 +217,7 @@ class ConfigManager:
             env_key = key.upper()
             os.environ[env_key] = value
             console.print(f"[green]Set {env_key} environment variable[/green]")
-            
+
             # Also store in config for persistence
             if "api_keys" not in user_config:
                 user_config["api_keys"] = {}

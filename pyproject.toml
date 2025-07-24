@@ -14,13 +14,10 @@ repository = "https://github.com/goobits/ai"
 documentation = "https://docs.goobits.com/ai"
 keywords = [ "ai", "llm", "openai", "anthropic", "google", "ollama", "chatgpt", "claude", "gemini",]
 classifiers = [ "Development Status :: 3 - Alpha", "Intended Audience :: Developers", "License :: OSI Approved :: MIT License", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.8", "Programming Language :: Python :: 3.9", "Programming Language :: Python :: 3.10", "Programming Language :: Python :: 3.11", "Programming Language :: Python :: 3.12", "Topic :: Software Development :: Libraries :: Python Modules", "Topic :: Scientific/Engineering :: Artificial Intelligence",]
-include = [ "config.yaml", "cli.py",]
+include = [ "config.yaml",]
 [[tool.poetry.packages]]
 include = "ttt"
 from = "src"
-
-[[tool.poetry.packages]]
-include = "cli.py"
 
 [tool.black]
 line-length = 88
@@ -65,8 +62,8 @@ validators = "^0.22.0"
 local = [ "httpx",]
 
 [tool.poetry.scripts]
-goobits-ttt = "ttt.generated_cli:cli_entry"
-ttt = "ttt.generated_cli:cli_entry"
+goobits-ttt = "ttt.cli:cli_entry"
+ttt = "ttt.cli:cli_entry"
 
 [tool.ruff.lint]
 select = [ "E", "W", "F", "I", "B", "C4", "UP",]

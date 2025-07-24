@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """Business logic hooks for the TTT CLI."""
 
+import json as json_module
 import os
 import sys
-import json as json_module
-import warnings
-from typing import Optional, Tuple, List, Dict, Any
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
 import rich_click as click
 from rich.console import Console
-from pathlib import Path
 
 # Import required TTT modules
 import ttt
-from ttt.api import ask as ttt_ask, stream as ttt_stream
+from ttt.api import ask as ttt_ask
+from ttt.api import stream as ttt_stream
 from ttt.chat_sessions import ChatSessionManager
 from ttt.config_manager import ConfigManager
 
@@ -26,6 +27,7 @@ def setup_logging_level(
     """Setup logging level based on verbosity flags."""
     import asyncio
     import logging
+
     from rich.logging import RichHandler
 
     if json_output:
@@ -199,20 +201,36 @@ def apply_coding_optimization(kwargs: Dict[str, Any]) -> None:
 
 # Main hook functions
 
-def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float, 
+def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
            max_tokens: Optional[int], tools: bool, session: Optional[str], stream: bool, json: bool):
     """Hook for 'ask' command."""
-    # Join prompt tuple into a single string
-    prompt_text = " ".join(prompt) if prompt else None
-    
+    # Parse provider shortcuts from prompt arguments
+    prompt_list = list(prompt) if prompt else []
+
+    # Check if first argument is a provider shortcut
+    if prompt_list and prompt_list[0].startswith('@') and not model:
+        potential_model = prompt_list[0]
+        # Remove the @ prefix to get the alias
+        model_alias = potential_model[1:]
+
+        # Resolve the alias and set as model if valid
+        resolved_model = resolve_model_alias(f"@{model_alias}")
+        if resolved_model != f"@{model_alias}":  # If resolve_model_alias changed it, it's valid
+            model = resolved_model
+            prompt_list = prompt_list[1:]  # Remove the @provider from prompt
+        # If not a valid alias, leave it as part of the prompt
+
+    # Join remaining prompt tuple into a single string
+    prompt_text = " ".join(prompt_list) if prompt_list else None
+
     # Setup logging
     setup_logging_level(json_output=json)
-    
+
     # Handle missing prompt
     if prompt_text is None and sys.stdin.isatty():
         click.echo("Error: Missing argument 'prompt'", err=True)
         sys.exit(1)
-    
+
     # Handle stdin input
     stdin_content = None
     if not sys.stdin.isatty():
@@ -220,12 +238,12 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
             stdin_content = sys.stdin.read().strip()
         except EOFError:
             stdin_content = ""
-    
+
     if prompt_text == "-" or (prompt_text is None and stdin_content):
         if not stdin_content:
             click.echo("Error: No input provided", err=True)
             sys.exit(1)
-        
+
         try:
             json_input = json_module.loads(stdin_content)
             prompt_text = (
@@ -235,7 +253,7 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
                 or json_input.get("text")
                 or json_input.get("content")
             )
-            
+
             if not prompt_text:
                 prompt_text = stdin_content
             else:
@@ -249,15 +267,15 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
             prompt_text = stdin_content
     elif prompt_text and stdin_content:
         prompt_text = f"{prompt_text}\n\nInput data:\n{stdin_content}"
-    
+
     elif prompt_text is None:
         click.echo("Error: Missing argument 'prompt'", err=True)
         sys.exit(1)
-    
+
     # Resolve model alias
     if model:
         model = resolve_model_alias(model)
-    
+
     # Build request parameters
     kwargs: Dict[str, Any] = {}
     if model:
@@ -270,7 +288,7 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
         kwargs["tools"] = None  # Enable all tools
     if session:
         kwargs["session_id"] = session
-    
+
     try:
         if json:
             # JSON output mode - collect response and format as JSON
@@ -285,8 +303,13 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
             }
             click.echo(json_module.dumps(output, indent=2))
         elif stream:
-            for chunk in ttt_stream(prompt_text, **kwargs):
-                click.echo(chunk, nl=False)
+            chunks = list(ttt_stream(prompt_text, **kwargs))
+            for i, chunk in enumerate(chunks):
+                if i == len(chunks) - 1:  # Last chunk
+                    click.echo(chunk.rstrip('\n'), nl=False)
+                else:
+                    click.echo(chunk, nl=False)
+            click.echo()  # Always add exactly one newline at the end
         else:
             response = ttt_ask(prompt_text, **kwargs)
             click.echo(str(response).strip())
@@ -306,22 +329,22 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
 def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown: bool):
     """Hook for 'chat' command."""
     from ttt.chat_sessions import ChatSessionManager
-    
+
     # Setup logging
     setup_logging_level()
-    
+
     # Initialize session manager
     session_manager = ChatSessionManager()
-    
+
     # Resolve model alias if provided
     if model:
         model = resolve_model_alias(model)
-    
+
     # Parse tools
     parsed_tools: Optional[List[str]] = None
     if tools:
         parsed_tools = None  # Enable all tools
-    
+
     # Load or create session
     if session:
         chat_session = session_manager.load_session(session)
@@ -334,7 +357,7 @@ def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown:
         chat_session = session_manager.create_session(
             model=model, tools=parsed_tools
         )
-    
+
     # Build kwargs for chat session
     chat_kwargs: Dict[str, Any] = {}
     if chat_session.model:
@@ -344,14 +367,14 @@ def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown:
     if chat_session.tools:
         chat_kwargs["tools"] = resolve_tools(chat_session.tools)
     chat_kwargs["stream"] = True
-    
+
     # Create chat session with context from previous messages
     messages: List[Dict[str, str]] = []
     if chat_session.system_prompt:
         messages.append({"role": "system", "content": chat_session.system_prompt})
     for msg in chat_session.messages:
         messages.append({"role": msg.role, "content": msg.content})
-    
+
     # Start chat loop
     try:
         # Use the chat API
@@ -359,7 +382,7 @@ def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown:
             # Restore message history
             if messages:
                 api_chat_session.history = messages
-            
+
             console.print("[bold blue]AI Chat Session[/bold blue]")
             if chat_session.model:
                 console.print(f"Model: {chat_session.model}")
@@ -367,7 +390,7 @@ def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown:
                 console.print(f"System: {chat_session.system_prompt[:50]}...")
             console.print("Type /exit to quit, /clear to clear history, /help for commands")
             console.print()
-            
+
             # Show previous messages if any
             if chat_session.messages:
                 console.print("[dim]--- Previous conversation ---[/dim]")
@@ -378,17 +401,17 @@ def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown:
                         console.print(f"[bold green]AI:[/bold green] {msg.content}")
                 console.print("[dim]--- Continue conversation ---[/dim]")
                 console.print()
-                
+
             while True:
                 try:
                     user_input = click.prompt("You", type=str, prompt_suffix=": ")
                 except (EOFError, KeyboardInterrupt):
                     console.print("\n[yellow]Chat session ended.[/yellow]")
                     break
-                
+
                 if not user_input.strip():
                     continue
-                
+
                 # Handle chat commands
                 if user_input.startswith("/"):
                     if user_input in ["/exit", "/quit"]:
@@ -414,17 +437,17 @@ def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown:
                     else:
                         console.print(f"[red]Unknown command: {user_input}[/red]")
                         continue
-                
+
                 # Add user message to session
                 session_manager.add_message(chat_session, "user", user_input)
-                
+
                 try:
                     # Get AI response
                     response = api_chat_session.ask(user_input)
-                    
+
                     # Display response
                     console.print(f"[bold green]AI:[/bold green] {response}")
-                    
+
                     # Add AI response to session
                     session_manager.add_message(
                         chat_session,
@@ -432,10 +455,10 @@ def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown:
                         str(response),
                         model=response.model if hasattr(response, "model") else None,
                     )
-                    
+
                 except Exception as e:
                     console.print(f"[red]Error: {e}[/red]")
-                    
+
     except (EOFError, KeyboardInterrupt):
         # Normal exit, don't show error
         pass
@@ -484,7 +507,7 @@ def on_config_list(show_secrets: bool):
     """Hook for 'config list' subcommand."""
     config_manager = ConfigManager()
     merged_config = config_manager.get_merged_config()
-    
+
     # Mask sensitive values unless show_secrets is True
     if not show_secrets:
         def mask_sensitive(obj, key=None):
@@ -496,36 +519,36 @@ def on_config_list(show_secrets: bool):
                 return "***" if obj else None
             else:
                 return obj
-        
+
         merged_config = mask_sensitive(merged_config)
-    
+
     click.echo(json_module.dumps(merged_config, indent=2))
 
 
 def on_export(session: str, format: str, output: Optional[str], include_metadata: bool):
     """Hook for 'export' command."""
     session_manager = ChatSessionManager()
-    
+
     # Load session
     chat_session = session_manager.load_session(session)
     if not chat_session:
         click.echo(f"Error: Session '{session}' not found", err=True)
         sys.exit(1)
-    
+
     # Export data
     export_data = {
         "session_id": chat_session.id,
         "created_at": chat_session.created_at.isoformat() if hasattr(chat_session, 'created_at') else None,
         "messages": chat_session.messages
     }
-    
+
     if include_metadata:
         export_data["metadata"] = {
             "model": getattr(chat_session, 'model', None),
             "system_prompt": getattr(chat_session, 'system_prompt', None),
             "tools": getattr(chat_session, 'tools', None),
         }
-    
+
     # Format output
     if format == 'json':
         output_text = json_module.dumps(export_data, indent=2)
@@ -540,10 +563,10 @@ def on_export(session: str, format: str, output: Optional[str], include_metadata
         output_text = f"# Chat Session: {session}\n\n"
         if include_metadata:
             output_text += f"**Model**: {export_data['metadata']['model']}\n\n"
-        
+
         for msg in export_data['messages']:
             output_text += f"## {msg['role'].capitalize()}\n\n{msg['content']}\n\n"
-    
+
     # Write output
     if output:
         Path(output).write_text(output_text)
@@ -557,7 +580,7 @@ def on_tools_enable(tool_name: str):
     config_manager = ConfigManager()
     merged_config = config_manager.get_merged_config()
     disabled_tools = merged_config.get("tools", {}).get("disabled", [])
-    
+
     if tool_name in disabled_tools:
         disabled_tools.remove(tool_name)
         config_manager.set_value("tools.disabled", disabled_tools)
@@ -571,7 +594,7 @@ def on_tools_disable(tool_name: str):
     config_manager = ConfigManager()
     merged_config = config_manager.get_merged_config()
     disabled_tools = merged_config.get("tools", {}).get("disabled", [])
-    
+
     if tool_name not in disabled_tools:
         disabled_tools.append(tool_name)
         config_manager.set_value("tools.disabled", disabled_tools)
@@ -583,13 +606,13 @@ def on_tools_disable(tool_name: str):
 def on_tools_list(show_disabled: bool):
     """Hook for 'tools list' subcommand."""
     from ttt.tools import list_tools
-    
+
     config_manager = ConfigManager()
     merged_config = config_manager.get_merged_config()
     disabled_tools = merged_config.get("tools", {}).get("disabled", [])
-    
+
     tools = list_tools()
-    
+
     console.print("\n[bold]Available Tools:[/bold]")
     for tool in tools:
         status = "[red]disabled[/red]" if tool.name in disabled_tools else "[green]enabled[/green]"
@@ -602,12 +625,12 @@ def on_tools_list(show_disabled: bool):
 def show_models_list(json_output: bool = False) -> None:
     """Show list of available models."""
     from ttt.config import get_model_registry
-    
+
     try:
         model_registry = get_model_registry()
         model_names = model_registry.list_models()
         models = [model_registry.get_model(name) for name in model_names if model_registry.get_model(name)]
-        
+
         if json_output:
             models_data = []
             for model in models:
@@ -625,14 +648,14 @@ def show_models_list(json_output: bool = False) -> None:
             click.echo(json_module.dumps(models_data))
         else:
             from rich.table import Table
-            
+
             table = Table(title="Available Models")
             table.add_column("Model Name", style="cyan")
             table.add_column("Provider", style="magenta")
             table.add_column("Speed", style="green")
             table.add_column("Quality", style="yellow")
             table.add_column("Context", style="blue")
-            
+
             for model in models:
                 context_str = f"{model.context_length:,}" if model.context_length else "N/A"
                 table.add_row(
@@ -642,7 +665,7 @@ def show_models_list(json_output: bool = False) -> None:
                     model.quality,
                     context_str,
                 )
-            
+
             console.print(table)
     except Exception as e:
         if json_output:
@@ -655,14 +678,14 @@ def show_models_list(json_output: bool = False) -> None:
 def show_model_info(model_name: str, json_output: bool = False) -> None:
     """Show detailed information about a specific model."""
     from ttt.config import get_model_registry
-    
+
     try:
         model_registry = get_model_registry()
         model = model_registry.get_model(model_name)
-        
+
         if not model:
             raise ValueError(f"Model '{model_name}' not found")
-            
+
         if json_output:
             model_data = {
                 "name": model.name,
@@ -682,16 +705,16 @@ def show_model_info(model_name: str, json_output: bool = False) -> None:
             console.print(f"Provider Name: {model.provider_name}")
             console.print(f"Speed: {model.speed}")
             console.print(f"Quality: {model.quality}")
-            
+
             if model.context_length:
                 console.print(f"Context Length: {model.context_length:,} tokens")
-            
+
             if model.cost_per_token:
                 console.print(f"Cost per Token: ${model.cost_per_token:.6f}")
-            
+
             if model.aliases:
                 console.print(f"Aliases: {', '.join(model.aliases)}")
-            
+
             if model.capabilities:
                 console.print(f"Capabilities: {', '.join(model.capabilities)}")
     except Exception as e:
@@ -705,7 +728,7 @@ def show_model_info(model_name: str, json_output: bool = False) -> None:
 def show_backend_status(json_output: bool = False) -> None:
     """Show backend status."""
     status_data: Dict[str, Any] = {"backends": {}}
-    
+
     # Check local backend
     try:
         import ttt.backends.local as local_module
@@ -727,12 +750,10 @@ def show_backend_status(json_output: bool = False) -> None:
             "available": False,
             "error": str(e),
         }
-    
+
     # Check cloud backend
     try:
-        import ttt.backends.cloud as cloud_module
-        cloud = cloud_module.CloudBackend()
-        
+
         # Check API keys
         api_keys = {
             "openrouter": bool(os.getenv("OPENROUTER_API_KEY")),
@@ -740,7 +761,7 @@ def show_backend_status(json_output: bool = False) -> None:
             "anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
             "google": bool(os.getenv("GOOGLE_API_KEY")),
         }
-        
+
         cloud_status = {
             "available": any(api_keys.values()),
             "type": "cloud",
@@ -752,45 +773,45 @@ def show_backend_status(json_output: bool = False) -> None:
             "available": False,
             "error": str(e),
         }
-    
+
     # Add overall status
     status_data["healthy"] = any(
         backend.get("available", False) for backend in status_data["backends"].values()
     )
-    
+
     if json_output:
         click.echo(json_module.dumps(status_data))
     else:
         console.print("\n[bold]TTT System Status[/bold]\n")
-        
+
         # Local backend
         local_status = status_data["backends"]["local"]
         if local_status["available"]:
-            console.print(f"✅ Local Backend (Ollama): [green]Available[/green]")
+            console.print("✅ Local Backend (Ollama): [green]Available[/green]")
             console.print(f"   URL: {local_status['url']}")
             console.print(f"   Models: {local_status.get('models', 0)}")
         else:
-            console.print(f"❌ Local Backend (Ollama): [red]Not Available[/red]")
+            console.print("❌ Local Backend (Ollama): [red]Not Available[/red]")
             if "error" in local_status:
                 console.print(f"   Error: {local_status['error']}")
-        
+
         console.print()
-        
+
         # Cloud backend
         cloud_status = status_data["backends"]["cloud"]
         if cloud_status["available"]:
-            console.print(f"✅ Cloud Backend: [green]Available[/green]")
+            console.print("✅ Cloud Backend: [green]Available[/green]")
             console.print("   API Keys:")
             for provider, has_key in cloud_status["api_keys"].items():
                 status = "[green]✓[/green]" if has_key else "[red]✗[/red]"
                 console.print(f"     {status} {provider}")
         else:
-            console.print(f"❌ Cloud Backend: [red]Not Available[/red]")
+            console.print("❌ Cloud Backend: [red]Not Available[/red]")
             if "error" in cloud_status:
                 console.print(f"   Error: {cloud_status['error']}")
-        
+
         console.print()
-        
+
         # Overall status
         if status_data["healthy"]:
             console.print("🎉 [bold green]System is ready to use![/bold green]")

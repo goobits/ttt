@@ -18,6 +18,11 @@ dependencies:
   optional:
     - curl  # For downloading models
     - wget  # Alternative to curl
+  development:
+    - ruff    # Modern Python linter and formatter
+    - mypy    # Static type checker
+    - black   # Code formatter
+    - pytest  # Testing framework
 
 installation:
   pypi_name: "goobits-ttt"

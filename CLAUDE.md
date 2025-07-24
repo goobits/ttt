@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Information
+
+**Package**: `goobits-ttt` (PyPI) | **Command**: `ttt` | **Version**: 1.0.0rc4 | **Python**: 3.8+
+
 ## Development Commands
 
 ### Test Commands
@@ -13,9 +17,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `./test.sh --markers "not slow"` - Skip slow tests
 
 ### Linting and Code Quality
-- `ruff src/ttt/ tests/` - Run ruff linter (install with: `pip install ruff`)
-- `black src/ttt/ tests/` - Format code with black (install with: `pip install black`)
-- `mypy src/ttt/` - Type checking (install with: `pip install mypy`)
+- `ruff src/ttt/ tests/` - Run ruff linter
+- `black src/ttt/ tests/` - Format code
+- `mypy src/ttt/` - Type checking
 
 ### Installation and Setup
 - `./setup.sh install` - Install with pipx (for end users)
@@ -40,7 +44,7 @@ This is a unified AI library that provides both CLI and Python API access to mul
 ```
 CLI Interface / Python API
          ↓
-    Backend Abstraction Layer (ai/backends/)
+    Backend Abstraction Layer (src/ttt/backends/)
          ↓
     AI Providers (OpenRouter, OpenAI, Anthropic, Google, Ollama)
 ```
@@ -91,74 +95,31 @@ CLI Interface / Python API
 - `src/ttt/exceptions.py` - Custom exception classes
 
 **Supporting:**
-- `src/ttt/chat.py` - Chat session management  
-- `src/ttt/plugins.py` - Plugin system for extensions
+- `src/ttt/cli.py` - Auto-generated CLI entry point
+- `src/ttt/app_hooks.py` - Custom CLI hooks and formatters
 - `config.yaml` - Default configuration with model registry
 
-## Testing Patterns
+## Testing
 
-### Test Structure
-- **Unit Tests**: Free, mocked, no API costs (default)
-- **Integration Tests**: Real API calls, costs money, requires API keys
-- **Rate Limiting**: Automatic delays between API calls in integration tests
+### IMPORTANT: Test Execution
 
-### Key Test Files
-- `tests/test_builtin_tools.py` - Tool testing with security validation
-- `tests/test_local_backend.py` - Backend testing with httpx mocking
-- `tests/test_modern_cli.py` - CLI testing with Click's CliRunner
-- `tests/test_integration.py` - Integration tests with real APIs
+**Always use `./test.sh` for tests** - DO NOT run `pytest` directly for integration tests as it bypasses critical rate limiting.
 
-### Test Execution Tips
-- Always run unit tests first before integration tests
-- Use `--markers "not slow"` to skip time-intensive tests
-- Integration tests require API keys and will prompt for confirmation
-- Rate limiting is built into integration tests via conftest.py
+```bash
+# Unit tests (default, free, fast)
+./test.sh                      # Run unit tests
+./test.sh unit --coverage      # With coverage report
 
-### IMPORTANT: Proper Test Execution
+# Integration tests (costs money, requires API keys)
+source .env && export OPENROUTER_API_KEY
+./test.sh integration          # Will prompt for confirmation
+./test.sh integration --force  # Skip confirmation
 
-**DO NOT run tests directly with `pytest` for integration tests!** The test suite has built-in rate limiting that must be used properly.
+# Custom rate limiting for strict APIs
+OPENROUTER_RATE_DELAY=2.0 ./test.sh integration --force
+```
 
-#### Correct Way to Run Tests:
-
-1. **Unit Tests (recommended for development)**:
-   ```bash
-   ./test.sh unit              # Run all unit tests
-   ./test.sh                   # Same as above (unit is default)
-   ./test.sh unit --coverage   # With coverage report
-   ```
-
-2. **Integration Tests (requires API keys)**:
-   ```bash
-   # First export API keys from .env if needed
-   source .env && export OPENROUTER_API_KEY
-   
-   # Run with built-in delays
-   ./test.sh integration       # Will prompt for confirmation
-   ./test.sh integration --force  # Skip confirmation
-   
-   # With custom delay (recommended for rate-limited APIs)
-   OPENROUTER_RATE_DELAY=2.0 ./test.sh integration --force
-   ```
-
-3. **All Tests**:
-   ```bash
-   ./test.sh all               # Runs unit tests first, then integration
-   ```
-
-#### Why Use test.sh:
-- Checks for required dependencies (pytest-asyncio)
-- Validates API keys before running integration tests
-- Applies proper rate limiting via conftest.py fixtures
-- Uses correct pytest markers to separate test types
-- Provides cost warnings for integration tests
-
-#### Rate Limiting Configuration:
-The test suite uses these default delays (configurable via environment variables):
-- `OPENROUTER_RATE_DELAY=1.0` (1 second between OpenRouter calls)
-- `OPENAI_RATE_DELAY=0.5` (0.5 seconds between OpenAI calls)
-- `ANTHROPIC_RATE_DELAY=0.5` (0.5 seconds between Anthropic calls)
-
-Integration tests use special fixtures (`delayed_ask`, `delayed_stream`, `delayed_chat`) that automatically apply these delays to prevent rate limiting errors.
+The test.sh script ensures proper rate limiting, validates API keys, and separates test types to prevent unexpected costs.
 
 ## Configuration
 
@@ -176,28 +137,22 @@ Integration tests use special fixtures (`delayed_ask`, `delayed_stream`, `delaye
 - `OLLAMA_BASE_URL` - Local Ollama URL (default: http://localhost:11434)
 
 ### Configuration Files
-- `config.yaml` - Default configuration
-- `~/.config/ttt/config.yaml` - User configuration
-- `.env` - Environment variables and API keys
+The library searches for configuration in this order:
+1. `./ttt.yaml` or `./ttt.yml` - Project-specific config
+2. `./.ttt.yaml` or `./.ttt.yml` - Hidden project config
+3. `~/.config/ttt/config.yaml` or `~/.config/ttt/config.yml` - User config
+4. `~/.ttt.yaml` or `~/.ttt.yml` - Hidden user config
+5. `config.yaml` - Default configuration (built-in)
+6. `.env` - Environment variables and API keys
 
 ## Development Guidelines
 
 ### Code Style
 - Black formatting (line length: 88)
-- Ruff linting with pycodestyle, pyflakes, isort
+- Ruff linting (checks: E, W, F, I, B, C4, UP; ignores: E501, B008, C901)
 - MyPy type checking (strict mode)
 - Follow existing patterns in similar files
 
-### Error Handling
-- Custom exceptions in `src/ttt/exceptions.py`
-- User-friendly error messages with actionable suggestions
-- Graceful degradation with provider fallbacks
-
-### Testing Requirements
-- Unit tests for all new functionality
-- Integration tests for API-dependent features
-- Mock external dependencies (httpx, API calls)
-- Test edge cases and error conditions
 
 ### Tool Development
 - Use `@tool` decorator from `src/ttt/tools/base.py`
@@ -207,3 +162,32 @@ Integration tests use special fixtures (`delayed_ask`, `delayed_stream`, `delaye
 
 ### Temporary Files
 When creating temporary debug or test scripts, use `/tmp` directory to keep the project clean.
+
+## Built-in Tools
+
+The project includes these built-in tools (in `src/ttt/tools/builtins.py`):
+- `web_search` - Search the web for information
+- `read_file` - Read contents of a file
+- `write_file` - Write content to a file
+- `list_directory` - List files in a directory
+- `run_python` - Execute Python code safely
+- `get_current_time` - Get current time in any timezone
+- `http_request` - Make HTTP API requests
+- `calculate` - Perform mathematical calculations
+
+## Plugin System
+
+Plugin discovery locations (in order):
+1. `~/.config/ttt/plugins/`
+2. `~/.ai/plugins/`
+3. `./ai_plugins/`
+4. Built-in plugins directory
+
+Plugins must have a `register_plugin(registry)` function.
+
+## CLI Generation
+
+The project uses a unique CLI generation system:
+- `src/ttt/cli.py` - Auto-generated from goobits.yaml
+- `src/ttt/app_hooks.py` - Custom formatters and hooks
+- Generation occurs via goobits build command during development

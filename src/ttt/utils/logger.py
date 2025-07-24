@@ -1,14 +1,14 @@
 """Logging utilities using rich for beautiful terminal output."""
 
 import logging
+
+# Check for JSON mode early and configure accordingly
+import os
 from typing import Optional
 
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.traceback import install
-
-# Check for JSON mode early and configure accordingly
-import os
 
 _json_mode = os.environ.get("TTT_JSON_MODE", "").lower() == "true"
 

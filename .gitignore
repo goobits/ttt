@@ -29,6 +29,7 @@ ENV/
 .venv/
 env.bak/
 venv.bak/
+.dev_venv/
 
 # IDEs
 .vscode/
@@ -79,6 +80,11 @@ tmp/
 # AI/LLM data
 data/
 *.jsonl
+
+# Root-level generated files (should not be committed)
+/cli.py
+tests/generated_cli.py
+*.bak
 
 # Project specific - TTT
 setup-config.yaml
