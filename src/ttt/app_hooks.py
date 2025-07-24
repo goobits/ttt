@@ -202,7 +202,7 @@ def apply_coding_optimization(kwargs: Dict[str, Any]) -> None:
 # Main hook functions
 
 def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
-           max_tokens: Optional[int], tools: bool, session: Optional[str], stream: bool, json: bool):
+           max_tokens: Optional[int], tools: bool, session: Optional[str], system: Optional[str], stream: bool, json: bool):
     """Hook for 'ask' command."""
     # Parse provider shortcuts from prompt arguments
     prompt_list = list(prompt) if prompt else []
@@ -288,6 +288,8 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
         kwargs["tools"] = None  # Enable all tools
     if session:
         kwargs["session_id"] = session
+    if system:
+        kwargs["system"] = system
 
     try:
         if json:
@@ -299,7 +301,8 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
                 "temperature": kwargs.get("temperature"),
                 "max_tokens": kwargs.get("max_tokens"),
                 "tools_enabled": kwargs.get("tools") is not None,
-                "session_id": kwargs.get("session_id")
+                "session_id": kwargs.get("session_id"),
+                "system": kwargs.get("system")
             }
             click.echo(json_module.dumps(output, indent=2))
         elif stream:

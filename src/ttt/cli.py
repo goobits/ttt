@@ -91,6 +91,10 @@ def load_plugins(cli_group):
             if plugin_file.name.startswith("_"):
                 continue
                 
+            # Skip core system files that aren't plugins
+            if plugin_file.name in ["loader.py", "__init__.py"]:
+                continue
+                
             plugin_name = plugin_file.stem
             
             try:
@@ -261,6 +265,14 @@ def show_help_json(ctx, param, value):
           "short": "s",
           "type": "str",
           "desc": "Session ID for context",
+          "default": null,
+          "choices": null
+        },
+        {
+          "name": "system",
+          "short": null,
+          "type": "str",
+          "desc": "System prompt to set AI behavior",
           "default": null,
           "choices": null
         },
@@ -673,18 +685,62 @@ class DefaultGroup(RichGroup):
         super().__init__(*args, **kwargs)
         self.default_command = default
     
+    def main(self, *args, **kwargs):
+        """Override main to handle stdin input when no command is provided."""
+        import sys
+        import os
+        import stat
+        
+        # Check if we need to inject the default command due to stdin input
+        if len(sys.argv) == 1 and self.default_command:  # Only script name provided
+            # Check if stdin is coming from a pipe or redirection
+            has_stdin = False
+            try:
+                # Check if stdin is a pipe or file (not a terminal)
+                stdin_stat = os.fstat(sys.stdin.fileno())
+                has_stdin = stat.S_ISFIFO(stdin_stat.st_mode) or stat.S_ISREG(stdin_stat.st_mode)
+            except:
+                # Fallback to isatty check
+                has_stdin = not sys.stdin.isatty()
+            
+            if has_stdin:
+                # Inject the default command into sys.argv
+                sys.argv.append(self.default_command)
+        
+        return super().main(*args, **kwargs)
+    
     def resolve_command(self, ctx, args):
+        import sys
+        import os
+        
         try:
             # Try normal command resolution first
             return super().resolve_command(ctx, args)
         except click.UsageError:
             # If no command found and we have a default, use it
-            if self.default_command and args and not any(arg in ['--help-all', '--help-json'] for arg in args):
-                # Get the default command object
-                cmd = self.commands.get(self.default_command)
-                if cmd:
-                    # Return command name, command object, and all args
-                    return self.default_command, cmd, args
+            # Check if stdin is coming from a pipe or redirection
+            has_stdin = False
+            try:
+                # Check if stdin is a pipe or file (not a terminal)
+                stdin_stat = os.fstat(sys.stdin.fileno())
+                # Use S_ISFIFO to check if it's a pipe, or S_ISREG to check if it's a regular file
+                import stat
+                has_stdin = stat.S_ISFIFO(stdin_stat.st_mode) or stat.S_ISREG(stdin_stat.st_mode)
+            except Exception as e:
+                # Fallback to isatty check
+                has_stdin = not sys.stdin.isatty()
+            
+            is_help_request = any(arg in ['--help-all', '--help-json'] for arg in args)
+            
+            if self.default_command and not is_help_request:
+                # Trigger default command if:
+                # 1. We have args (existing behavior)
+                # 2. We have stdin input (new behavior for pipes)
+                if args or has_stdin:
+                    cmd = self.commands.get(self.default_command)
+                    if cmd:
+                        # Return command name, command object, and all args
+                        return self.default_command, cmd, args
             raise
 
 
@@ -788,8 +844,7 @@ click.rich_click.COMMAND_GROUPS = {
 
 @click.argument(
     "PROMPT",
-    nargs=-1,
-    required=True
+    nargs=-1
 )
 
 
@@ -820,6 +875,11 @@ click.rich_click.COMMAND_GROUPS = {
     help="Session ID for context"
 )
 
+@click.option("--system",
+    type=str,
+    help="System prompt to set AI behavior"
+)
+
 @click.option("--stream",
     type=bool,
     default=True,
@@ -831,7 +891,7 @@ click.rich_click.COMMAND_GROUPS = {
     help="Output response in JSON format"
 )
 
-def ask(prompt, model, temperature, max_tokens, tools, session, stream, json):
+def ask(prompt, model, temperature, max_tokens, tools, session, system, stream, json):
     """💬 Quickly ask one-off questions"""
     # Check if hook function exists
     hook_name = f"on_ask"
@@ -839,7 +899,7 @@ def ask(prompt, model, temperature, max_tokens, tools, session, stream, json):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
         
-        result = hook_func(prompt, model, temperature, max_tokens, tools, session, stream, json)
+        result = hook_func(prompt, model, temperature, max_tokens, tools, session, system, stream, json)
         
         return result
     else:
@@ -861,6 +921,8 @@ def ask(prompt, model, temperature, max_tokens, tools, session, stream, json):
         click.echo(f"  tools: {tools}")
         
         click.echo(f"  session: {session}")
+        
+        click.echo(f"  system: {system}")
         
         click.echo(f"  stream: {stream}")
         
