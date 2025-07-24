@@ -74,7 +74,7 @@ def load_plugins(cli_group):
     # Define plugin directories to search
     plugin_dirs = [
         # User-specific plugin directory
-        Path.home() / ".config" / "goobits" / "TTT CLI" / "plugins",
+        Path.home() / ".config" / "goobits" / "GOOBITS TTT CLI" / "plugins",
         # Local plugin directory (same as script)
         Path(__file__).parent / "plugins",
     ]
@@ -191,10 +191,10 @@ class DefaultGroup(RichGroup):
 
 @click.group(cls=DefaultGroup, default='ask', context_settings={"help_option_names": ["-h", "--help"], "max_content_width": 120})
 
-@click.version_option(version=get_version(), prog_name="TTT CLI")
+@click.version_option(version=get_version(), prog_name="GOOBITS TTT CLI")
 @click.pass_context
 def main(ctx):
-    """🤖  [bold color(6)]TTT CLI v1.0.0[/bold color(6)] - Talk to Transformer
+    """🤖 [bold color(6)]GOOBITS TTT CLI v1.0.0[/bold color(6)] - Talk to Transformer
 
     
     \b
@@ -211,7 +211,7 @@ def main(ctx):
 
     
     \b
-    [bold yellow]🔑 First-time Setup:[/bold yellow]
+    [bold yellow]🔑 Initial Setup:[/bold yellow]
     
        \b    1. See providers:    [color(2)]ttt providers[/color(2)]
     
@@ -301,15 +301,20 @@ click.rich_click.COMMAND_GROUPS = {
     help="Stream the response"
 )
 
-def ask(prompt, model, temperature, max_tokens, tools, session, stream):
-    """💬  Quickly ask one-off questions"""
+@click.option("--json",
+    is_flag=True,
+    help="Output response in JSON format"
+)
+
+def ask(prompt, model, temperature, max_tokens, tools, session, stream, json):
+    """💬 Quickly ask one-off questions"""
     # Check if hook function exists
     hook_name = f"on_ask"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
         
-        result = hook_func(prompt, model, temperature, max_tokens, tools, session, stream)
+        result = hook_func(prompt, model, temperature, max_tokens, tools, session, stream, json)
         
         return result
     else:
@@ -333,6 +338,8 @@ def ask(prompt, model, temperature, max_tokens, tools, session, stream):
         click.echo(f"  session: {session}")
         
         click.echo(f"  stream: {stream}")
+        
+        click.echo(f"  json: {json}")
         
         
 
@@ -365,7 +372,7 @@ def ask(prompt, model, temperature, max_tokens, tools, session, stream):
 )
 
 def chat(model, session, tools, markdown):
-    """💬  Chat interactively with AI"""
+    """💬 Chat interactively with AI"""
     # Check if hook function exists
     hook_name = f"on_chat"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -415,7 +422,7 @@ def chat(model, session, tools, markdown):
 )
 
 def list(resource, format, verbose):
-    """📜  See available resources"""
+    """📜 See available resources"""
     # Check if hook function exists
     hook_name = f"on_list"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -447,20 +454,29 @@ def list(resource, format, verbose):
 @main.command()
 
 
-def status():
-    """✅  Verify system and API health"""
+@click.option("--json",
+    is_flag=True,
+    help="Output status in JSON format"
+)
+
+def status(json):
+    """✅ Verify system and API health"""
     # Check if hook function exists
     hook_name = f"on_status"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
         
-        result = hook_func()
+        result = hook_func(json)
         
         return result
     else:
         # Default placeholder behavior
         click.echo(f"Executing status command...")
+        
+        
+        
+        click.echo(f"  json: {json}")
         
         
 
@@ -470,20 +486,29 @@ def status():
 @main.command()
 
 
-def models():
-    """🧠  View AI models"""
+@click.option("--json",
+    is_flag=True,
+    help="Output models in JSON format"
+)
+
+def models(json):
+    """🧠 View AI models"""
     # Check if hook function exists
     hook_name = f"on_models"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
         
-        result = hook_func()
+        result = hook_func(json)
         
         return result
     else:
         # Default placeholder behavior
         click.echo(f"Executing models command...")
+        
+        
+        
+        click.echo(f"  json: {json}")
         
         
 
@@ -497,7 +522,12 @@ def models():
 )
 
 
-def info(model):
+@click.option("--json",
+    is_flag=True,
+    help="Output model info in JSON format"
+)
+
+def info(model, json):
     """ℹ️  Detailed model information"""
     # Check if hook function exists
     hook_name = f"on_info"
@@ -505,7 +535,7 @@ def info(model):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
         
-        result = hook_func(model)
+        result = hook_func(model, json)
         
         return result
     else:
@@ -515,6 +545,10 @@ def info(model):
         
         click.echo(f"  model: {model}")
         
+        
+        
+        
+        click.echo(f"  json: {json}")
         
         
 
@@ -546,7 +580,7 @@ def info(model):
 )
 
 def export(session, format, output, include_metadata):
-    """💾  Save your chat history"""
+    """💾 Save your chat history"""
     # Check if hook function exists
     hook_name = f"on_export"
     if app_hooks and hasattr(app_hooks, hook_name):

@@ -65,7 +65,7 @@ messages:
 
 # CLI fields for cli.py generation
 cli:
-  name: "TTT CLI"
+  name: "GOOBITS TTT CLI"
   version: "1.0.0"
   display_version: true
   tagline: "Talk to Transformer"
@@ -140,6 +140,9 @@ cli:
           type: "bool"
           desc: "Stream the response"
           default: true
+        - name: "json"
+          type: "flag"
+          desc: "Output response in JSON format"
     
     chat:
       desc: "Chat interactively with AI"
@@ -185,10 +188,18 @@ cli:
     status:
       desc: "Verify system and API health"
       icon: "✅"
+      options:
+        - name: "json"
+          type: "flag"
+          desc: "Output status in JSON format"
     
     models:
       desc: "View AI models"
       icon: "🧠"
+      options:
+        - name: "json"
+          type: "flag"
+          desc: "Output models in JSON format"
     
     info:
       desc: "Detailed model information"
@@ -196,6 +207,10 @@ cli:
       args:
         - name: "model"
           desc: "Model name"
+      options:
+        - name: "json"
+          type: "flag"
+          desc: "Output model info in JSON format"
     
     export:
       desc: "Save your chat history"

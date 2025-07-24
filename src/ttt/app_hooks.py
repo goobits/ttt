@@ -3,7 +3,7 @@
 
 import os
 import sys
-import json
+import json as json_module
 import warnings
 from typing import Optional, Tuple, List, Dict, Any
 import rich_click as click
@@ -200,13 +200,13 @@ def apply_coding_optimization(kwargs: Dict[str, Any]) -> None:
 # Main hook functions
 
 def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float, 
-           max_tokens: Optional[int], tools: bool, session: Optional[str], stream: bool):
+           max_tokens: Optional[int], tools: bool, session: Optional[str], stream: bool, json: bool):
     """Hook for 'ask' command."""
     # Join prompt tuple into a single string
     prompt_text = " ".join(prompt) if prompt else None
     
     # Setup logging
-    setup_logging_level()
+    setup_logging_level(json_output=json)
     
     # Handle missing prompt
     if prompt_text is None and sys.stdin.isatty():
@@ -227,7 +227,7 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
             sys.exit(1)
         
         try:
-            json_input = json.loads(stdin_content)
+            json_input = json_module.loads(stdin_content)
             prompt_text = (
                 json_input.get("prompt")
                 or json_input.get("query")
@@ -245,7 +245,7 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
                     temperature = json_input.get("temperature")
                 if not max_tokens and json_input.get("max_tokens"):
                     max_tokens = json_input.get("max_tokens")
-        except json.JSONDecodeError:
+        except json_module.JSONDecodeError:
             prompt_text = stdin_content
     elif prompt_text and stdin_content:
         prompt_text = f"{prompt_text}\n\nInput data:\n{stdin_content}"
@@ -272,14 +272,34 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
         kwargs["session_id"] = session
     
     try:
-        if stream:
+        if json:
+            # JSON output mode - collect response and format as JSON
+            response = ttt_ask(prompt_text, **kwargs)
+            output = {
+                "response": str(response).strip(),
+                "model": kwargs.get("model"),
+                "temperature": kwargs.get("temperature"),
+                "max_tokens": kwargs.get("max_tokens"),
+                "tools_enabled": kwargs.get("tools") is not None,
+                "session_id": kwargs.get("session_id")
+            }
+            click.echo(json_module.dumps(output, indent=2))
+        elif stream:
             for chunk in ttt_stream(prompt_text, **kwargs):
                 click.echo(chunk, nl=False)
         else:
             response = ttt_ask(prompt_text, **kwargs)
-            click.echo(str(response).rstrip())
+            click.echo(str(response).strip())
     except Exception as e:
-        click.echo(f"Error: {e}", err=True)
+        if json:
+            error_output = {
+                "error": str(e),
+                "model": kwargs.get("model"),
+                "parameters": kwargs
+            }
+            click.echo(json_module.dumps(error_output, indent=2), err=True)
+        else:
+            click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
 
@@ -433,7 +453,7 @@ def on_list(resource: str, format: str, verbose: bool):
         session_manager = ChatSessionManager()
         if format == 'json':
             sessions = session_manager.list_sessions()
-            click.echo(json.dumps(sessions))
+            click.echo(json_module.dumps(sessions))
         else:
             session_manager.display_sessions_table()
     elif resource == 'tools':
@@ -441,7 +461,7 @@ def on_list(resource: str, format: str, verbose: bool):
         tools = list_tools()
         if format == 'json':
             tools_data = [{"name": t.name, "description": t.description} for t in tools]
-            click.echo(json.dumps(tools_data))
+            click.echo(json_module.dumps(tools_data))
         else:
             console.print("\n[bold]Available Tools:[/bold]")
             for tool in tools:
@@ -479,7 +499,7 @@ def on_config_list(show_secrets: bool):
         
         merged_config = mask_sensitive(merged_config)
     
-    click.echo(json.dumps(merged_config, indent=2))
+    click.echo(json_module.dumps(merged_config, indent=2))
 
 
 def on_export(session: str, format: str, output: Optional[str], include_metadata: bool):
@@ -508,7 +528,7 @@ def on_export(session: str, format: str, output: Optional[str], include_metadata
     
     # Format output
     if format == 'json':
-        output_text = json.dumps(export_data, indent=2)
+        output_text = json_module.dumps(export_data, indent=2)
     elif format == 'yaml':
         try:
             import yaml
@@ -602,7 +622,7 @@ def show_models_list(json_output: bool = False) -> None:
                     "aliases": model.aliases,
                 }
                 models_data.append(model_data)
-            click.echo(json.dumps(models_data))
+            click.echo(json_module.dumps(models_data))
         else:
             from rich.table import Table
             
@@ -627,7 +647,7 @@ def show_models_list(json_output: bool = False) -> None:
     except Exception as e:
         if json_output:
             error_output = {"error": str(e)}
-            click.echo(json.dumps(error_output))
+            click.echo(json_module.dumps(error_output))
         else:
             console.print(f"[red]Error listing models: {e}[/red]")
 
@@ -655,7 +675,7 @@ def show_model_info(model_name: str, json_output: bool = False) -> None:
                 "aliases": model.aliases,
                 "capabilities": model.capabilities,
             }
-            click.echo(json.dumps(model_data))
+            click.echo(json_module.dumps(model_data))
         else:
             console.print(f"\n[bold]Model Information: {model.name}[/bold]")
             console.print(f"Provider: {model.provider}")
@@ -677,7 +697,7 @@ def show_model_info(model_name: str, json_output: bool = False) -> None:
     except Exception as e:
         if json_output:
             error_output = {"error": str(e)}
-            click.echo(json.dumps(error_output))
+            click.echo(json_module.dumps(error_output))
         else:
             console.print(f"[red]Error getting model info: {e}[/red]")
 
@@ -739,7 +759,7 @@ def show_backend_status(json_output: bool = False) -> None:
     )
     
     if json_output:
-        click.echo(json.dumps(status_data))
+        click.echo(json_module.dumps(status_data))
     else:
         console.print("\n[bold]TTT System Status[/bold]\n")
         
@@ -779,16 +799,16 @@ def show_backend_status(json_output: bool = False) -> None:
 
 
 # Add hook functions for missing commands that need to be added to CLI
-def on_status():
+def on_status(json: bool):
     """Hook for 'status' command."""
-    show_backend_status(json_output=False)
+    show_backend_status(json_output=json)
 
 
-def on_models():
+def on_models(json: bool):
     """Hook for 'models' command."""
-    show_models_list(json_output=False)
+    show_models_list(json_output=json)
 
 
-def on_info(model: str):
+def on_info(model: str, json: bool):
     """Hook for 'info' command."""
-    show_model_info(model, json_output=False)
+    show_model_info(model, json_output=json)
