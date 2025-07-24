@@ -65,7 +65,7 @@ validators = "^0.22.0"
 local = [ "httpx",]
 
 [tool.poetry.scripts]
-goobits-ttt = "cli:main"
+goobits-ttt = "ttt.generated_cli:cli_entry"
 ttt = "ttt.generated_cli:cli_entry"
 
 [tool.ruff.lint]

@@ -195,38 +195,43 @@ class DefaultGroup(RichGroup):
 @click.pass_context
 def main(ctx):
     """🤖 [bold color(6)]TTT CLI v1.0.0[/bold color(6)] - Talk to Transformer
+
     
     \b
     [#B3B8C0]A powerful AI assistant for your terminal that provides seamless access to multiple language models[/#B3B8C0]
     
+
+    
     \b
     [bold yellow]💡 Quick Start:[/bold yellow]
     
-    \b
-       [color(2)]ttt "What is the meaning of life?"[/color(2)]  [italic #B3B8C0]# Ask a question[/italic #B3B8C0]
-    \b
-       [color(2)]ttt chat[/color(2)]  [italic #B3B8C0]# Start interactive chat[/italic #B3B8C0]
-    \b
-       [color(2)]ttt list models[/color(2)]  [italic #B3B8C0]# List available models[/italic #B3B8C0]
-    \b
-       [color(2)]ttt config set model gpt-4[/color(2)]  [italic #B3B8C0]# Set the default model[/italic #B3B8C0]
+    
+       Ask a question:              [color(2)]ttt "What is the meaning of life?"[/color(2)]
+    
+       Start interactive chat:      [color(2)]ttt chat[/color(2)]
+    
+       List available models:       [color(2)]ttt list models[/color(2)]
+    
+       Set the default model:       [color(2)]ttt config set model gpt-4[/color(2)]
+    
+    
+
     
     \b
     [bold yellow]🔑 First-time Setup:[/bold yellow]
     
     
-       1. Check providers:     [color(2)]ttt providers[/color(2)]
+                                1. Set API keys:         [color(2)]export OPENROUTER_API_KEY='your-key-here'[/color(2)]
     
-       2. Set API keys:        [color(2)]export OPENROUTER_API_KEY='your-key-here'[/color(2)]
+                                2. Test connection:      [color(2)]ttt status[/color(2)]
     
-       3. Test connection:     [color(2)]ttt status[/color(2)]
-    
-       4. Start chatting:      [color(2)]ttt chat[/color(2)]
+                                3. Start chatting:       [color(2)]ttt chat[/color(2)]
     
     
     \b
     
-    [#B3B8C0]📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6][/#B3B8C0]"""
+       [#B3B8C0]📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6][/#B3B8C0]
+    """
     
     pass
 

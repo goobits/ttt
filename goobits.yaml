@@ -85,13 +85,11 @@ cli:
   
   setup_section_title: "🔑 First-time Setup"
   setup_steps:
-    - step: "1. Check providers"
-      cmd: "ttt providers"
-    - step: "2. Set API keys"
+    - step: "1. Set API keys"
       cmd: "export OPENROUTER_API_KEY='your-key-here'"
-    - step: "3. Test connection"
+    - step: "2. Test connection"
       cmd: "ttt status"
-    - step: "4. Start chatting"
+    - step: "3. Start chatting"
       cmd: "ttt chat"
   
   footer_note: "📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6]"
