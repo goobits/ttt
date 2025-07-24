@@ -204,28 +204,20 @@ def main(ctx):
     
     \b
     [bold yellow]💡 Quick Start:[/bold yellow]
-    
-    
-       Ask a question:              [color(2)]ttt "What is the meaning of life?"[/color(2)]
-    
-       Start interactive chat:      [color(2)]ttt chat[/color(2)]
-    
-       List available models:       [color(2)]ttt list models[/color(2)]
-    
-       Set the default model:       [color(2)]ttt config set model gpt-4[/color(2)]
-    
-    
+       [color(2)]ttt "What is the meaning of life?"    [/color(2)] [italic][#B3B8C0]# Ask a question[/#B3B8C0][/italic]
+       [color(2)]ttt chat                              [/color(2)] [italic][#B3B8C0]# Start interactive chat[/#B3B8C0][/italic]
+       [color(2)]ttt list models                       [/color(2)] [italic][#B3B8C0]# List available models[/#B3B8C0][/italic]
+       [color(2)]ttt config set model gpt-4            [/color(2)] [italic][#B3B8C0]# Set the default model[/#B3B8C0][/italic]
 
     
     \b
     [bold yellow]🔑 First-time Setup:[/bold yellow]
     
+       \b    1. Set API keys:      [color(2)]export OPENROUTER_API_KEY='your-key-here'[/color(2)]
     
-                                1. Set API keys:         [color(2)]export OPENROUTER_API_KEY='your-key-here'[/color(2)]
+       \b    2. Test connection:   [color(2)]ttt status[/color(2)]
     
-                                2. Test connection:      [color(2)]ttt status[/color(2)]
-    
-                                3. Start chatting:       [color(2)]ttt chat[/color(2)]
+       \b    3. Start chatting:    [color(2)]ttt chat[/color(2)]
     
     
     \b
