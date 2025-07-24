@@ -164,7 +164,7 @@ cli:
     
     list:
       desc: "See available resources"
-      icon: "📋"
+      icon: "📜"
       args:
         - name: "resource"
           desc: "Type of resource to list"
@@ -184,7 +184,7 @@ cli:
     
     status:
       desc: "Verify system and API health"
-      icon: "🩺"
+      icon: "✅"
     
     models:
       desc: "View AI models"
@@ -192,7 +192,7 @@ cli:
     
     info:
       desc: "Detailed model information"
-      icon: "ℹ️ "
+      icon: "ℹ️"
       args:
         - name: "model"
           desc: "Model name"
@@ -221,7 +221,7 @@ cli:
     
     config:
       desc: "Customize your setup"
-      icon: "⚙️ "
+      icon: "⚙️"
       subcommands:
         get:
           desc: "Get a configuration value"
@@ -245,7 +245,7 @@ cli:
     
     tools:
       desc: "Manage CLI tools and extensions"
-      icon: "🔧"
+      icon: "🛠️"
       subcommands:
         enable:
           desc: "Enable a tool"

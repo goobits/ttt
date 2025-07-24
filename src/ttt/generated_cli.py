@@ -194,7 +194,7 @@ class DefaultGroup(RichGroup):
 @click.version_option(version=get_version(), prog_name="TTT CLI")
 @click.pass_context
 def main(ctx):
-    """🤖 [bold color(6)]TTT CLI v1.0.0[/bold color(6)] - Talk to Transformer
+    """🤖  [bold color(6)]TTT CLI v1.0.0[/bold color(6)] - Talk to Transformer
 
     
     \b
@@ -302,7 +302,7 @@ click.rich_click.COMMAND_GROUPS = {
 )
 
 def ask(prompt, model, temperature, max_tokens, tools, session, stream):
-    """💬 Quickly ask one-off questions"""
+    """💬  Quickly ask one-off questions"""
     # Check if hook function exists
     hook_name = f"on_ask"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -365,7 +365,7 @@ def ask(prompt, model, temperature, max_tokens, tools, session, stream):
 )
 
 def chat(model, session, tools, markdown):
-    """💬 Chat interactively with AI"""
+    """💬  Chat interactively with AI"""
     # Check if hook function exists
     hook_name = f"on_chat"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -415,7 +415,7 @@ def chat(model, session, tools, markdown):
 )
 
 def list(resource, format, verbose):
-    """📋 See available resources"""
+    """📜  See available resources"""
     # Check if hook function exists
     hook_name = f"on_list"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -448,7 +448,7 @@ def list(resource, format, verbose):
 
 
 def status():
-    """🩺 Verify system and API health"""
+    """✅  Verify system and API health"""
     # Check if hook function exists
     hook_name = f"on_status"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -471,7 +471,7 @@ def status():
 
 
 def models():
-    """🧠 View AI models"""
+    """🧠  View AI models"""
     # Check if hook function exists
     hook_name = f"on_models"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -546,7 +546,7 @@ def info(model):
 )
 
 def export(session, format, output, include_metadata):
-    """💾 Save your chat history"""
+    """💾  Save your chat history"""
     # Check if hook function exists
     hook_name = f"on_export"
     if app_hooks and hasattr(app_hooks, hook_name):
@@ -681,7 +681,7 @@ def list(show_secrets):
 
 @main.group()
 def tools():
-    """🔧 Manage CLI tools and extensions"""
+    """🛠️  Manage CLI tools and extensions"""
     pass
 
 
