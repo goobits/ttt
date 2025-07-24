@@ -248,7 +248,7 @@ class ImageInput:
 
             # Try to get mime types from config
             try:
-                from .config import load_project_defaults
+                from ..config.loader import load_project_defaults
 
                 project_defaults = load_project_defaults()
                 default_mime_types = {

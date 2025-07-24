@@ -23,9 +23,9 @@ class ConfigManager:
         # Try multiple locations for default config
         possible_config_paths = [
             Path(__file__).parent
-            / "config.yaml",  # Installed in ttt package (preferred)
-            Path(__file__).parent.parent / "config.yaml",  # Development
-            Path(__file__).parent.parent.parent / "config.yaml",  # Installed at root
+            / "defaults.yaml",  # Installed in ttt package (preferred)
+            Path(__file__).parent / "defaults.yaml",  # Same directory
+            Path(__file__).parent.parent / "config.yaml",  # Development fallback
         ]
 
         self.default_config_path = None

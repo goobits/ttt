@@ -12,10 +12,10 @@ from rich.console import Console
 
 # Import required TTT modules
 import ttt
-from ttt.api import ask as ttt_ask
-from ttt.api import stream as ttt_stream
-from ttt.chat_sessions import ChatSessionManager
-from ttt.config_manager import ConfigManager
+from ttt.core.api import ask as ttt_ask
+from ttt.core.api import stream as ttt_stream
+from ttt.session.manager import ChatSessionManager
+from ttt.config.manager import ConfigManager
 
 # Initialize console
 console = Console()
@@ -328,7 +328,7 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
 
 def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown: bool):
     """Hook for 'chat' command."""
-    from ttt.chat_sessions import ChatSessionManager
+    from ttt.session.manager import ChatSessionManager
 
     # Setup logging
     setup_logging_level()
@@ -624,7 +624,7 @@ def on_tools_list(show_disabled: bool):
 
 def show_models_list(json_output: bool = False) -> None:
     """Show list of available models."""
-    from ttt.config import get_model_registry
+    from ttt.config.schema import get_model_registry
 
     try:
         model_registry = get_model_registry()
@@ -677,7 +677,7 @@ def show_models_list(json_output: bool = False) -> None:
 
 def show_model_info(model_name: str, json_output: bool = False) -> None:
     """Show detailed information about a specific model."""
-    from ttt.config import get_model_registry
+    from ttt.config.schema import get_model_registry
 
     try:
         model_registry = get_model_registry()

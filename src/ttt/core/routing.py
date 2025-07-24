@@ -2,19 +2,19 @@
 
 from typing import Any, Dict, List, Optional, Union
 
-from .backends import HAS_LOCAL_BACKEND, BaseBackend, CloudBackend
+from ..backends import HAS_LOCAL_BACKEND, BaseBackend, CloudBackend
 from .models import AIResponse, ImageInput
 
 if HAS_LOCAL_BACKEND:
-    from .backends import LocalBackend
-from .config import get_config
+    from ..backends import LocalBackend
+from ..config.schema import get_config
 
 # Import model_registry lazily to avoid import-time initialization
 from .exceptions import (
     BackendNotAvailableError,
 )
-from .plugins import plugin_registry
-from .utils import get_logger
+from ..plugins.loader import plugin_registry
+from ..utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -180,7 +180,7 @@ class Router:
         try:
             import httpx
 
-            from .utils import run_async
+            from ..utils import run_async
 
             async def fetch_local_models() -> List[str]:
                 try:
@@ -235,7 +235,7 @@ class Router:
                 return str(get_config_value("models.default", "gpt-3.5-turbo"))
 
         # Try to resolve alias
-        from .config import model_registry
+        from ..config.schema import model_registry
 
         resolved = model_registry.resolve_model_name(model)
         logger.debug(f"Resolved model '{model}' to '{resolved}'")
@@ -285,7 +285,7 @@ class Router:
         # If specific model requested, determine backend from model
         if model is not None:
             # First check if it's in the registry
-            from .config import model_registry
+            from ..config.schema import model_registry
 
             model_info = model_registry.get_model(model)
             if model_info:
@@ -298,7 +298,7 @@ class Router:
 
             # If not in registry, detect cloud models by naming patterns
             # Get patterns from config
-            from .config import load_project_defaults
+            from ..config.loader import load_project_defaults
 
             project_defaults = load_project_defaults()
             cloud_model_patterns = project_defaults.get("routing", {}).get(

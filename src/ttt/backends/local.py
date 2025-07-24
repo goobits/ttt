@@ -6,14 +6,14 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
 import httpx
 
-from ..exceptions import (
+from ..core.exceptions import (
     BackendConnectionError,
     BackendTimeoutError,
     EmptyResponseError,
     ModelNotFoundError,
     ResponseParsingError,
 )
-from ..models import AIResponse, ImageInput
+from ..core.models import AIResponse, ImageInput
 from ..utils import get_logger, run_async
 from .base import BaseBackend
 
@@ -40,7 +40,7 @@ class LocalBackend(BaseBackend):
         local_config = self.backend_config.get("local", {})
 
         # Use backend_config from base class which handles merging
-        from ..config_loader import get_config_value
+        from ..config.loader import get_config_value
 
         self.base_url = (
             local_config.get("base_url")
@@ -108,7 +108,7 @@ class LocalBackend(BaseBackend):
             has_images = any(isinstance(item, ImageInput) for item in prompt)
             if has_images:
                 # Raise MultiModalError for image inputs
-                from ..exceptions import MultiModalError
+                from ..core.exceptions import MultiModalError
 
                 raise MultiModalError(
                     "Local backend (Ollama) does not support image inputs yet. Please use a cloud backend with vision capabilities."
@@ -217,7 +217,7 @@ class LocalBackend(BaseBackend):
             has_images = any(isinstance(item, ImageInput) for item in prompt)
             if has_images:
                 # Raise MultiModalError for image inputs
-                from ..exceptions import MultiModalError
+                from ..core.exceptions import MultiModalError
 
                 raise MultiModalError(
                     "Local backend (Ollama) does not support image inputs yet. Please use a cloud backend with vision capabilities."

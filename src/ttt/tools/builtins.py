@@ -30,7 +30,7 @@ from typing import Any, Callable, Dict, Optional, Union
 
 import zoneinfo
 
-from ttt.config import get_config
+from ttt.config.schema import get_config
 from ttt.tools import tool
 
 from .recovery import ErrorRecoverySystem, InputSanitizer, RetryConfig
@@ -334,7 +334,7 @@ def run_python(code: str, timeout: Optional[int] = None) -> str:
 
         # Get timeout bounds from config
         try:
-            from ..config import get_config
+            from ..config.schema import get_config
 
             config = get_config()
             timeout_bounds = (
@@ -461,7 +461,7 @@ def http_request(
 
         # Get timeout bounds from config
         try:
-            from ..config import get_config
+            from ..config.schema import get_config
 
             config = get_config()
             timeout_bounds = (
@@ -731,7 +731,7 @@ def list_directory(
 
                 # Get size format thresholds from config
                 try:
-                    from ..config import get_config
+                    from ..config.schema import get_config
 
                     config = get_config()
                     size_config = (

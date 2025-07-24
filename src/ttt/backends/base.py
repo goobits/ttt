@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
-from ..models import AIResponse, ImageInput
+from ..core.models import AIResponse, ImageInput
 
 
 class BaseBackend(ABC):
@@ -33,7 +33,7 @@ class BaseBackend(ABC):
         self.backend_config = {**self.config, **backend_specific}
 
         # Common configuration attributes
-        from ..config_loader import get_config_value
+        from ..config.loader import get_config_value
 
         self.timeout = self.backend_config.get("timeout") or get_config_value(
             "timeout", 30

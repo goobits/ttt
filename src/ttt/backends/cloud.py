@@ -6,7 +6,7 @@ import time
 from typing import Any, AsyncIterator, Dict, List, Optional, Union, cast
 
 # Import model_registry lazily to avoid import-time config loading
-from ..exceptions import (
+from ..core.exceptions import (
     APIKeyError,
     BackendConnectionError,
     BackendNotAvailableError,
@@ -16,7 +16,7 @@ from ..exceptions import (
     QuotaExceededError,
     RateLimitError,
 )
-from ..models import AIResponse, ImageInput
+from ..core.models import AIResponse, ImageInput
 from ..utils import get_logger
 from .base import BaseBackend
 
@@ -55,7 +55,7 @@ class CloudBackend(BaseBackend):
         cloud_config = self.backend_config.get("cloud", {})
 
         # Default models for different providers
-        from ..config_loader import get_config_value
+        from ..config.loader import get_config_value
 
         self.default_models = cloud_config.get("default_models") or get_config_value(
             "backends.cloud.default_models",
@@ -544,7 +544,7 @@ class CloudBackend(BaseBackend):
             List of model names available on cloud providers
         """
         # Get all model definitions from the registry
-        from ..config import model_registry
+        from ..config.schema import model_registry
 
         all_model_info = model_registry.models.values()
 
@@ -568,7 +568,7 @@ class CloudBackend(BaseBackend):
             List of model names or detailed model information
         """
         # Get all non-local models from the registry
-        from ..config import model_registry
+        from ..config.schema import model_registry
 
         all_model_info = [
             model

@@ -7,9 +7,9 @@ from typing import Any, Dict, List, Optional, Union
 import yaml
 from dotenv import load_dotenv
 
-from .exceptions import ConfigFileError
-from .models import ConfigModel, ModelInfo
-from .utils import get_logger
+from ..core.exceptions import ConfigFileError
+from ..core.models import ConfigModel, ModelInfo
+from ..utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -33,7 +33,7 @@ def load_project_defaults() -> Dict[str, Any]:
         return _project_defaults_cache
 
     # Use the centralized config loader to avoid duplicate warnings
-    from .config_loader import get_project_config
+    from .loader import get_project_config
 
     config = get_project_config()
     if config:

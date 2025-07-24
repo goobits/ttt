@@ -55,7 +55,7 @@ class RetryConfig:
 
     def __post_init__(self) -> None:
         """Load defaults from config if not set."""
-        from ..config_loader import get_config_value
+        from ..config.loader import get_config_value
 
         if self.max_attempts is None:
             self.max_attempts = get_config_value("tools.retry.max_attempts", 3)
@@ -487,7 +487,7 @@ class ErrorRecoverySystem:
 
         # Special handling for rate limits
         if error_pattern.error_type == ErrorType.RATE_LIMIT_ERROR:
-            from ..config_loader import get_config_value
+            from ..config.loader import get_config_value
 
             min_rate_limit_delay = get_config_value(
                 "tools.retry.rate_limit_min_delay", 5.0

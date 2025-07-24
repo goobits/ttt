@@ -3,12 +3,12 @@
 from contextlib import asynccontextmanager, contextmanager
 from typing import Any, AsyncIterator, Iterator, List, Optional, Union
 
-from .backends import BaseBackend
-from .chat import PersistentChatSession
+from ..backends import BaseBackend
+from ..session.chat import PersistentChatSession
 from .models import AIResponse, ImageInput
-from .plugins import discover_plugins
+from ..plugins import discover_plugins
 from .routing import router
-from .utils import get_logger, run_async, run_coro_in_background
+from ..utils import get_logger, run_async, run_coro_in_background
 
 # Backward compatibility alias - prefer PersistentChatSession in new code
 ChatSession = PersistentChatSession
@@ -215,7 +215,7 @@ def chat(
         ...     session.save("alice_chat.json")
 
         >>> # Resume a saved session
-        >>> from ttt.chat import PersistentChatSession
+        >>> from ttt.session.chat import PersistentChatSession
         >>> session = PersistentChatSession.load("alice_chat.json")
         >>> session.ask("What's my name?")  # Will remember it's Alice
 

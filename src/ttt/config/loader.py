@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 import yaml
 
-from .utils import get_logger
+from ..utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -41,7 +41,7 @@ def get_project_config() -> Dict[str, Any]:
 
     # Try to find the project config.yaml
     config_paths = [
-        Path(__file__).parent.parent / "config.yaml",  # Relative to ai package
+        Path(__file__).parent / "defaults.yaml",  # Config defaults
         Path.cwd() / "config.yaml",  # Current working directory
     ]
 
