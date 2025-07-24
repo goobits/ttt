@@ -251,7 +251,8 @@ class TestCLIToolSupport:
                         max_tokens=None,
                         tools=False,
                         session=None,
-                        stream=True
+                        stream=True,
+                        json=False
                     )
                 
                 # Verify it was called without tools

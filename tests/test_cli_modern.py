@@ -203,7 +203,7 @@ class TestConfigCommand:
         
         assert result.exit_code == 0
         output = result.output
-        assert "Manage configuration" in output
+        assert "Customize your setup" in output
 
     def test_config_subcommands_exist(self):
         """Test that config subcommands are available."""
@@ -267,7 +267,7 @@ class TestToolsCommand:
         
         assert result.exit_code == 0
         output = result.output
-        assert "Manage available tools" in output
+        assert "Manage CLI tools and extensions" in output
 
     def test_tools_subcommands_exist(self):
         """Test that tools subcommands are available."""
@@ -416,8 +416,9 @@ class TestCLIErrorHandling:
         """Test handling of invalid commands."""
         result = self.runner.invoke(main, ["invalid-command"])
         
-        assert result.exit_code == 2
-        assert "No such command" in result.output
+        # The CLI treats unknown commands as prompts for the ask command
+        assert result.exit_code == 0
+        assert "invalid-command" in result.output
 
     def test_invalid_option(self):
         """Test handling of invalid options."""

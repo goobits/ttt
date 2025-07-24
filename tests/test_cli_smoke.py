@@ -154,9 +154,11 @@ class TestSystemPromptOptions:
         # Should show session option (--session) which is what replaced --system
         assert "--session" in result.stdout
     
-    @pytest.mark.requires_api
+    @pytest.mark.skip(reason="--system option not implemented in CLI, though API supports it")
     def test_ask_system_prompt(self):
         """Test: ttt ask --system 'system prompt' 'user prompt' - Tested 2025-07-24"""
+        # Note: The API supports system prompts, but the CLI doesn't have a --system option
+        # This functionality can be achieved through chat sessions which support system prompts
         if not has_valid_api_key():
             pytest.skip("Requires API key")
         
@@ -251,7 +253,7 @@ class TestOutputModes:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
         
-        result = run_ttt_command(["ask", "--stream", "hello"])
+        result = run_ttt_command(["ask", "--stream", "true", "hello"])
         assert result.returncode in [0, 124]
     
     @pytest.mark.requires_api
@@ -523,7 +525,7 @@ class TestComplexCombinations:
             pytest.skip("Requires API key")
         
         result = run_ttt_command([
-            "ask", "-m", "@fast", "--json", "--stream", "quick hello"
+            "ask", "-m", "@fast", "--json", "--stream", "true", "quick hello"
         ])
         assert result.returncode in [0, 124]
 

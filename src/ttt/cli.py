@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """Auto-generated from goobits.yaml"""
-import importlib.util
 import os
 import sys
+import importlib.util
 from pathlib import Path
-
 import rich_click as click
-from rich_click import RichGroup
+from rich_click import RichGroup, RichCommand
 
 # Set up rich-click configuration globally
-click.rich_click.USE_RICH_MARKUP = True
+click.rich_click.USE_RICH_MARKUP = True  
 click.rich_click.USE_MARKDOWN = False  # Disable markdown to avoid conflicts
 click.rich_click.MARKUP_MODE = "rich"
 
@@ -30,7 +29,7 @@ click.rich_click.SHOW_SUBCOMMAND_ALIASES = True
 click.rich_click.ALIGN_OPTIONS_SWITCHES = True
 click.rich_click.STYLE_OPTION = "#ff79c6"      # Dracula Pink - for option flags
 click.rich_click.STYLE_SWITCH = "#50fa7b"      # Dracula Green - for switches
-click.rich_click.STYLE_METAVAR = "#8BE9FD not bold"   # Light cyan - for argument types (OPTIONS, COMMAND)
+click.rich_click.STYLE_METAVAR = "#8BE9FD not bold"   # Light cyan - for argument types (OPTIONS, COMMAND)  
 click.rich_click.STYLE_METAVAR_SEPARATOR = "#6272a4"  # Dracula Comment
 click.rich_click.STYLE_HEADER_TEXT = "bold yellow"    # Bold yellow - for section headers
 click.rich_click.STYLE_EPILOGUE_TEXT = "#6272a4"      # Dracula Comment
@@ -58,7 +57,7 @@ try:
     # Try to import from the same directory as this script
     script_dir = Path(__file__).parent
     hooks_path = script_dir / "app_hooks.py"
-
+    
     if hooks_path.exists():
         spec = importlib.util.spec_from_file_location("app_hooks", hooks_path)
         app_hooks = importlib.util.module_from_spec(spec)
@@ -79,27 +78,27 @@ def load_plugins(cli_group):
         # Local plugin directory (same as script)
         Path(__file__).parent / "plugins",
     ]
-
+    
     for plugin_dir in plugin_dirs:
         if not plugin_dir.exists():
             continue
-
+            
         # Add plugin directory to Python path
         sys.path.insert(0, str(plugin_dir))
-
+        
         # Scan for plugin files
         for plugin_file in plugin_dir.glob("*.py"):
             if plugin_file.name.startswith("_"):
                 continue
-
+                
             plugin_name = plugin_file.stem
-
+            
             try:
                 # Import the plugin module
                 spec = importlib.util.spec_from_file_location(plugin_name, plugin_file)
                 plugin_module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(plugin_module)
-
+                
                 # Call register_plugin if it exists
                 if hasattr(plugin_module, "register_plugin"):
                     plugin_module.register_plugin(cli_group)
@@ -116,7 +115,7 @@ def load_plugins(cli_group):
 def get_version():
     """Get version from pyproject.toml or __init__.py"""
     import re
-
+    
     try:
         # Try to get version from pyproject.toml FIRST (most authoritative)
         toml_path = Path(__file__).parent.parent / "pyproject.toml"
@@ -127,7 +126,7 @@ def get_version():
                 return match.group(1)
     except Exception:
         pass
-
+    
     try:
         # Fallback to __init__.py
         init_path = Path(__file__).parent / "__init__.py"
@@ -138,7 +137,7 @@ def get_version():
                 return match.group(1)
     except Exception:
         pass
-
+        
     # Final fallback
     return "1.0.0"
 
@@ -645,35 +644,35 @@ def show_help_json(ctx, param, value):
 
 
 
+  
+    
+  
 
+  
 
+  
 
+  
 
+  
 
+  
 
+  
 
+  
 
-
-
-
-
-
-
-
-
-
-
-
+  
 
 
 
 class DefaultGroup(RichGroup):
     """Allow a default command to be invoked without being specified."""
-
+    
     def __init__(self, *args, default=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.default_command = default
-
+    
     def resolve_command(self, ctx, args):
         try:
             # Try normal command resolution first
@@ -728,7 +727,7 @@ def main(ctx, help_json=False, help_all=False):
        [#B3B8C0]📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6][/#B3B8C0]
     """
 
-
+    
     if help_all:
         # Print main help
         click.echo(ctx.get_help())
@@ -750,7 +749,7 @@ def main(ctx, help_json=False, help_all=False):
 
         # Exit after printing all help
         ctx.exit()
-
+    
 
     pass
 
@@ -758,27 +757,27 @@ def main(ctx, help_json=False, help_all=False):
 # Set command groups after main function is defined
 click.rich_click.COMMAND_GROUPS = {
     "main": [
-
+        
         {
             "name": "Core Commands",
             "commands": ['ask', 'chat', 'list', 'status'],
         },
-
+        
         {
             "name": "Model Management",
             "commands": ['models', 'info'],
         },
-
+        
         {
             "name": "Configuration",
             "commands": ['config', 'tools'],
         },
-
+        
         {
             "name": "Data Management",
             "commands": ['export'],
         },
-
+        
     ]
 }
 
@@ -835,39 +834,39 @@ click.rich_click.COMMAND_GROUPS = {
 def ask(prompt, model, temperature, max_tokens, tools, session, stream, json):
     """💬 Quickly ask one-off questions"""
     # Check if hook function exists
-    hook_name = "on_ask"
+    hook_name = f"on_ask"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
+        
         result = hook_func(prompt, model, temperature, max_tokens, tools, session, stream, json)
-
+        
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing ask command...")
-
-
+        click.echo(f"Executing ask command...")
+        
+        
         click.echo(f"  prompt: {prompt}")
-
-
-
-
+        
+        
+        
+        
         click.echo(f"  model: {model}")
-
+        
         click.echo(f"  temperature: {temperature}")
-
+        
         click.echo(f"  max-tokens: {max_tokens}")
-
+        
         click.echo(f"  tools: {tools}")
-
+        
         click.echo(f"  session: {session}")
-
+        
         click.echo(f"  stream: {stream}")
-
+        
         click.echo(f"  json: {json}")
-
-
+        
+        
 
 
 
@@ -900,29 +899,29 @@ def ask(prompt, model, temperature, max_tokens, tools, session, stream, json):
 def chat(model, session, tools, markdown):
     """💬 Chat interactively with AI"""
     # Check if hook function exists
-    hook_name = "on_chat"
+    hook_name = f"on_chat"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
+        
         result = hook_func(model, session, tools, markdown)
-
+        
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing chat command...")
-
-
-
+        click.echo(f"Executing chat command...")
+        
+        
+        
         click.echo(f"  model: {model}")
-
+        
         click.echo(f"  session: {session}")
-
+        
         click.echo(f"  tools: {tools}")
-
+        
         click.echo(f"  markdown: {markdown}")
-
-
+        
+        
 
 
 
@@ -950,29 +949,29 @@ def chat(model, session, tools, markdown):
 def list(resource, format, verbose):
     """📜 See available resources"""
     # Check if hook function exists
-    hook_name = "on_list"
+    hook_name = f"on_list"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
+        
         result = hook_func(resource, format, verbose)
-
+        
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing list command...")
-
-
+        click.echo(f"Executing list command...")
+        
+        
         click.echo(f"  resource: {resource}")
-
-
-
-
+        
+        
+        
+        
         click.echo(f"  format: {format}")
-
+        
         click.echo(f"  verbose: {verbose}")
-
-
+        
+        
 
 
 
@@ -988,23 +987,23 @@ def list(resource, format, verbose):
 def status(json):
     """✅ Verify system and API health"""
     # Check if hook function exists
-    hook_name = "on_status"
+    hook_name = f"on_status"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
+        
         result = hook_func(json)
-
+        
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing status command...")
-
-
-
+        click.echo(f"Executing status command...")
+        
+        
+        
         click.echo(f"  json: {json}")
-
-
+        
+        
 
 
 
@@ -1020,23 +1019,23 @@ def status(json):
 def models(json):
     """🧠 View AI models"""
     # Check if hook function exists
-    hook_name = "on_models"
+    hook_name = f"on_models"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
+        
         result = hook_func(json)
-
+        
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing models command...")
-
-
-
+        click.echo(f"Executing models command...")
+        
+        
+        
         click.echo(f"  json: {json}")
-
-
+        
+        
 
 
 
@@ -1056,27 +1055,27 @@ def models(json):
 def info(model, json):
     """ℹ️  Detailed model information"""
     # Check if hook function exists
-    hook_name = "on_info"
+    hook_name = f"on_info"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
+        
         result = hook_func(model, json)
-
+        
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing info command...")
-
-
+        click.echo(f"Executing info command...")
+        
+        
         click.echo(f"  model: {model}")
-
-
-
-
+        
+        
+        
+        
         click.echo(f"  json: {json}")
-
-
+        
+        
 
 
 
@@ -1108,31 +1107,31 @@ def info(model, json):
 def export(session, format, output, include_metadata):
     """💾 Save your chat history"""
     # Check if hook function exists
-    hook_name = "on_export"
+    hook_name = f"on_export"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
+        
         result = hook_func(session, format, output, include_metadata)
-
+        
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing export command...")
-
-
+        click.echo(f"Executing export command...")
+        
+        
         click.echo(f"  session: {session}")
-
-
-
-
+        
+        
+        
+        
         click.echo(f"  format: {format}")
-
+        
         click.echo(f"  output: {output}")
-
+        
         click.echo(f"  include-metadata: {include_metadata}")
-
-
+        
+        
 
 
 
@@ -1153,23 +1152,23 @@ def config():
 def get(key):
     """Get a configuration value"""
     # Check if hook function exists
-    hook_name = "on_config_get"
+    hook_name = f"on_config_get"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
+        
         result = hook_func(key)
-
+        
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing get command...")
-
-
+        click.echo(f"Executing get command...")
+        
+        
         click.echo(f"  key: {key}")
-
-
-
+        
+        
+        
 
 @config.command()
 
@@ -1185,25 +1184,25 @@ def get(key):
 def set(key, value):
     """Set a configuration value"""
     # Check if hook function exists
-    hook_name = "on_config_set"
+    hook_name = f"on_config_set"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
+        
         result = hook_func(key, value)
-
+        
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing set command...")
-
-
+        click.echo(f"Executing set command...")
+        
+        
         click.echo(f"  key: {key}")
-
+        
         click.echo(f"  value: {value}")
-
-
-
+        
+        
+        
 
 @config.command()
 
@@ -1217,23 +1216,23 @@ def set(key, value):
 def list(show_secrets):
     """List all configuration"""
     # Check if hook function exists
-    hook_name = "on_config_list"
+    hook_name = f"on_config_list"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
+        
         result = hook_func(show_secrets)
-
+        
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing list command...")
-
-
-
+        click.echo(f"Executing list command...")
+        
+        
+        
         click.echo(f"  show-secrets: {show_secrets}")
-
-
+        
+        
 
 
 
@@ -1255,23 +1254,23 @@ def tools():
 def enable(tool_name):
     """Enable a tool"""
     # Check if hook function exists
-    hook_name = "on_tools_enable"
+    hook_name = f"on_tools_enable"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
+        
         result = hook_func(tool_name)
-
+        
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing enable command...")
-
-
+        click.echo(f"Executing enable command...")
+        
+        
         click.echo(f"  tool_name: {tool_name}")
-
-
-
+        
+        
+        
 
 @tools.command()
 
@@ -1283,23 +1282,23 @@ def enable(tool_name):
 def disable(tool_name):
     """Disable a tool"""
     # Check if hook function exists
-    hook_name = "on_tools_disable"
+    hook_name = f"on_tools_disable"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
+        
         result = hook_func(tool_name)
-
+        
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing disable command...")
-
-
+        click.echo(f"Executing disable command...")
+        
+        
         click.echo(f"  tool_name: {tool_name}")
-
-
-
+        
+        
+        
 
 @tools.command()
 
@@ -1313,23 +1312,23 @@ def disable(tool_name):
 def list(show_disabled):
     """List all tools"""
     # Check if hook function exists
-    hook_name = "on_tools_list"
+    hook_name = f"on_tools_list"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
+        
         result = hook_func(show_disabled)
-
+        
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing list command...")
-
-
-
+        click.echo(f"Executing list command...")
+        
+        
+        
         click.echo(f"  show-disabled: {show_disabled}")
-
-
+        
+        
 
 
 

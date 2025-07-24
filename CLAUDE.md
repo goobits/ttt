@@ -186,8 +186,5 @@ Plugin discovery locations (in order):
 Plugins must have a `register_plugin(registry)` function.
 
 ## CLI Generation
-
-The project uses a unique CLI generation system:
-- `src/ttt/cli.py` - Auto-generated from goobits.yaml
-- `src/ttt/app_hooks.py` - Custom formatters and hooks
-- Generation occurs via goobits build command during development
+The project uses Goobits CLI framework: run `goobits build` to generate CLI and setup scripts from goobits.yaml configuration.
+After generation, use `./setup.sh install --dev` for development installation with immediate code change reflection.

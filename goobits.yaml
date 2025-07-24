@@ -7,9 +7,12 @@ command_name: "ttt"
 display_name: "TTT - Terminal Tools for Thoughts"
 description: "A powerful AI assistant for your terminal"
 
+# CLI generation configuration
+cli_output_path: "src/{package_name}/cli.py"
+
 python:
   minimum_version: "3.8"
-  maximum_version: ""  # Empty means no maximum
+  maximum_version: "3.13"
 
 dependencies:
   required:
