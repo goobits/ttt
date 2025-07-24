@@ -813,13 +813,7 @@ def cli_entry():
     """Entry point for the CLI when installed via pipx."""
     # Load plugins before running the CLI
     load_plugins(main)
-    try:
-        main()
-    except SystemExit as e:
-        # Add a final newline after help output
-        if e.code == 0:  # Successful exit (like --help)
-            print()
-        raise
+    main()
 
 if __name__ == "__main__":
     cli_entry()
