@@ -204,23 +204,17 @@ def main(ctx):
     
     \b
     [bold yellow]💡 Quick Start:[/bold yellow]
-       [color(2)]ttt "What is the meaning of life?"    [/color(2)] [italic][#B3B8C0]# Instant response[/#B3B8C0][/italic]
-       [color(2)]ttt chat                              [/color(2)] [italic][#B3B8C0]# Interactive session[/#B3B8C0][/italic]
-       [color(2)]ttt models                            [/color(2)] [italic][#B3B8C0]# Explore available models[/#B3B8C0][/italic]
-       [color(2)]ttt config set model gpt-4            [/color(2)] [italic][#B3B8C0]# Set your preferred model[/#B3B8C0][/italic]
-
+    [green]ttt "What is the meaning of life?"  [/green] [italic][#B3B8C0]# Instant response[/#B3B8C0][/italic]
+    [green]ttt chat                            [/green] [italic][#B3B8C0]# Interactive session[/#B3B8C0][/italic]
+    [green]ttt models                          [/green] [italic][#B3B8C0]# Explore available models[/#B3B8C0][/italic]
+    [green]ttt config set model gpt-4          [/green] [italic][#B3B8C0]# Set your preferred model[/#B3B8C0][/italic]
     
     \b
     [bold yellow]🔑 Initial Setup:[/bold yellow]
-    
-       \b    1. See providers:    [color(2)]ttt providers[/color(2)]
-    
-       \b    2. Add API key:      [color(2)]export OPENROUTER_API_KEY='your-key-here'[/color(2)]
-    
-       \b    3. Check setup:      [color(2)]ttt status[/color(2)]
-    
-       \b    4. Start chatting:   [color(2)]ttt chat[/color(2)]
-    
+    1. See providers:  [green]ttt providers[/green]
+    2. Add API key:    [green]export OPENROUTER_API_KEY='your-key-here'[/green]
+    3. Check setup:    [green]ttt status[/green]
+    4. Start chatting: [green]ttt chat[/green]
     
     \b
     

@@ -72,27 +72,20 @@ cli:
   description: "AI-powered conversations, straight from your command line"
   icon: "🤖"
   
-  examples_section_title: "💡 Quick Start"
-  examples:
-    - cmd: 'ttt "What is the meaning of life?"'
-      desc: "Instant response"
-    - cmd: "ttt chat"
-      desc: "Interactive session"
-    - cmd: "ttt models"
-      desc: "Explore available models"
-    - cmd: "ttt config set model gpt-4"
-      desc: "Set your preferred model"
-  
-  setup_section_title: "🔑 Initial Setup"
-  setup_steps:
-    - step: "1. See providers"
-      cmd: "ttt providers"
-    - step: "2. Add API key"
-      cmd: "export OPENROUTER_API_KEY='your-key-here'"
-    - step: "3. Check setup"
-      cmd: "ttt status"
-    - step: "4. Start chatting"
-      cmd: "ttt chat"
+  header_sections:
+    - title: "💡 Quick Start"
+      items:
+        - { item: 'ttt "What is the meaning of life?"', desc: "Instant response", style: "example" }
+        - { item: "ttt chat", desc: "Interactive session", style: "example" }
+        - { item: "ttt models", desc: "Explore available models", style: "example" }
+        - { item: "ttt config set model gpt-4", desc: "Set your preferred model", style: "example" }
+
+    - title: "🔑 Initial Setup"
+      items:
+        - { item: "1. See providers", desc: "ttt providers", style: "setup" }
+        - { item: "2. Add API key", desc: "export OPENROUTER_API_KEY='your-key-here'", style: "setup" }
+        - { item: "3. Check setup", desc: "ttt status", style: "setup" }
+        - { item: "4. Start chatting", desc: "ttt chat", style: "setup" }
   
   footer_note: "📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6]"
   
