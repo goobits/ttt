@@ -5,8 +5,7 @@ from typing import Any, AsyncIterator, Dict, List
 import pytest
 
 from ttt.backends import BaseBackend
-from ttt.exceptions import PluginValidationError
-from ttt.models import AIResponse
+from ttt import PluginValidationError, AIResponse
 from ttt.plugins import BackendPlugin, PluginRegistry, plugin_registry
 
 
@@ -128,7 +127,7 @@ class TestPluginLoading:
 
         plugin_code = """
 from ttt.backends import BaseBackend
-from ttt.models import AIResponse
+from ttt import AIResponse
 
 class FileMockTestBackend(BaseBackend):
     @property
@@ -191,7 +190,7 @@ def register_plugin(registry):
 
         plugin_code = """
 from ttt.backends import BaseBackend
-from ttt.models import AIResponse
+from ttt import AIResponse
 
 class PackageBackend(BaseBackend):
     @property
@@ -237,7 +236,7 @@ def register_plugin(registry):
 
         plugin_code = """
 from ttt.backends import BaseBackend
-from ttt.models import AIResponse
+from ttt import AIResponse
 
 class DiscoveredBackend(BaseBackend):
     @property

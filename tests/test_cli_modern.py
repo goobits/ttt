@@ -9,7 +9,7 @@ import json
 import pytest
 from click.testing import CliRunner
 
-from ttt.cli import main
+from ttt.generated_cli import main
 
 
 class TestCLIStructure:

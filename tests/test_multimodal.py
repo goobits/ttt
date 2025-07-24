@@ -5,9 +5,8 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from ttt import ImageInput, ask, stream
+from ttt import ImageInput, ask, stream, AIResponse
 from ttt.backends import CloudBackend, LocalBackend
-from ttt.models import AIResponse
 
 
 class TestImageInput:
@@ -220,7 +219,7 @@ class TestLocalBackendMultiModal:
     @pytest.mark.asyncio
     async def test_local_backend_rejects_images(self):
         """Test local backend properly rejects image inputs."""
-        from ttt.exceptions import MultiModalError
+        from ttt import MultiModalError
 
         backend = LocalBackend()
 
@@ -264,7 +263,7 @@ class TestRoutingMultiModal:
 
     def test_routing_detects_images(self):
         """Test router detects images and switches to cloud."""
-        from ttt.routing import Router
+        from ttt.core.routing import Router
 
         router = Router()
 
@@ -284,7 +283,7 @@ class TestRoutingMultiModal:
 
     def test_routing_respects_explicit_vision_model(self):
         """Test routing respects explicit vision model selection."""
-        from ttt.routing import Router
+        from ttt.core.routing import Router
 
         router = Router()
 

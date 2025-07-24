@@ -6,10 +6,9 @@ import pytest
 
 from ttt.backends import BaseBackend
 from ttt.config import model_registry
-from ttt.exceptions import BackendNotAvailableError
-from ttt.models import AIResponse, ModelInfo
+from ttt import BackendNotAvailableError, AIResponse, ModelInfo
 from ttt.plugins import plugin_registry
-from ttt.routing import Router
+from ttt.core.routing import Router
 
 
 class MockBackend(BaseBackend):

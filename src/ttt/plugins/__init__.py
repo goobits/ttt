@@ -1,5 +1,5 @@
 """Plugin system for TTT."""
 
-from .loader import discover_plugins, load_plugin, register_backend
+from .loader import BackendPlugin, discover_plugins, load_plugin, PluginRegistry, plugin_registry, register_backend
 
-__all__ = ["discover_plugins", "load_plugin", "register_backend"]
+__all__ = ["BackendPlugin", "discover_plugins", "load_plugin", "PluginRegistry", "plugin_registry", "register_backend"]

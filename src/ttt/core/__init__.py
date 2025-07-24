@@ -32,7 +32,7 @@ from .exceptions import (
     ValidationError,
 )
 from .models import AIResponse, ImageInput, ModelInfo
-from .routing import ModelRouter
+from .routing import Router
 
 __all__ = [
     # API functions
@@ -43,7 +43,7 @@ __all__ = [
     "AIResponse",
     "ImageInput", 
     "ModelInfo",
-    "ModelRouter",
+    "Router",
     # Exceptions
     "AIError",
     "APIKeyError",

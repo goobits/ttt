@@ -5,15 +5,15 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from ttt.exceptions import (
+from ttt import (
     APIKeyError,
     BackendNotAvailableError,
     EmptyResponseError,
     ModelNotFoundError,
     QuotaExceededError,
     RateLimitError,
+    ImageInput,
 )
-from ttt.models import ImageInput
 
 
 class MockLiteLLM:

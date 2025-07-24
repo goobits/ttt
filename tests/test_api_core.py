@@ -2,10 +2,9 @@
 
 import pytest
 
-from ttt.api import chat
+from ttt import chat, AIResponse
 from ttt.backends import BaseBackend
-from ttt.chat import PersistentChatSession
-from ttt.models import AIResponse
+from ttt.session.chat import PersistentChatSession
 
 
 class MockBackend(BaseBackend):

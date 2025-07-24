@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from ttt.exceptions import (
+from ttt import (
     AIError,
     APIKeyError,
     BackendConnectionError,
@@ -147,7 +147,7 @@ class TestBackendExceptions:
     def test_local_backend_multimodal_error(self):
         """Test that multi-modal input raises MultiModalError."""
         from ttt.backends.local import LocalBackend
-        from ttt.models import ImageInput
+        from ttt import ImageInput
 
         backend = LocalBackend()
 
@@ -655,7 +655,7 @@ class TestSessionExceptions:
 
     def test_session_load_not_found(self):
         """Test loading non-existent session raises SessionLoadError."""
-        from ttt.chat import PersistentChatSession
+        from ttt.session.chat import PersistentChatSession
 
         with pytest.raises(SessionLoadError) as exc_info:
             PersistentChatSession.load("nonexistent.json")
@@ -665,7 +665,7 @@ class TestSessionExceptions:
 
     def test_session_load_invalid_json(self, tmp_path):
         """Test loading invalid JSON raises SessionLoadError."""
-        from ttt.chat import PersistentChatSession
+        from ttt.session.chat import PersistentChatSession
 
         # Create invalid JSON
         session_file = tmp_path / "invalid.json"
@@ -678,7 +678,7 @@ class TestSessionExceptions:
 
     def test_session_save_invalid_format(self):
         """Test saving with invalid format raises InvalidParameterError."""
-        from ttt.chat import PersistentChatSession
+        from ttt.session.chat import PersistentChatSession
 
         session = PersistentChatSession()
 
@@ -691,7 +691,7 @@ class TestSessionExceptions:
 
     def test_session_save_permission_error(self, tmp_path):
         """Test saving to protected location raises SessionSaveError."""
-        from ttt.chat import PersistentChatSession
+        from ttt.session.chat import PersistentChatSession
 
         session = PersistentChatSession()
 
@@ -764,7 +764,7 @@ class TestRoutingExceptions:
 
     def test_unknown_backend(self):
         """Test that unknown backends raise BackendNotAvailableError."""
-        from ttt.routing import Router
+        from ttt.core.routing import Router
 
         router = Router()
 

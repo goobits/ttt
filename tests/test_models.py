@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from ttt.models import AIResponse, ConfigModel, ModelInfo
+from ttt import AIResponse, ConfigModel, ModelInfo
 
 
 class TestAIResponse:

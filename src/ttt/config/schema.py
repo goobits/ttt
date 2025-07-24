@@ -526,6 +526,41 @@ class ModelRegistry:
 _model_registry: Optional[ModelRegistry] = None
 
 
+def merge_configs(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Merge two configuration dictionaries, with override taking precedence.
+    
+    Args:
+        base: Base configuration dictionary
+        override: Override configuration dictionary
+        
+    Returns:
+        Merged configuration dictionary
+    """
+    import copy
+    
+    result = copy.deepcopy(base)
+    
+    for key, value in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = merge_configs(result[key], value)
+        else:
+            result[key] = value
+            
+    return result
+
+
+def set_config(config: ConfigModel) -> None:
+    """
+    Set the global configuration.
+    
+    Args:
+        config: Configuration model to set
+    """
+    global _config
+    _config = config
+
+
 def get_model_registry() -> ModelRegistry:
     """Get the global model registry, creating it if needed."""
     global _model_registry

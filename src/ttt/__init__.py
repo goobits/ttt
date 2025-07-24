@@ -7,12 +7,12 @@ A single, elegant interface for local and cloud AI models.
 from .core.api import ChatSession, achat, ask, ask_async, chat, stream, stream_async
 from .backends import CloudBackend, LocalBackend
 from .session.chat import PersistentChatSession
-from .config.schema import configure
+from .config import configure
 
 
 # Import model_registry lazily to avoid import-time initialization
 def _get_model_registry():
-    from .config.schema import model_registry
+    from .config import model_registry
 
     return model_registry
 
@@ -54,7 +54,7 @@ from .core.exceptions import (
     SessionSaveError,
     ValidationError,
 )
-from .core.models import AIResponse, ImageInput
+from .core.models import AIResponse, ConfigModel, ImageInput, ModelInfo
 from .plugins import discover_plugins, load_plugin, register_backend
 
 # Auto-load built-in tools when the library is imported
@@ -73,6 +73,8 @@ __all__ = [
     "ChatSession",
     "AIResponse",
     "ImageInput",
+    "ConfigModel",
+    "ModelInfo",
     "PersistentChatSession",
     "configure",
     "LocalBackend",

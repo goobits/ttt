@@ -4,10 +4,9 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from ttt.api import chat
-from ttt.chat import PersistentChatSession
-from ttt.chat import PersistentChatSession as ChatSession
-from ttt.models import AIResponse
+from ttt import chat, AIResponse
+from ttt.session.chat import PersistentChatSession
+from ttt.session.chat import PersistentChatSession as ChatSession
 from ttt.tools import ToolCall, ToolResult
 
 
@@ -73,7 +72,7 @@ class TestPersistentChatSessionTools:
         def test_tool(x: int) -> int:
             return x * 2
 
-        from ttt.chat import router
+        from ttt.session.chat import router
 
         with patch.object(router, "smart_route") as mock_smart_route:
             backend_instance = Mock()

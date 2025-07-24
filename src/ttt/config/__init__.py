@@ -9,6 +9,7 @@ from .schema import (
     load_config,
     merge_configs,
     model_registry,
+    save_config,
     set_config,
 )
 
@@ -21,6 +22,7 @@ __all__ = [
     "load_config",
     "merge_configs",
     "model_registry",
+    "save_config",
     "set_config",
     "set_suppress_warnings",
 ]

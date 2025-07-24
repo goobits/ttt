@@ -5,18 +5,19 @@ from unittest.mock import patch
 
 import pytest
 
-from ttt.api import (
+from ttt import (
     achat,
     ask,
     ask_async,
     chat,
     stream,
     stream_async,
+    AIResponse,
+    ImageInput,
+    BackendNotAvailableError,
 )
 from ttt.backends import BaseBackend
-from ttt.chat import PersistentChatSession as ChatSession
-from ttt.exceptions import BackendNotAvailableError
-from ttt.models import AIResponse, ImageInput
+from ttt.session.chat import PersistentChatSession as ChatSession
 
 
 class MockBackend(BaseBackend):

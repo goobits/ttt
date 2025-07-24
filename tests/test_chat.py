@@ -9,15 +9,9 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from ttt import AIResponse, PersistentChatSession, chat
+from ttt import AIResponse, chat, ImageInput, InvalidParameterError, SessionLoadError, SessionSaveError
 from ttt.backends import BaseBackend
-from ttt.chat import _estimate_tokens
-from ttt.exceptions import (
-    InvalidParameterError,
-    SessionLoadError,
-    SessionSaveError,
-)
-from ttt.models import ImageInput
+from ttt.session.chat import PersistentChatSession, _estimate_tokens
 
 
 class MockBackend(BaseBackend):

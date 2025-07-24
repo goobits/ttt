@@ -15,7 +15,7 @@ import os
 
 import pytest
 
-from ttt.exceptions import APIKeyError, ModelNotFoundError, RateLimitError
+from ttt import APIKeyError, ModelNotFoundError, RateLimitError
 
 
 def skip_if_no_api_keys():
