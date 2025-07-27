@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import rich_click as click
 from rich.console import Console
 
-# Import required TTT modules
 import ttt
 from ttt.config.manager import ConfigManager
 from ttt.core.api import ask as ttt_ask
@@ -19,6 +18,7 @@ from ttt.session.manager import ChatSessionManager
 
 # Initialize console
 console = Console()
+
 
 # Import helper functions we'll need
 def setup_logging_level(
@@ -75,7 +75,24 @@ def setup_logging_level(
 
 
 def resolve_model_alias(model: str) -> str:
-    """Resolve model alias to full model name."""
+    """Resolve model alias to full model name.
+
+    Converts model aliases (prefixed with @) to their full model names
+    using the configuration system. Also handles automatic routing to
+    OpenRouter when only that API key is available.
+
+    Args:
+        model: The model name or alias to resolve
+
+    Returns:
+        The resolved full model name, or the original if no alias found
+
+    Examples:
+        >>> resolve_model_alias("@fast")
+        "openrouter/google/gemini-1.5-flash"
+        >>> resolve_model_alias("gpt-4")
+        "gpt-4"
+    """
     if model and model.startswith("@"):
         alias = model[1:]
         try:
@@ -93,10 +110,11 @@ def resolve_model_alias(model: str) -> str:
                         return str(model_name)
 
             console.print(
-                f"[yellow]Warning: Unknown model alias '@{alias}', using '{alias}'[/yellow]"
+                f"[yellow]Warning: Unknown model alias '@{alias}', "
+                f"using '{alias}'[/yellow]"
             )
             return alias
-        except Exception as e:
+        except (KeyError, ValueError, TypeError) as e:
             console.print(
                 f"[yellow]Warning: Could not resolve model alias: {e}[/yellow]"
             )
@@ -114,8 +132,12 @@ def resolve_model_alias(model: str) -> str:
                 "gpt-4o-mini": "openrouter/openai/gpt-4o-mini",
                 "gpt-4": "openrouter/openai/gpt-4",
                 "gpt-3.5-turbo": "openrouter/openai/gpt-3.5-turbo",
-                "claude-3-5-sonnet-20241022": "openrouter/anthropic/claude-3-5-sonnet-20241022",
-                "claude-3-5-haiku-20241022": "openrouter/anthropic/claude-3-5-haiku-20241022",
+                "claude-3-5-sonnet-20241022": (
+                    "openrouter/anthropic/claude-3-5-sonnet-20241022"
+                ),
+                "claude-3-5-haiku-20241022": (
+                    "openrouter/anthropic/claude-3-5-haiku-20241022"
+                ),
                 "gemini-1.5-pro": "openrouter/google/gemini-1.5-pro",
                 "gemini-1.5-flash": "openrouter/google/gemini-1.5-flash",
             }
@@ -128,7 +150,25 @@ def resolve_model_alias(model: str) -> str:
 
 
 def parse_tools_arg(tools: Optional[str]) -> Optional[str]:
-    """Parse tools argument and expand categories."""
+    """Parse tools argument and expand categories.
+
+    Processes the tools command-line argument, expanding category names
+    into their constituent tool lists. For example, "web" might expand
+    to "web_search,http_request".
+
+    Args:
+        tools: Comma-separated string of tool names and categories
+
+    Returns:
+        Expanded comma-separated string of individual tool names,
+        or None if no tools specified
+
+    Examples:
+        >>> parse_tools_arg("web,file")
+        "web_search,http_request,read_file,write_file"
+        >>> parse_tools_arg("")
+        "all"
+    """
     if tools is None:
         return None
 
@@ -150,7 +190,22 @@ def parse_tools_arg(tools: Optional[str]) -> Optional[str]:
 
 
 def resolve_tools(tool_specs: List[str]) -> List[Any]:
-    """Resolve tool specifications to actual tool functions."""
+    """Resolve tool specifications to actual tool functions.
+
+    Takes a list of tool specifications (names or category:name pairs)
+    and returns the corresponding tool function objects. Handles both
+    simple tool names and category-scoped lookups.
+
+    Args:
+        tool_specs: List of tool specifications to resolve
+
+    Returns:
+        List of tool function objects that were successfully resolved
+
+    Examples:
+        >>> resolve_tools(["web_search", "file:read_file"])
+        [<function web_search>, <function read_file>]
+    """
     tools: List[Any] = []
 
     try:
@@ -169,7 +224,8 @@ def resolve_tools(tool_specs: List[str]) -> List[Any]:
                     tools.append(found_tool)
                 else:
                     console.print(
-                        f"[yellow]Warning: Tool {tool_name} not found in category {category}[/yellow]"
+                        f"[yellow]Warning: Tool {tool_name} not found in "
+                        f"category {category}[/yellow]"
                     )
             else:
                 found_tool_def = get_tool(spec)
@@ -177,14 +233,26 @@ def resolve_tools(tool_specs: List[str]) -> List[Any]:
                     tools.append(found_tool_def.function)
                 else:
                     console.print(f"[yellow]Warning: Tool {spec} not found[/yellow]")
-    except Exception as e:
+    except (ImportError, AttributeError, ValueError) as e:
         console.print(f"[red]Error resolving tools: {e}[/red]")
 
     return tools
 
 
 def apply_coding_optimization(kwargs: Dict[str, Any]) -> None:
-    """Apply optimizations for coding requests."""
+    """Apply optimizations for coding requests.
+
+    Configures request parameters with sensible defaults for coding tasks:
+    - Uses a coding-optimized model if none specified
+    - Sets low temperature for more deterministic output
+    - Adds system prompt with coding best practices
+
+    Args:
+        kwargs: Request parameters dictionary to modify in-place
+
+    Note:
+        Modifies the kwargs dictionary directly rather than returning a new one.
+    """
     if "model" not in kwargs:
         default_coding_model = os.getenv("TTT_CODING_MODEL", "@coding")
         kwargs["model"] = resolve_model_alias(default_coding_model)
@@ -201,21 +269,52 @@ def apply_coding_optimization(kwargs: Dict[str, Any]) -> None:
 
 # Main hook functions
 
-def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
-           max_tokens: Optional[int], tools: bool, session: Optional[str], system: Optional[str], stream: bool, json: bool) -> None:
-    """Hook for 'ask' command."""
+
+def on_ask(
+    prompt: Tuple[str, ...],
+    model: Optional[str],
+    temperature: float,
+    max_tokens: Optional[int],
+    tools: bool,
+    session: Optional[str],
+    system: Optional[str],
+    stream: bool,
+    json: bool,
+) -> None:
+    """Hook for 'ask' command.
+
+    Handles the main ask command that sends a prompt to an AI model and returns
+    the response. Supports various output formats, model selection, tool usage,
+    and session management.
+
+    Args:
+        prompt: Tuple of prompt arguments to join into query text
+        model: AI model to use (can be alias like @fast)
+        temperature: Sampling temperature for response generation
+        max_tokens: Maximum tokens in response
+        tools: Whether to enable tool usage
+        session: Session ID for conversation continuity
+        system: System prompt to set context
+        stream: Whether to stream response in real-time
+        json: Whether to output response in JSON format
+
+    Note:
+        Handles stdin input, model alias resolution, and various error conditions.
+        Exits with status code 1 on errors.
+    """
     # Parse provider shortcuts from prompt arguments
     prompt_list = list(prompt) if prompt else []
 
     # Check if first argument is a provider shortcut
-    if prompt_list and prompt_list[0].startswith('@') and not model:
+    if prompt_list and prompt_list[0].startswith("@") and not model:
         potential_model = prompt_list[0]
         # Remove the @ prefix to get the alias
         model_alias = potential_model[1:]
 
         # Resolve the alias and set as model if valid
         resolved_model = resolve_model_alias(f"@{model_alias}")
-        if resolved_model != f"@{model_alias}":  # If resolve_model_alias changed it, it's valid
+        # If resolve_model_alias changed it, it's valid
+        if resolved_model != f"@{model_alias}":
             model = resolved_model
             prompt_list = prompt_list[1:]  # Remove the @provider from prompt
         # If not a valid alias, leave it as part of the prompt
@@ -302,26 +401,26 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
                 "max_tokens": kwargs.get("max_tokens"),
                 "tools_enabled": kwargs.get("tools") is not None,
                 "session_id": kwargs.get("session_id"),
-                "system": kwargs.get("system")
+                "system": kwargs.get("system"),
             }
             click.echo(json_module.dumps(output, indent=2))
         elif stream:
             chunks = list(ttt_stream(prompt_text, **kwargs))
             for i, chunk in enumerate(chunks):
                 if i == len(chunks) - 1:  # Last chunk
-                    click.echo(chunk.rstrip('\n'), nl=False)
+                    click.echo(chunk.rstrip("\n"), nl=False)
                 else:
                     click.echo(chunk, nl=False)
             click.echo()  # Always add exactly one newline at the end
         else:
             response = ttt_ask(prompt_text, **kwargs)
             click.echo(str(response).strip())
-    except Exception as e:
+    except (ConnectionError, TimeoutError, ValueError, RuntimeError) as e:
         if json:
             error_output = {
                 "error": str(e),
                 "model": kwargs.get("model"),
-                "parameters": kwargs
+                "parameters": kwargs,
             }
             click.echo(json_module.dumps(error_output, indent=2), err=True)
         else:
@@ -329,8 +428,24 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
         sys.exit(1)
 
 
-def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown: bool) -> None:
-    """Hook for 'chat' command."""
+def on_chat(
+    model: Optional[str], session: Optional[str], tools: bool, markdown: bool
+) -> None:
+    """Hook for 'chat' command.
+
+    Starts an interactive chat session with an AI model. Supports session
+    persistence, tool usage, and various chat commands like /clear and /exit.
+
+    Args:
+        model: AI model to use for the chat session
+        session: Existing session ID to resume, or None for new session
+        tools: Whether to enable tool usage in the chat
+        markdown: Whether to format output with markdown (currently unused)
+
+    Note:
+        Creates an interactive loop that continues until user types /exit
+        or interrupts with Ctrl+C. Session state is automatically saved.
+    """
     from ttt.session.manager import ChatSessionManager
 
     # Setup logging
@@ -352,14 +467,14 @@ def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown:
     if session:
         chat_session = session_manager.load_session(session)
         if not chat_session:
-            console.print(f"[yellow]Session '{session}' not found. Creating new session.[/yellow]")
+            console.print(
+                f"[yellow]Session '{session}' not found. Creating new session.[/yellow]"
+            )
             chat_session = session_manager.create_session(
                 session_id=session, model=model, tools=parsed_tools
             )
     else:
-        chat_session = session_manager.create_session(
-            model=model, tools=parsed_tools
-        )
+        chat_session = session_manager.create_session(model=model, tools=parsed_tools)
 
     # Build kwargs for chat session
     chat_kwargs: Dict[str, Any] = {}
@@ -391,7 +506,9 @@ def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown:
                 console.print(f"Model: {chat_session.model}")
             if chat_session.system_prompt:
                 console.print(f"System: {chat_session.system_prompt[:50]}...")
-            console.print("Type /exit to quit, /clear to clear history, /help for commands")
+            console.print(
+                "Type /exit to quit, /clear to clear history, /help for commands"
+            )
             console.print()
 
             # Show previous messages if any
@@ -459,33 +576,43 @@ def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown:
                         model=response.model if hasattr(response, "model") else None,
                     )
 
-                except Exception as e:
+                except (ConnectionError, TimeoutError, ValueError, RuntimeError) as e:
                     console.print(f"[red]Error: {e}[/red]")
 
     except (EOFError, KeyboardInterrupt):
         # Normal exit, don't show error
         pass
-    except Exception as e:
+    except (ValueError, RuntimeError, ConnectionError, ImportError) as e:
         # Only show error if it's not an empty exception
         if str(e).strip():
             console.print(f"[red]Error starting chat session: {e}[/red]")
 
 
 def on_list(resource: str, format: str, verbose: bool) -> None:
-    """Hook for 'list' command."""
-    if resource == 'models':
-        show_models_list(json_output=(format == 'json'))
-    elif resource == 'sessions':
+    """Hook for 'list' command.
+
+    Lists various TTT resources like models, sessions, or tools in either
+    tabular or JSON format.
+
+    Args:
+        resource: Type of resource to list ('models', 'sessions', 'tools')
+        format: Output format ('table', 'json')
+        verbose: Whether to show additional details (currently unused)
+    """
+    if resource == "models":
+        show_models_list(json_output=(format == "json"))
+    elif resource == "sessions":
         session_manager = ChatSessionManager()
-        if format == 'json':
+        if format == "json":
             sessions = session_manager.list_sessions()
             click.echo(json_module.dumps(sessions))
         else:
             session_manager.display_sessions_table()
-    elif resource == 'tools':
+    elif resource == "tools":
         from ttt.tools import list_tools
+
         tools = list_tools()
-        if format == 'json':
+        if format == "json":
             tools_data = [{"name": t.name, "description": t.description} for t in tools]
             click.echo(json_module.dumps(tools_data))
         else:
@@ -495,30 +622,56 @@ def on_list(resource: str, format: str, verbose: bool) -> None:
 
 
 def on_config_get(key: str) -> None:
-    """Hook for 'config get' subcommand."""
+    """Hook for 'config get' subcommand.
+
+    Retrieves and displays a specific configuration value using dot notation.
+
+    Args:
+        key: Configuration key in dot notation (e.g., 'models.default')
+    """
     config_manager = ConfigManager()
     config_manager.show_value(key)
 
 
 def on_config_set(key: str, value: str) -> None:
-    """Hook for 'config set' subcommand."""
+    """Hook for 'config set' subcommand.
+
+    Sets a configuration value using dot notation. Creates nested
+    structure as needed and persists to user configuration file.
+
+    Args:
+        key: Configuration key in dot notation (e.g., 'models.default')
+        value: String value to set (will be parsed as appropriate type)
+    """
     config_manager = ConfigManager()
     config_manager.set_value(key, value)
 
 
 def on_config_list(show_secrets: bool) -> None:
-    """Hook for 'config list' subcommand."""
+    """Hook for 'config list' subcommand.
+
+    Displays the complete merged configuration from all sources.
+    Sensitive values like API keys are masked unless explicitly requested.
+
+    Args:
+        show_secrets: If True, shows actual API keys; otherwise masks them
+    """
     config_manager = ConfigManager()
     merged_config = config_manager.get_merged_config()
 
     # Mask sensitive values unless show_secrets is True
     if not show_secrets:
+
         def mask_sensitive(obj: Any, key: Optional[str] = None) -> Any:
             if isinstance(obj, dict):
                 return {k: mask_sensitive(v, k) for k, v in obj.items()}
             elif isinstance(obj, list):
                 return [mask_sensitive(item) for item in obj]
-            elif key and ('key' in key.lower() or 'secret' in key.lower() or 'token' in key.lower()):
+            elif key and (
+                "key" in key.lower()
+                or "secret" in key.lower()
+                or "token" in key.lower()
+            ):
                 return "***" if obj else None
             else:
                 return obj
@@ -528,8 +681,23 @@ def on_config_list(show_secrets: bool) -> None:
     click.echo(json_module.dumps(merged_config, indent=2))
 
 
-def on_export(session: str, format: str, output: Optional[str], include_metadata: bool) -> None:
-    """Hook for 'export' command."""
+def on_export(
+    session: str, format: str, output: Optional[str], include_metadata: bool
+) -> None:
+    """Hook for 'export' command.
+
+    Exports a chat session to various formats (JSON, YAML, Markdown).
+    Can output to file or stdout with optional metadata inclusion.
+
+    Args:
+        session: Session ID to export
+        format: Output format ('json', 'yaml', 'markdown')
+        output: Output file path, or None to print to stdout
+        include_metadata: Whether to include session metadata in export
+
+    Raises:
+        SystemExit: If session not found or PyYAML missing for YAML format
+    """
     session_manager = ChatSessionManager()
 
     # Load session
@@ -541,33 +709,40 @@ def on_export(session: str, format: str, output: Optional[str], include_metadata
     # Export data
     export_data = {
         "session_id": chat_session.id,
-        "created_at": chat_session.created_at.isoformat() if hasattr(chat_session, 'created_at') else None,
-        "messages": chat_session.messages
+        "created_at": (
+            chat_session.created_at.isoformat()
+            if hasattr(chat_session, "created_at")
+            else None
+        ),
+        "messages": chat_session.messages,
     }
 
     if include_metadata:
         export_data["metadata"] = {
-            "model": getattr(chat_session, 'model', None),
-            "system_prompt": getattr(chat_session, 'system_prompt', None),
-            "tools": getattr(chat_session, 'tools', None),
+            "model": getattr(chat_session, "model", None),
+            "system_prompt": getattr(chat_session, "system_prompt", None),
+            "tools": getattr(chat_session, "tools", None),
         }
 
     # Format output
-    if format == 'json':
+    if format == "json":
         output_text = json_module.dumps(export_data, indent=2)
-    elif format == 'yaml':
+    elif format == "yaml":
         try:
             import yaml
+
             output_text = yaml.dump(export_data, default_flow_style=False)
         except ImportError:
-            click.echo("Error: PyYAML is not installed. Use 'pip install pyyaml'", err=True)
+            click.echo(
+                "Error: PyYAML is not installed. Use 'pip install pyyaml'", err=True
+            )
             sys.exit(1)
     else:  # markdown
         output_text = f"# Chat Session: {session}\n\n"
         if include_metadata:
             output_text += f"**Model**: {export_data['metadata']['model']}\n\n"
 
-        for msg in export_data['messages']:
+        for msg in export_data["messages"]:
             output_text += f"## {msg['role'].capitalize()}\n\n{msg['content']}\n\n"
 
     # Write output
@@ -579,7 +754,13 @@ def on_export(session: str, format: str, output: Optional[str], include_metadata
 
 
 def on_tools_enable(tool_name: str) -> None:
-    """Hook for 'tools enable' subcommand."""
+    """Hook for 'tools enable' subcommand.
+
+    Removes a tool from the disabled list, making it available for use.
+
+    Args:
+        tool_name: Name of the tool to enable
+    """
     config_manager = ConfigManager()
     merged_config = config_manager.get_merged_config()
     disabled_tools = merged_config.get("tools", {}).get("disabled", [])
@@ -593,7 +774,13 @@ def on_tools_enable(tool_name: str) -> None:
 
 
 def on_tools_disable(tool_name: str) -> None:
-    """Hook for 'tools disable' subcommand."""
+    """Hook for 'tools disable' subcommand.
+
+    Adds a tool to the disabled list, preventing it from being used.
+
+    Args:
+        tool_name: Name of the tool to disable
+    """
     config_manager = ConfigManager()
     merged_config = config_manager.get_merged_config()
     disabled_tools = merged_config.get("tools", {}).get("disabled", [])
@@ -607,7 +794,13 @@ def on_tools_disable(tool_name: str) -> None:
 
 
 def on_tools_list(show_disabled: bool) -> None:
-    """Hook for 'tools list' subcommand."""
+    """Hook for 'tools list' subcommand.
+
+    Lists all available tools with their status (enabled/disabled).
+
+    Args:
+        show_disabled: Whether to include disabled tools in the output
+    """
     from ttt.tools import list_tools
 
     config_manager = ConfigManager()
@@ -618,21 +811,44 @@ def on_tools_list(show_disabled: bool) -> None:
 
     console.print("\n[bold]Available Tools:[/bold]")
     for tool in tools:
-        status = "[red]disabled[/red]" if tool.name in disabled_tools else "[green]enabled[/green]"
+        status = (
+            "[red]disabled[/red]"
+            if tool.name in disabled_tools
+            else "[green]enabled[/green]"
+        )
         if show_disabled or tool.name not in disabled_tools:
-            console.print(f"  • [cyan]{tool.name}[/cyan] ({status}): {tool.description}")
+            console.print(
+                f"  • [cyan]{tool.name}[/cyan] ({status}): {tool.description}"
+            )
 
 
 # Additional helper functions needed by hooks
 
+
 def show_models_list(json_output: bool = False) -> None:
-    """Show list of available models."""
+    """Show list of available models.
+
+    Displays all configured AI models with their metadata including provider,
+    speed, quality ratings, and context limits. Supports both rich table
+    and JSON output formats.
+
+    Args:
+        json_output: If True, outputs JSON format; otherwise shows rich table
+
+    Example:
+        >>> show_models_list(json_output=True)
+        [{"name": "gpt-4", "provider": "openai", ...}]
+    """
     from ttt.config.schema import get_model_registry
 
     try:
         model_registry = get_model_registry()
         model_names = model_registry.list_models()
-        models = [model_registry.get_model(name) for name in model_names if model_registry.get_model(name)]
+        models = [
+            model_registry.get_model(name)
+            for name in model_names
+            if model_registry.get_model(name)
+        ]
 
         if json_output:
             models_data = []
@@ -660,7 +876,9 @@ def show_models_list(json_output: bool = False) -> None:
             table.add_column("Context", style="blue")
 
             for model in models:
-                context_str = f"{model.context_length:,}" if model.context_length else "N/A"
+                context_str = (
+                    f"{model.context_length:,}" if model.context_length else "N/A"
+                )
                 table.add_row(
                     model.name,
                     model.provider,
@@ -670,7 +888,7 @@ def show_models_list(json_output: bool = False) -> None:
                 )
 
             console.print(table)
-    except Exception as e:
+    except (ImportError, ValueError, AttributeError) as e:
         if json_output:
             error_output = {"error": str(e)}
             click.echo(json_module.dumps(error_output))
@@ -679,7 +897,24 @@ def show_models_list(json_output: bool = False) -> None:
 
 
 def show_model_info(model_name: str, json_output: bool = False) -> None:
-    """Show detailed information about a specific model."""
+    """Show detailed information about a specific model.
+
+    Displays comprehensive details about a single AI model including
+    capabilities, pricing, context limits, and available aliases.
+
+    Args:
+        model_name: Name or alias of the model to show info for
+        json_output: If True, outputs JSON format; otherwise shows formatted text
+
+    Raises:
+        ValueError: If the specified model is not found in the registry
+
+    Example:
+        >>> show_model_info("gpt-4", json_output=False)
+        Model Information: gpt-4
+        Provider: openai
+        ...
+    """
     from ttt.config.schema import get_model_registry
 
     try:
@@ -720,7 +955,7 @@ def show_model_info(model_name: str, json_output: bool = False) -> None:
 
             if model.capabilities:
                 console.print(f"Capabilities: {', '.join(model.capabilities)}")
-    except Exception as e:
+    except (ValueError, KeyError, AttributeError) as e:
         if json_output:
             error_output = {"error": str(e)}
             click.echo(json_module.dumps(error_output))
@@ -729,12 +964,28 @@ def show_model_info(model_name: str, json_output: bool = False) -> None:
 
 
 def show_backend_status(json_output: bool = False) -> None:
-    """Show backend status."""
+    """Show backend status.
+
+    Checks connectivity and availability of all configured backends
+    (local Ollama and cloud providers). Shows API key status and
+    model counts where available.
+
+    Args:
+        json_output: If True, outputs JSON format; otherwise shows formatted status
+
+    Example:
+        >>> show_backend_status(json_output=False)
+        TTT System Status
+        ✅ Local Backend (Ollama): Available
+           URL: http://localhost:11434
+           Models: 5
+    """
     status_data: Dict[str, Any] = {"backends": {}}
 
     # Check local backend
     try:
         import ttt.backends.local as local_module
+
         local = local_module.LocalBackend()
         local_status = {
             "available": local.is_available,
@@ -745,10 +996,10 @@ def show_backend_status(json_output: bool = False) -> None:
             try:
                 models = local.list_models()
                 local_status["models"] = len(models)
-            except Exception:
+            except (ConnectionError, TimeoutError, ValueError):
                 local_status["models"] = 0
         status_data["backends"]["local"] = local_status
-    except Exception as e:
+    except (ImportError, AttributeError) as e:
         status_data["backends"]["local"] = {
             "available": False,
             "error": str(e),
@@ -756,7 +1007,6 @@ def show_backend_status(json_output: bool = False) -> None:
 
     # Check cloud backend
     try:
-
         # Check API keys
         api_keys = {
             "openrouter": bool(os.getenv("OPENROUTER_API_KEY")),
@@ -771,7 +1021,7 @@ def show_backend_status(json_output: bool = False) -> None:
             "api_keys": api_keys,
         }
         status_data["backends"]["cloud"] = cloud_status
-    except Exception as e:
+    except (ImportError, AttributeError, ValueError) as e:
         status_data["backends"]["cloud"] = {
             "available": False,
             "error": str(e),
@@ -819,20 +1069,42 @@ def show_backend_status(json_output: bool = False) -> None:
         if status_data["healthy"]:
             console.print("🎉 [bold green]System is ready to use![/bold green]")
         else:
-            console.print("⚠️  [bold yellow]No backends available. Please configure API keys or install Ollama.[/bold yellow]")
+            console.print(
+                "⚠️  [bold yellow]No backends available. Please configure API keys "
+                "or install Ollama.[/bold yellow]"
+            )
 
 
 # Add hook functions for missing commands that need to be added to CLI
 def on_status(json: bool) -> None:
-    """Hook for 'status' command."""
+    """Hook for 'status' command.
+
+    Shows the overall status of TTT backends and connectivity.
+
+    Args:
+        json: If True, outputs JSON format; otherwise shows formatted status
+    """
     show_backend_status(json_output=json)
 
 
 def on_models(json: bool) -> None:
-    """Hook for 'models' command."""
+    """Hook for 'models' command.
+
+    Lists all available AI models with their details.
+
+    Args:
+        json: If True, outputs JSON format; otherwise shows rich table
+    """
     show_models_list(json_output=json)
 
 
 def on_info(model: str, json: bool) -> None:
-    """Hook for 'info' command."""
+    """Hook for 'info' command.
+
+    Shows detailed information about a specific AI model.
+
+    Args:
+        model: Name or alias of the model to show information for
+        json: If True, outputs JSON format; otherwise shows formatted info
+    """
     show_model_info(model, json_output=json)

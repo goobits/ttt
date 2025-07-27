@@ -179,6 +179,7 @@ class ConfigModel(BaseModel):
     env_mappings: Dict[str, Any] = Field(default_factory=dict)
     routing: Dict[str, Any] = Field(default_factory=dict)
     files: Dict[str, Any] = Field(default_factory=dict)
+    constants: Dict[str, Any] = Field(default_factory=dict)  # Centralized constants
 
     model_config = ConfigDict(extra="forbid")
 

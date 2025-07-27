@@ -48,7 +48,8 @@ class CloudBackend(BaseBackend):
         except ImportError as e:
             raise BackendNotAvailableError(
                 "cloud",
-                "LiteLLM is required for cloud backend. Install with: pip install litellm",
+                "LiteLLM is required for cloud backend. "
+                "Install with: pip install litellm",
             ) from e
 
         # Get cloud-specific config
@@ -115,7 +116,7 @@ class CloudBackend(BaseBackend):
 
     @property
     def is_available(self) -> bool:
-        """Check if the cloud backend is available (always True since it's installed)."""
+        """Check if the cloud backend is available (always True since installed)."""
         # The cloud backend is always "available" as a backend option
         # Individual providers may or may not be configured
         return True
@@ -239,7 +240,8 @@ class CloudBackend(BaseBackend):
         try:
             logger.debug(f"Sending request to {used_model}")
             logger.debug(
-                f"Parameters: max_tokens={params.get('max_tokens')}, temperature={params.get('temperature')}"
+                f"Parameters: max_tokens={params.get('max_tokens')}, "
+                f"temperature={params.get('temperature')}"
             )
 
             # Use LiteLLM's completion function
@@ -483,7 +485,8 @@ class CloudBackend(BaseBackend):
         try:
             logger.debug(f"Starting stream request to {used_model}")
             logger.debug(
-                f"Stream parameters: max_tokens={params.get('max_tokens')}, temperature={params.get('temperature')}"
+                f"Stream parameters: max_tokens={params.get('max_tokens')}, "
+                f"temperature={params.get('temperature')}"
             )
 
             # Use LiteLLM's streaming completion

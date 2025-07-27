@@ -44,27 +44,45 @@ def _get_max_file_size() -> int:
     """Get maximum file size from configuration."""
     try:
         config = get_config()
-        return int(config.tools_config.get("max_file_size", 10 * 1024 * 1024))
+        # Try tools config first, then constants, then hardcoded fallback
+        size = config.tools_config.get("max_file_size")
+        if size is None:
+            # Try to get from constants section
+            constants = getattr(config, 'model_dump', lambda: {})().get('constants', {})
+            size = constants.get('file_sizes', {}).get('max_file_size')
+        return int(size or 10485760)  # 10MB fallback from constants
     except Exception:
-        return 10 * 1024 * 1024  # Fallback to default
+        return 10485760  # Fallback to constants value
 
 
 def _get_code_timeout() -> int:
     """Get code execution timeout from configuration."""
     try:
         config = get_config()
-        return int(config.tools_config.get("code_execution_timeout", 30))
+        # Try tools config first, then constants, then hardcoded fallback
+        timeout = config.tools_config.get("code_execution_timeout")
+        if timeout is None:
+            # Try to get from constants section
+            constants = getattr(config, 'model_dump', lambda: {})().get('constants', {})
+            timeout = constants.get('tool_bounds', {}).get('default_code_timeout')
+        return int(timeout or 30)  # fallback from constants
     except Exception:
-        return 30  # Fallback to default
+        return 30  # Fallback to constants value
 
 
 def _get_web_timeout() -> int:
     """Get web request timeout from configuration."""
     try:
         config = get_config()
-        return int(config.tools_config.get("web_request_timeout", 10))
+        # Try tools config first, then constants, then hardcoded fallback
+        timeout = config.tools_config.get("web_request_timeout")
+        if timeout is None:
+            # Try to get from constants section
+            constants = getattr(config, 'model_dump', lambda: {})().get('constants', {})
+            timeout = constants.get('tool_bounds', {}).get('default_web_timeout')
+        return int(timeout or 10)  # fallback from constants
     except Exception:
-        return 10  # Fallback to default
+        return 10  # Fallback to constants value
 
 
 def _safe_execute(func_name: str, func: Callable[..., Any], **kwargs: Any) -> str:
@@ -340,11 +358,19 @@ def run_python(code: str, timeout: Optional[int] = None) -> str:
             timeout_bounds = (
                 config.model_dump().get("tools", {}).get("timeout_bounds", {})
             )
-            min_timeout = timeout_bounds.get("min", 1)
-            max_timeout = timeout_bounds.get("max", 30)
+            # Try tools timeout_bounds first, then constants
+            min_timeout = timeout_bounds.get("min")
+            max_timeout = timeout_bounds.get("max")
+
+            if min_timeout is None or max_timeout is None:
+                constants = config.model_dump().get("constants", {})
+                tool_bounds = constants.get('tool_bounds', {})
+                min_timeout = min_timeout or tool_bounds.get('min_timeout', 1)
+                max_timeout = max_timeout or tool_bounds.get('max_timeout', 30)
         except Exception:
-            min_timeout = 1
-            max_timeout = 30
+            # Fallback to constants values
+            min_timeout = 1  # constants.tool_bounds.min_timeout
+            max_timeout = 30  # constants.tool_bounds.max_timeout
 
         timeout = min(max(min_timeout, timeout), max_timeout)
 
@@ -467,11 +493,19 @@ def http_request(
             timeout_bounds = (
                 config.model_dump().get("tools", {}).get("timeout_bounds", {})
             )
-            min_timeout = timeout_bounds.get("min", 1)
-            max_timeout = timeout_bounds.get("max", 30)
+            # Try tools timeout_bounds first, then constants
+            min_timeout = timeout_bounds.get("min")
+            max_timeout = timeout_bounds.get("max")
+
+            if min_timeout is None or max_timeout is None:
+                constants = config.model_dump().get("constants", {})
+                tool_bounds = constants.get('tool_bounds', {})
+                min_timeout = min_timeout or tool_bounds.get('min_timeout', 1)
+                max_timeout = max_timeout or tool_bounds.get('max_timeout', 30)
         except Exception:
-            min_timeout = 1
-            max_timeout = 30
+            # Fallback to constants values
+            min_timeout = 1  # constants.tool_bounds.min_timeout
+            max_timeout = 30  # constants.tool_bounds.max_timeout
 
         timeout = min(max(min_timeout, timeout), max_timeout)
 
@@ -740,8 +774,9 @@ def list_directory(
                     kb_threshold = size_config.get("kb_threshold", 1024)
                     mb_threshold = size_config.get("mb_threshold", 1048576)
                 except Exception:
-                    kb_threshold = 1024
-                    mb_threshold = 1048576
+                    # Fallback to constants values
+                    kb_threshold = 1024  # constants.file_sizes.kb_threshold
+                    mb_threshold = 1048576  # constants.file_sizes.mb_threshold
 
                 if size < kb_threshold:
                     size_str = f"{size}B"

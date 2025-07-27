@@ -22,7 +22,9 @@ click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
 click.rich_click.SHOW_METAVARS_COLUMN = False
 click.rich_click.APPEND_METAVARS_HELP = True
 click.rich_click.STYLE_ERRORS_SUGGESTION = "#ff5555"
-click.rich_click.ERRORS_SUGGESTION = "Try running the '--help' flag for more information."
+click.rich_click.ERRORS_SUGGESTION = (
+    "Try running the '--help' flag for more information."
+)
 click.rich_click.ERRORS_EPILOGUE = "To find out more, visit https://github.com/anthropics/claude-code"
 click.rich_click.MAX_WIDTH = 120  # Set reasonable width
 click.rich_click.WIDTH = 120  # Set consistent width
@@ -31,23 +33,23 @@ click.rich_click.SHOW_SUBCOMMAND_ALIASES = True
 click.rich_click.ALIGN_OPTIONS_SWITCHES = True
 click.rich_click.STYLE_OPTION = "#ff79c6"      # Dracula Pink - for option flags
 click.rich_click.STYLE_SWITCH = "#50fa7b"      # Dracula Green - for switches
-click.rich_click.STYLE_METAVAR = "#8BE9FD not bold"   # Light cyan - for argument types (OPTIONS, COMMAND)
+click.rich_click.STYLE_METAVAR = "#8BE9FD not bold"   # Light cyan - arg types
 click.rich_click.STYLE_METAVAR_SEPARATOR = "#6272a4"  # Dracula Comment
-click.rich_click.STYLE_HEADER_TEXT = "bold yellow"    # Bold yellow - for section headers
+click.rich_click.STYLE_HEADER_TEXT = "bold yellow"    # Bold yellow - headers
 click.rich_click.STYLE_EPILOGUE_TEXT = "#6272a4"      # Dracula Comment
 click.rich_click.STYLE_FOOTER_TEXT = "#6272a4"        # Dracula Comment
 click.rich_click.STYLE_USAGE = "#BD93F9"              # Purple - for "Usage:" line
 click.rich_click.STYLE_USAGE_COMMAND = "bold"         # Bold for main command name
 click.rich_click.STYLE_DEPRECATED = "#ff5555"         # Dracula Red
 click.rich_click.STYLE_HELPTEXT_FIRST_LINE = "#f8f8f2" # Dracula Foreground
-click.rich_click.STYLE_HELPTEXT = "#B3B8C0"           # Light gray - for help descriptions
+click.rich_click.STYLE_HELPTEXT = "#B3B8C0"           # Light gray - help text
 click.rich_click.STYLE_OPTION_DEFAULT = "#ffb86c"     # Dracula Orange
 click.rich_click.STYLE_REQUIRED_SHORT = "#ff5555"     # Dracula Red
 click.rich_click.STYLE_REQUIRED_LONG = "#ff5555"      # Dracula Red
 click.rich_click.STYLE_OPTIONS_PANEL_BORDER = "dim"   # Dim for subtle borders
 click.rich_click.STYLE_COMMANDS_PANEL_BORDER = "dim"  # Dim for subtle borders
-click.rich_click.STYLE_COMMAND = "#50fa7b"            # Dracula Green - for command names in list
-click.rich_click.STYLE_COMMANDS_TABLE_COLUMN_WIDTH_RATIO = (1, 3)  # Command:Description ratio (1/4 : 3/4)
+click.rich_click.STYLE_COMMAND = "#50fa7b"            # Dracula Green - commands
+click.rich_click.STYLE_COMMANDS_TABLE_COLUMN_WIDTH_RATIO = (1, 3)  # Cmd:Desc ratio
 
 
 # Command groups will be set after main function is defined
@@ -893,7 +895,7 @@ click.rich_click.COMMAND_GROUPS = {
     help="Output response in JSON format"
 )
 
-def ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float, max_tokens: Optional[int], tools: bool, session: Optional[str], system: Optional[str], stream: bool, json: bool) -> Optional[Any]:
+def ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float, max_tokens: Optional[int], tools: bool, session: Optional[str], system: Optional[str], stream: bool, json: bool) -> None:
     """💬 Quickly ask one-off questions"""
     # Check if hook function exists
     hook_name = "on_ask"
@@ -960,7 +962,7 @@ def ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float, max_t
     help="Render markdown in responses"
 )
 
-def chat(model: Optional[str], session: Optional[str], tools: bool, markdown: bool) -> Optional[Any]:
+def chat(model: Optional[str], session: Optional[str], tools: bool, markdown: bool) -> None:
     """💬 Chat interactively with AI"""
     # Check if hook function exists
     hook_name = "on_chat"
@@ -1010,7 +1012,7 @@ def chat(model: Optional[str], session: Optional[str], tools: bool, markdown: bo
     help="Show detailed information"
 )
 
-def list(resource: str, format: str, verbose: bool) -> Optional[Any]:
+def list(resource: str, format: str, verbose: bool) -> None:
     """📜 See available resources"""
     # Check if hook function exists
     hook_name = "on_list"
@@ -1048,7 +1050,7 @@ def list(resource: str, format: str, verbose: bool) -> Optional[Any]:
     help="Output status in JSON format"
 )
 
-def status(json: bool) -> Optional[Any]:
+def status(json: bool) -> None:
     """✅ Verify system and API health"""
     # Check if hook function exists
     hook_name = "on_status"
@@ -1080,7 +1082,7 @@ def status(json: bool) -> Optional[Any]:
     help="Output models in JSON format"
 )
 
-def models(json: bool) -> Optional[Any]:
+def models(json: bool) -> None:
     """🧠 View AI models"""
     # Check if hook function exists
     hook_name = "on_models"
@@ -1116,7 +1118,7 @@ def models(json: bool) -> Optional[Any]:
     help="Output model info in JSON format"
 )
 
-def info(model: str, json: bool) -> Optional[Any]:
+def info(model: str, json: bool) -> None:
     """ℹ️  Detailed model information"""
     # Check if hook function exists
     hook_name = "on_info"
@@ -1168,7 +1170,7 @@ def info(model: str, json: bool) -> Optional[Any]:
     help="Include timestamps and model info"
 )
 
-def export(session: str, format: str, output: Optional[str], include_metadata: bool) -> Optional[Any]:
+def export(session: str, format: str, output: Optional[str], include_metadata: bool) -> None:
     """💾 Save your chat history"""
     # Check if hook function exists
     hook_name = "on_export"
@@ -1213,7 +1215,7 @@ def config() -> None:
 )
 
 
-def get(key: str) -> Optional[Any]:
+def get(key: str) -> None:
     """Get a configuration value"""
     # Check if hook function exists
     hook_name = "on_config_get"
@@ -1245,7 +1247,7 @@ def get(key: str) -> Optional[Any]:
 )
 
 
-def set(key: str, value: str) -> Optional[Any]:
+def set(key: str, value: str) -> None:
     """Set a configuration value"""
     # Check if hook function exists
     hook_name = "on_config_set"
@@ -1277,7 +1279,7 @@ def set(key: str, value: str) -> Optional[Any]:
     help="Include API keys in output"
 )
 
-def config_list(show_secrets: bool) -> Optional[Any]:
+def config_list(show_secrets: bool) -> None:
     """List all configuration"""
     # Check if hook function exists
     hook_name = "on_config_list"
@@ -1315,7 +1317,7 @@ def tools() -> None:
 )
 
 
-def enable(tool_name: str) -> Optional[Any]:
+def enable(tool_name: str) -> None:
     """Enable a tool"""
     # Check if hook function exists
     hook_name = "on_tools_enable"
@@ -1343,7 +1345,7 @@ def enable(tool_name: str) -> Optional[Any]:
 )
 
 
-def disable(tool_name: str) -> Optional[Any]:
+def disable(tool_name: str) -> None:
     """Disable a tool"""
     # Check if hook function exists
     hook_name = "on_tools_disable"
@@ -1373,7 +1375,7 @@ def disable(tool_name: str) -> Optional[Any]:
     help="Include disabled tools"
 )
 
-def tools_list(show_disabled: bool) -> Optional[Any]:
+def tools_list(show_disabled: bool) -> None:
     """List all tools"""
     # Check if hook function exists
     hook_name = "on_tools_list"

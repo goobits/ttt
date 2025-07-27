@@ -45,7 +45,8 @@ class LocalBackend(BaseBackend):
         self.base_url = (
             local_config.get("base_url")
             or self.backend_config.get("ollama_base_url")
-            or get_config_value("backends.local.base_url", "http://localhost:11434")
+            or get_config_value("backends.local.base_url")
+            or get_config_value("constants.urls.ollama_default", "http://localhost:11434")
         )
 
         self.default_model = local_config.get("default_model") or get_config_value(
@@ -63,7 +64,11 @@ class LocalBackend(BaseBackend):
         try:
             # Create a simple sync check
             async def check() -> bool:
-                async with httpx.AsyncClient(timeout=5) as client:
+                from ..config.loader import get_config_value
+                availability_timeout = get_config_value(
+                    "constants.timeouts.availability_check", 5
+                )
+                async with httpx.AsyncClient(timeout=availability_timeout) as client:
                     response = await client.get(f"{self.base_url}/api/tags")
                     return response.status_code == 200
 
@@ -111,7 +116,8 @@ class LocalBackend(BaseBackend):
                 from ..core.exceptions import MultiModalError
 
                 raise MultiModalError(
-                    "Local backend (Ollama) does not support image inputs yet. Please use a cloud backend with vision capabilities."
+                    "Local backend (Ollama) does not support image inputs yet. "
+                    "Please use a cloud backend with vision capabilities."
                 )
             # Extract text from the list
             prompt = " ".join(item for item in prompt if isinstance(item, str))
@@ -220,7 +226,8 @@ class LocalBackend(BaseBackend):
                 from ..core.exceptions import MultiModalError
 
                 raise MultiModalError(
-                    "Local backend (Ollama) does not support image inputs yet. Please use a cloud backend with vision capabilities."
+                    "Local backend (Ollama) does not support image inputs yet. "
+                    "Please use a cloud backend with vision capabilities."
                 )
             # Extract text from the list
             prompt = " ".join(item for item in prompt if isinstance(item, str))
@@ -288,7 +295,9 @@ class LocalBackend(BaseBackend):
             List of model names available locally
         """
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
+            from ..config.loader import get_config_value
+            model_list_timeout = get_config_value("constants.timeouts.model_list", 10)
+            async with httpx.AsyncClient(timeout=model_list_timeout) as client:
                 response = await client.get(f"{self.base_url}/api/tags")
                 response.raise_for_status()
 
@@ -299,7 +308,9 @@ class LocalBackend(BaseBackend):
                 return models
 
         except httpx.TimeoutException:
-            raise BackendTimeoutError(self.name, 10.0) from None
+            from ..config.loader import get_config_value
+            model_list_timeout = get_config_value("constants.timeouts.model_list", 10)
+            raise BackendTimeoutError(self.name, float(model_list_timeout)) from None
         except Exception as e:
             logger.error(f"Failed to fetch models: {str(e)}")
             raise BackendConnectionError(self.name, e) from e

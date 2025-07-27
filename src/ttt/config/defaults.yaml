@@ -235,6 +235,40 @@ routing:
     - "replicate/"
     - "huggingface/"
 
+# Constants configuration - centralized hardcoded values
+constants:
+  # Network timeouts (in seconds)
+  timeouts:
+    availability_check: 5          # Quick availability checks
+    model_list: 10                 # Model listing operations
+    backend_health_check: 3        # Backend health/routing checks
+    async_thread_join: 2.0         # Background thread cleanup
+    cache_ttl: 30                  # Cache TTL for routing decisions (seconds)
+    
+  # File size limits (in bytes)
+  file_sizes:
+    max_file_size: 10485760        # 10MB in bytes (10 * 1024 * 1024)
+    kb_threshold: 1024             # 1KB threshold for display
+    mb_threshold: 1048576          # 1MB threshold for display (1024 * 1024)
+    
+  # Tool execution bounds
+  tool_bounds:
+    min_timeout: 1                 # Minimum timeout for tool execution
+    max_timeout: 30                # Maximum timeout for tool execution
+    default_code_timeout: 30       # Default code execution timeout
+    default_web_timeout: 10        # Default web request timeout
+    math_max_iterations: 1000      # Maximum math calculation iterations
+    
+  # Default URLs and endpoints
+  urls:
+    ollama_default: "http://localhost:11434"  # Default Ollama base URL
+    
+  # Retry and rate limiting
+  retries:
+    default_max_retries: 3         # Default maximum retry attempts
+    default_retry_delay: 1.0       # Default retry delay in seconds
+    rate_limit_min_delay: 5.0      # Minimum rate limit delay
+
 # File handling configuration
 files:
   # Image MIME type mappings

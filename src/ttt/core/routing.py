@@ -3,18 +3,14 @@
 from typing import Any, Dict, List, Optional, Union
 
 from ..backends import HAS_LOCAL_BACKEND, BaseBackend, CloudBackend
+from ..config.schema import get_config
+from ..plugins.loader import plugin_registry
+from ..utils import get_logger
+from .exceptions import BackendNotAvailableError
 from .models import AIResponse, ImageInput
 
 if HAS_LOCAL_BACKEND:
     from ..backends import LocalBackend
-from ..config.schema import get_config
-from ..plugins.loader import plugin_registry
-from ..utils import get_logger
-
-# Import model_registry lazily to avoid import-time initialization
-from .exceptions import (
-    BackendNotAvailableError,
-)
 
 logger = get_logger(__name__)
 
@@ -35,7 +31,9 @@ class Router:
         self._backends: Dict[str, BaseBackend] = {}
         self._local_models_cache: Optional[List[str]] = None
         self._cache_timestamp: Optional[float] = None
-        self._cache_ttl = 30  # Cache for 30 seconds
+        # Get cache TTL from constants
+        from ..config.loader import get_config_value
+        self._cache_ttl = get_config_value("constants.timeouts.cache_ttl", 30)  # Cache TTL in seconds
 
     def get_backend(self, backend_name: str) -> BaseBackend:
         """Get or create a backend instance."""
@@ -111,7 +109,7 @@ class Router:
                         f"Using configured default backend: {self.config.default_backend}"
                     )
                     return backend
-            except Exception as e:
+            except (BackendNotAvailableError, ImportError, ValueError) as e:
                 logger.debug(
                     f"Default backend {self.config.default_backend} not available: {e}"
                 )
@@ -122,7 +120,7 @@ class Router:
             if backend.is_available:
                 logger.debug("Using cloud backend")
                 return backend
-        except Exception as e:
+        except (BackendNotAvailableError, ImportError, ConnectionError) as e:
             logger.debug(f"Cloud backend not available: {e}")
 
         # Fallback to local if available
@@ -132,7 +130,7 @@ class Router:
                 if backend.is_available:
                     logger.debug("Using local backend")
                     return backend
-            except Exception as e:
+            except (BackendNotAvailableError, ImportError, ConnectionError) as e:
                 logger.warning(f"Local backend failed: {e}")
 
         # Try other backends in fallback order
@@ -144,7 +142,7 @@ class Router:
                 if backend.is_available:
                     logger.debug(f"Auto-selected backend: {backend_name}")
                     return backend
-            except Exception as e:
+            except (BackendNotAvailableError, ImportError, ConnectionError) as e:
                 logger.debug(f"Backend {backend_name} not available: {e}")
 
         # No backends available
@@ -186,7 +184,10 @@ class Router:
                 try:
                     if local_backend is None:
                         return []
-                    async with httpx.AsyncClient(timeout=3) as client:
+                    # Use backend health check timeout from constants
+                    from ..config.loader import get_config_value
+                    health_check_timeout = get_config_value("constants.timeouts.backend_health_check", 3)
+                    async with httpx.AsyncClient(timeout=health_check_timeout) as client:
                         response = await client.get(
                             f"{local_backend.base_url}/api/tags"
                         )
@@ -194,7 +195,7 @@ class Router:
                             data = response.json()
                             return [m["name"] for m in data.get("models", [])]
                         return []
-                except Exception:
+                except (ConnectionError, TimeoutError, ValueError):
                     return []
 
             available_models = run_async(fetch_local_models())
@@ -203,7 +204,7 @@ class Router:
 
             return model in available_models
 
-        except Exception as e:
+        except (ImportError, ConnectionError, TimeoutError) as e:
             logger.debug(f"Failed to fetch local models: {e}")
             return False
 
@@ -339,7 +340,7 @@ class Router:
                         logger.debug(f"Detected local model: {model}")
                         selected_model = self.resolve_model(model, local_backend)
                         return local_backend, selected_model
-                except Exception as e:
+                except (BackendNotAvailableError, ConnectionError, ValueError) as e:
                     logger.debug(
                         f"Failed to check local backend for model {model}: {e}"
                     )
@@ -383,7 +384,7 @@ class Router:
                 response = await backend.ask(prompt, model=model, **kwargs)
                 if not response.failed:
                     return response
-        except Exception as e:
+        except (ConnectionError, TimeoutError, ValueError, RuntimeError) as e:
             logger.warning(f"Primary backend {backend.name} failed: {e}")
 
         # Try fallback backends if enabled
@@ -413,7 +414,7 @@ class Router:
                     if not response.failed:
                         return response
 
-            except Exception as e:
+            except (BackendNotAvailableError, ConnectionError, TimeoutError, ValueError) as e:
                 logger.warning(f"Fallback backend {backend_name} failed: {e}")
 
         # All backends failed

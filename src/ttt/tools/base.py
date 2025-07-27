@@ -40,7 +40,21 @@ class ToolDefinition:
     category: str = "general"
 
     def to_openai_schema(self) -> Dict[str, Any]:
-        """Convert to OpenAI function calling schema."""
+        """Convert to OpenAI function calling schema.
+
+        Transforms the tool definition into the JSON schema format
+        expected by OpenAI's function calling API.
+
+        Returns:
+            A dictionary containing the OpenAI-compatible schema with
+            function name, description, and parameter specifications.
+
+        Example:
+            >>> tool = ToolDefinition(name="greet", description="Say hello", parameters=[])
+            >>> schema = tool.to_openai_schema()
+            >>> schema["type"]
+            "function"
+        """
         properties: Dict[str, Any] = {}
         required: List[str] = []
 
@@ -68,7 +82,21 @@ class ToolDefinition:
         }
 
     def to_anthropic_schema(self) -> Dict[str, Any]:
-        """Convert to Anthropic function calling schema."""
+        """Convert to Anthropic function calling schema.
+
+        Transforms the tool definition into the JSON schema format
+        expected by Anthropic's Claude function calling API.
+
+        Returns:
+            A dictionary containing the Anthropic-compatible schema with
+            function name, description, and input_schema specifications.
+
+        Example:
+            >>> tool = ToolDefinition(name="calculate", description="Do math", parameters=[])
+            >>> schema = tool.to_anthropic_schema()
+            >>> "input_schema" in schema
+            True
+        """
         input_schema: Dict[str, Any] = {
             "type": "object",
             "properties": {},
@@ -104,11 +132,20 @@ class ToolCall:
 
     @property
     def succeeded(self) -> bool:
-        """Check if the tool call succeeded."""
+        """Check if the tool call succeeded.
+
+        Returns:
+            True if no error occurred during execution, False otherwise.
+        """
         return self.error is None
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization."""
+        """Convert to dictionary for serialization.
+
+        Returns:
+            A dictionary representation of the tool call including
+            all metadata, arguments, results, and success status.
+        """
         return {
             "id": self.id,
             "name": self.name,
@@ -127,16 +164,29 @@ class ToolResult:
 
     @property
     def succeeded(self) -> bool:
-        """Check if all tool calls succeeded."""
+        """Check if all tool calls succeeded.
+
+        Returns:
+            True if all individual tool calls succeeded, False if any failed.
+        """
         return all(call.succeeded for call in self.calls)
 
     @property
     def failed_calls(self) -> List[ToolCall]:
-        """Get list of failed tool calls."""
+        """Get list of failed tool calls.
+
+        Returns:
+            A list of ToolCall objects that failed during execution.
+        """
         return [call for call in self.calls if not call.succeeded]
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization."""
+        """Convert to dictionary for serialization.
+
+        Returns:
+            A dictionary representation including all tool calls,
+            overall success status, and count of failed calls.
+        """
         return {
             "calls": [call.to_dict() for call in self.calls],
             "succeeded": self.succeeded,
@@ -145,7 +195,31 @@ class ToolResult:
 
 
 def extract_parameter_info(func: Callable) -> List[ToolParameter]:
-    """Extract parameter information from a function using type hints and docstring."""
+    """Extract parameter information from a function using type hints and docstring.
+
+    Analyzes a function's signature and docstring to automatically generate
+    ToolParameter objects for each parameter. Type hints are used to determine
+    parameter types, and docstring Args sections provide descriptions.
+
+    Args:
+        func: The function to analyze for parameter information
+
+    Returns:
+        A list of ToolParameter objects representing the function's parameters,
+        excluding 'self' if present.
+
+    Example:
+        >>> def greet(name: str, age: int = 25):
+        ...     '''Greet a person.
+        ...     Args:
+        ...         name: Person's name
+        ...         age: Person's age
+        ...     '''
+        ...     pass
+        >>> params = extract_parameter_info(greet)
+        >>> len(params)
+        2
+    """
     sig = inspect.signature(func)
     parameters = []
 
@@ -216,7 +290,29 @@ def create_tool_definition(
     description: Optional[str] = None,
     category: str = "general",
 ) -> ToolDefinition:
-    """Create a ToolDefinition from a function."""
+    """Create a ToolDefinition from a function.
+
+    Automatically generates a complete tool definition by introspecting
+    the function's signature, type hints, and docstring. This is the
+    primary way to convert regular Python functions into AI-callable tools.
+
+    Args:
+        func: The function to convert into a tool
+        name: Override name for the tool (defaults to function name)
+        description: Override description (defaults to first line of docstring)
+        category: Category for organizing tools (default: "general")
+
+    Returns:
+        A complete ToolDefinition ready for use with AI function calling
+
+    Example:
+        >>> def add_numbers(a: int, b: int) -> int:
+        ...     '''Add two numbers together.'''
+        ...     return a + b
+        >>> tool = create_tool_definition(add_numbers)
+        >>> tool.name
+        'add_numbers'
+    """
     tool_name = name or func.__name__
     tool_description = description or func.__doc__ or f"Tool: {tool_name}"
 

@@ -42,22 +42,23 @@ def load_project_defaults() -> Dict[str, Any]:
 
     # Fallback to minimal defaults if config.yaml not found
     # No need to warn again - get_project_config already warned
+    # Note: These values should match the constants in config.yaml
     _project_defaults_cache = {
         "models": {"default": "openrouter/google/gemini-flash-1.5", "available": {}},
         "backends": {
             "default": "cloud",
             "cloud": {"timeout": 30, "max_retries": 3, "retry_delay": 1.0},
             "local": {
-                "base_url": "http://localhost:11434",
+                "base_url": "http://localhost:11434",  # constants.urls.ollama_default
                 "timeout": 60,
                 "default_model": "llama2",
             },
         },
         "tools": {
-            "max_file_size": 10 * 1024 * 1024,  # 10MB
-            "code_execution_timeout": 30,
-            "web_request_timeout": 10,
-            "math_max_iterations": 1000,
+            "max_file_size": 10485760,  # constants.file_sizes.max_file_size (10MB)
+            "code_execution_timeout": 30,  # constants.tool_bounds.default_code_timeout
+            "web_request_timeout": 10,  # constants.tool_bounds.default_web_timeout
+            "math_max_iterations": 1000,  # constants.tool_bounds.math_max_iterations
         },
         "chat": {
             "default_system_prompt": None,
@@ -67,6 +68,34 @@ def load_project_defaults() -> Dict[str, Any]:
         "logging": {
             "level": "INFO",
             "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        },
+        "constants": {
+            "timeouts": {
+                "availability_check": 5,
+                "model_list": 10,
+                "backend_health_check": 3,
+                "async_thread_join": 2.0,
+            },
+            "file_sizes": {
+                "max_file_size": 10485760,
+                "kb_threshold": 1024,
+                "mb_threshold": 1048576,
+            },
+            "tool_bounds": {
+                "min_timeout": 1,
+                "max_timeout": 30,
+                "default_code_timeout": 30,
+                "default_web_timeout": 10,
+                "math_max_iterations": 1000,
+            },
+            "urls": {
+                "ollama_default": "http://localhost:11434",
+            },
+            "retries": {
+                "default_max_retries": 3,
+                "default_retry_delay": 1.0,
+                "rate_limit_min_delay": 5.0,
+            },
         },
     }
     return _project_defaults_cache

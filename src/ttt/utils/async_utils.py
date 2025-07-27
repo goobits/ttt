@@ -16,13 +16,26 @@ _lock = threading.Lock()
 
 
 def _start_background_loop() -> None:
-    """Start the background event loop in a dedicated thread."""
+    """Start the background event loop in a dedicated thread.
+
+    Creates a new event loop in a daemon thread to handle async operations
+    from synchronous contexts. Sets up custom exception handling to suppress
+    common aiohttp task destruction warnings that occur during cleanup.
+
+    The loop is stored in the global _background_loop variable and a
+    ThreadPoolExecutor is created for non-async operations.
+
+    Note:
+        This function is thread-safe and will only create one background
+        loop even if called multiple times.
+    """
     global _background_loop, _background_thread, _executor
 
     if _background_loop is not None:
         return  # Already started
 
     def run_loop() -> None:
+        """Internal function to run the event loop in the background thread."""
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
@@ -30,6 +43,12 @@ def _start_background_loop() -> None:
         def custom_exception_handler(
             loop: asyncio.AbstractEventLoop, context: dict
         ) -> None:
+            """Custom exception handler that suppresses specific task destruction warnings.
+
+            Args:
+                loop: The event loop where the exception occurred
+                context: Exception context containing message and exception details
+            """
             # Suppress specific aiohttp task destruction warnings
             message = context.get("message", "")
             exception = context.get("exception")
@@ -61,12 +80,23 @@ def _start_background_loop() -> None:
 
 
 def _stop_background_loop() -> None:
-    """Stop the background event loop and cleanup resources."""
+    """Stop the background event loop and cleanup resources.
+
+    Performs graceful shutdown by:
+    1. Cancelling all pending tasks in the loop
+    2. Allowing brief time for cancellations to complete
+    3. Stopping the event loop
+    4. Joining the background thread with timeout
+    5. Shutting down the thread pool executor
+
+    This function is automatically called at program exit via atexit.
+    """
     global _background_loop, _background_thread, _executor
 
     if _background_loop is not None:
         # Cancel all pending tasks more gracefully
         def cancel_tasks() -> None:
+            """Cancel all pending tasks in the background loop."""
             tasks = asyncio.all_tasks(_background_loop)
             for task in tasks:
                 if not task.done():
@@ -74,6 +104,7 @@ def _stop_background_loop() -> None:
 
             # Schedule loop stop after tasks are cancelled
             async def stop_when_ready() -> None:
+                """Stop the loop after allowing time for task cancellation."""
                 # Wait briefly for cancellations to complete
                 await asyncio.sleep(0.1)
                 if _background_loop is not None:
@@ -84,7 +115,10 @@ def _stop_background_loop() -> None:
         _background_loop.call_soon_threadsafe(cancel_tasks)
         # Give more time for graceful shutdown
         if _background_thread:
-            _background_thread.join(timeout=2.0)
+            # Use thread join timeout from constants
+            from ..config.loader import get_config_value
+            join_timeout = get_config_value("constants.timeouts.async_thread_join", 2.0)
+            _background_thread.join(timeout=join_timeout)
         _background_loop = None
         _background_thread = None
 
@@ -139,7 +173,24 @@ def optimized_run_async(coro: Awaitable[T]) -> T:
     Optimized version of run_async that reuses a background event loop.
 
     This function provides better performance by avoiding the overhead
-    of creating new event loops for every call.
+    of creating new event loops for every call. It intelligently chooses
+    between using the background loop or creating a new one based on
+    the current execution context.
+
+    Args:
+        coro: The coroutine or awaitable to execute
+
+    Returns:
+        The result of executing the coroutine
+
+    Raises:
+        RuntimeError: If there are issues with loop management
+
+    Examples:
+        >>> async def my_async_function():
+        ...     return "Hello, World!"
+        >>> result = optimized_run_async(my_async_function())
+        >>> print(result)  # "Hello, World!"
     """
     try:
         # Check if an event loop is already running in the current thread
