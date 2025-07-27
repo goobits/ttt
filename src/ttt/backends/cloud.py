@@ -251,7 +251,29 @@ class CloudBackend(BaseBackend):
 
             response = await self.litellm.acompletion(**params)
 
-            # Extract response content
+            # Handle streaming response if stream=True
+            if kwargs.get("stream", False):
+                # Collect all chunks from the stream
+                response_content = ""
+                async for chunk in response:
+                    if chunk.choices and chunk.choices[0].delta:
+                        content = chunk.choices[0].delta.content
+                        if content:
+                            response_content += str(content)
+                
+                # For streaming, we don't have tool calls or other metadata
+                # Just return the content
+                return AIResponse(
+                    content=response_content,
+                    model=used_model,
+                    backend=self.name,
+                    metadata={
+                        "finish_reason": "stop",
+                        "elapsed_time": time.time() - start_time,
+                    },
+                )
+            
+            # Extract response content for non-streaming
             if not response.choices:
                 raise EmptyResponseError(used_model, self.name)
 

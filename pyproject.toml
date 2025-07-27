@@ -74,7 +74,7 @@ testpaths = [ "tests",]
 python_files = [ "test_*.py",]
 python_classes = [ "Test*",]
 python_functions = [ "test_*",]
-addopts = "-v --tb=short --strict-markers"
+addopts = "-v --tb=short --strict-markers -p pytest_asyncio"
 markers = [ "slow: marks tests as slow (deselect with '-m \"not slow\"')", "integration: marks tests as integration tests", "unit: marks tests as unit tests", "benchmark: marks tests as performance benchmarks", "examples: marks tests as usage examples", "real_api: marks tests that make real API calls", "asyncio: marks tests as async tests", "requires_api: marks tests that require API keys",]
 
 [tool.coverage.run]
