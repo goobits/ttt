@@ -12,10 +12,10 @@ from rich.console import Console
 
 # Import required TTT modules
 import ttt
+from ttt.config.manager import ConfigManager
 from ttt.core.api import ask as ttt_ask
 from ttt.core.api import stream as ttt_stream
 from ttt.session.manager import ChatSessionManager
-from ttt.config.manager import ConfigManager
 
 # Initialize console
 console = Console()
@@ -202,7 +202,7 @@ def apply_coding_optimization(kwargs: Dict[str, Any]) -> None:
 # Main hook functions
 
 def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
-           max_tokens: Optional[int], tools: bool, session: Optional[str], system: Optional[str], stream: bool, json: bool):
+           max_tokens: Optional[int], tools: bool, session: Optional[str], system: Optional[str], stream: bool, json: bool) -> None:
     """Hook for 'ask' command."""
     # Parse provider shortcuts from prompt arguments
     prompt_list = list(prompt) if prompt else []
@@ -329,7 +329,7 @@ def on_ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float,
         sys.exit(1)
 
 
-def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown: bool):
+def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown: bool) -> None:
     """Hook for 'chat' command."""
     from ttt.session.manager import ChatSessionManager
 
@@ -471,7 +471,7 @@ def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown:
             console.print(f"[red]Error starting chat session: {e}[/red]")
 
 
-def on_list(resource: str, format: str, verbose: bool):
+def on_list(resource: str, format: str, verbose: bool) -> None:
     """Hook for 'list' command."""
     if resource == 'models':
         show_models_list(json_output=(format == 'json'))
@@ -494,26 +494,26 @@ def on_list(resource: str, format: str, verbose: bool):
                 console.print(f"  • [cyan]{tool.name}[/cyan]: {tool.description}")
 
 
-def on_config_get(key: str):
+def on_config_get(key: str) -> None:
     """Hook for 'config get' subcommand."""
     config_manager = ConfigManager()
     config_manager.show_value(key)
 
 
-def on_config_set(key: str, value: str):
+def on_config_set(key: str, value: str) -> None:
     """Hook for 'config set' subcommand."""
     config_manager = ConfigManager()
     config_manager.set_value(key, value)
 
 
-def on_config_list(show_secrets: bool):
+def on_config_list(show_secrets: bool) -> None:
     """Hook for 'config list' subcommand."""
     config_manager = ConfigManager()
     merged_config = config_manager.get_merged_config()
 
     # Mask sensitive values unless show_secrets is True
     if not show_secrets:
-        def mask_sensitive(obj, key=None):
+        def mask_sensitive(obj: Any, key: Optional[str] = None) -> Any:
             if isinstance(obj, dict):
                 return {k: mask_sensitive(v, k) for k, v in obj.items()}
             elif isinstance(obj, list):
@@ -528,7 +528,7 @@ def on_config_list(show_secrets: bool):
     click.echo(json_module.dumps(merged_config, indent=2))
 
 
-def on_export(session: str, format: str, output: Optional[str], include_metadata: bool):
+def on_export(session: str, format: str, output: Optional[str], include_metadata: bool) -> None:
     """Hook for 'export' command."""
     session_manager = ChatSessionManager()
 
@@ -578,7 +578,7 @@ def on_export(session: str, format: str, output: Optional[str], include_metadata
         click.echo(output_text)
 
 
-def on_tools_enable(tool_name: str):
+def on_tools_enable(tool_name: str) -> None:
     """Hook for 'tools enable' subcommand."""
     config_manager = ConfigManager()
     merged_config = config_manager.get_merged_config()
@@ -592,7 +592,7 @@ def on_tools_enable(tool_name: str):
         click.echo(f"Tool '{tool_name}' is already enabled")
 
 
-def on_tools_disable(tool_name: str):
+def on_tools_disable(tool_name: str) -> None:
     """Hook for 'tools disable' subcommand."""
     config_manager = ConfigManager()
     merged_config = config_manager.get_merged_config()
@@ -606,7 +606,7 @@ def on_tools_disable(tool_name: str):
         click.echo(f"Tool '{tool_name}' is already disabled")
 
 
-def on_tools_list(show_disabled: bool):
+def on_tools_list(show_disabled: bool) -> None:
     """Hook for 'tools list' subcommand."""
     from ttt.tools import list_tools
 
@@ -823,16 +823,16 @@ def show_backend_status(json_output: bool = False) -> None:
 
 
 # Add hook functions for missing commands that need to be added to CLI
-def on_status(json: bool):
+def on_status(json: bool) -> None:
     """Hook for 'status' command."""
     show_backend_status(json_output=json)
 
 
-def on_models(json: bool):
+def on_models(json: bool) -> None:
     """Hook for 'models' command."""
     show_models_list(json_output=json)
 
 
-def on_info(model: str, json: bool):
+def on_info(model: str, json: bool) -> None:
     """Hook for 'info' command."""
     show_model_info(model, json_output=json)

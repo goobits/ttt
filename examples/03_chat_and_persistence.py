@@ -84,7 +84,7 @@ def advanced_session_management():
 
     # Create session with custom ID
     session = PersistentChatSession(
-        session_id="project_manager_001", 
+        session_id="project_manager_001",
         system="You are a project management assistant specialized in software development"
     )
 
@@ -125,15 +125,15 @@ def multi_session_tracking():
     # Create different sessions for different purposes
     sessions = {
         "coding": PersistentChatSession(
-            system="You are an expert Python developer", 
+            system="You are an expert Python developer",
             session_id="coding_helper"
         ),
         "learning": PersistentChatSession(
-            system="You are a patient teacher who explains concepts clearly", 
+            system="You are a patient teacher who explains concepts clearly",
             session_id="learning_helper"
         ),
         "planning": PersistentChatSession(
-            system="You are a strategic thinking partner", 
+            system="You are a strategic thinking partner",
             session_id="planning_helper"
         ),
     }
@@ -176,7 +176,7 @@ def incremental_conversation():
     else:
         print("Starting new learning session...")
         session = PersistentChatSession(
-            system="You are a coding tutor who tracks student progress", 
+            system="You are a coding tutor who tracks student progress",
             session_id="python_learning"
         )
 
@@ -192,7 +192,7 @@ def incremental_conversation():
     # Pick next topic based on conversation length
     user_messages = [m for m in session.history if m["role"] == "user"]
     topic_index = len(user_messages)
-    
+
     if topic_index < len(topics):
         response = session.ask(topics[topic_index])
         print(f"\nTopic {topic_index + 1}: {topics[topic_index]}")
@@ -216,7 +216,7 @@ def get_weather(city: str) -> str:
     """Get current weather for a city."""
     weather_data = {
         "New York": "72°F, Sunny",
-        "London": "60°F, Cloudy", 
+        "London": "60°F, Cloudy",
         "Tokyo": "68°F, Clear",
         "Paris": "65°F, Partly Cloudy",
     }
@@ -246,7 +246,7 @@ def persistent_chat_with_tools():
 
     # First conversation
     print(f"Session ID: {session.session_id}")
-    
+
     response1 = session.ask("What's the weather like in London?")
     print(f"User: What's the weather like in London?")
     print(f"Assistant: {response1}")

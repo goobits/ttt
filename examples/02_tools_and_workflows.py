@@ -237,24 +237,24 @@ def demo_cli_examples():
     print("\n=== CLI Tool Examples ===\n")
     print("You can use tools from the command line in several ways:")
     print()
-    
+
     print("1. Using built-in tools:")
     print('   ttt "Search for Python tutorials" --tools "web_search"')
     print('   ttt "Calculate 15% of 250" --tools "calculate"')
     print()
-    
+
     print("2. Using multiple tools:")
     print('   ttt "Search for weather data and calculate averages" --tools "web_search,calculate"')
     print()
-    
+
     print("3. Using custom tools from modules:")
     print('   ttt "Get system info" --tools "os:getcwd,platform:system"')
     print()
-    
+
     print("4. Using tools from custom scripts:")
     print('   ttt "Process data" --tools "/path/to/my_tools.py:process_data"')
     print()
-    
+
     print("5. Complex workflows:")
     print('   ttt "Research topic, analyze data, create report" --tools "web_search,calculate,write_file"')
 

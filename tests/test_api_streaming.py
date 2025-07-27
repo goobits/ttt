@@ -6,15 +6,15 @@ from unittest.mock import patch
 import pytest
 
 from ttt import (
+    AIResponse,
+    BackendNotAvailableError,
+    ImageInput,
     achat,
     ask,
     ask_async,
     chat,
     stream,
     stream_async,
-    AIResponse,
-    ImageInput,
-    BackendNotAvailableError,
 )
 from ttt.backends import BaseBackend
 from ttt.session.chat import PersistentChatSession as ChatSession
@@ -96,7 +96,7 @@ class TestAskFunction:
         mock_backend = MockBackend()
         with patch("ttt.core.routing.router.smart_route") as mock_route:
             mock_route.return_value = (mock_backend, "mock-model")
-            
+
             response = ask("Test prompt")
 
             assert str(response) == "Mock response"
@@ -113,8 +113,8 @@ class TestAskFunction:
         mock_backend = MockBackend()
         with patch("ttt.core.routing.router.smart_route") as mock_route:
             mock_route.return_value = (mock_backend, "specific-model")
-            
-            response = ask(
+
+            ask(
                 "Test prompt",
                 model="specific-model",
                 system="System prompt",
@@ -140,8 +140,8 @@ class TestAskFunction:
         mock_backend = MockBackend()
         with patch("ttt.core.routing.router.smart_route") as mock_route:
             mock_route.return_value = (mock_backend, "mock-model")
-            
-            response = ask(["What's in this image?", ImageInput(b"fake_image_data_for_testing")])
+
+            ask(["What's in this image?", ImageInput(b"fake_image_data_for_testing")])
 
             # Verify prompt was passed correctly
             assert isinstance(mock_backend.last_prompt, list)
@@ -158,7 +158,7 @@ class TestStreamFunction:
         mock_backend.response_text = "Hello world test"
         with patch("ttt.core.routing.router.smart_route") as mock_route:
             mock_route.return_value = (mock_backend, "mock-model")
-            
+
             chunks = list(stream("Test prompt"))
 
             assert chunks == ["Hello ", "world ", "test "]
@@ -169,7 +169,7 @@ class TestStreamFunction:
         mock_backend = MockBackend()
         with patch("ttt.core.routing.router.smart_route") as mock_route:
             mock_route.return_value = (mock_backend, "specific-model")
-            
+
             list(
                 stream(
                     "Test prompt",
@@ -191,7 +191,7 @@ class TestStreamFunction:
         mock_backend = MockBackend()
         with patch("ttt.core.routing.router.smart_route") as mock_route:
             mock_route.return_value = (mock_backend, "mock-model")
-            
+
             chunks = list(stream(["Describe this", ImageInput(b"fake_image_data_for_testing")]))
 
             assert isinstance(mock_backend.last_prompt, list)
@@ -439,7 +439,7 @@ class TestErrorHandling:
                     chunks.append(chunk)
             except Exception:
                 pass  # Expected to fail
-            
+
             # We should get at least the partial result
             assert "Start " in chunks or len(chunks) == 3  # Either partial or full mock response
 

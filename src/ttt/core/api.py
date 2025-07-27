@@ -4,11 +4,11 @@ from contextlib import asynccontextmanager, contextmanager
 from typing import Any, AsyncIterator, Iterator, List, Optional, Union
 
 from ..backends import BaseBackend
-from ..session.chat import PersistentChatSession
-from .models import AIResponse, ImageInput
 from ..plugins import discover_plugins
-from .routing import router
+from ..session.chat import PersistentChatSession
 from ..utils import get_logger, run_async, run_coro_in_background
+from .models import AIResponse, ImageInput
+from .routing import router
 
 # Backward compatibility alias - prefer PersistentChatSession in new code
 ChatSession = PersistentChatSession

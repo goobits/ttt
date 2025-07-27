@@ -9,7 +9,14 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from ttt import AIResponse, chat, ImageInput, InvalidParameterError, SessionLoadError, SessionSaveError
+from ttt import (
+    AIResponse,
+    ImageInput,
+    InvalidParameterError,
+    SessionLoadError,
+    SessionSaveError,
+    chat,
+)
 from ttt.backends import BaseBackend
 from ttt.session.chat import PersistentChatSession, _estimate_tokens
 

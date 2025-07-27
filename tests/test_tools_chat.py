@@ -1,10 +1,10 @@
 """Tests for tool support in chat sessions."""
 
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from ttt import chat, AIResponse
+from ttt import AIResponse, chat
 from ttt.session.chat import PersistentChatSession
 from ttt.session.chat import PersistentChatSession as ChatSession
 from ttt.tools import ToolCall, ToolResult
@@ -188,37 +188,38 @@ class TestCLIToolSupport:
     def test_cli_with_tools(self):
         """Test that CLI with --tools flag is properly supported."""
         from click.testing import CliRunner
+
         from ttt.cli import main
-        
+
         runner = CliRunner()
-        
+
         # Test 1: Verify the --tools flag exists in help
         result = runner.invoke(
             main,
             ["ask", "--help"],
             catch_exceptions=False
         )
-        
+
         assert result.exit_code == 0
         assert "--tools" in result.output
         assert "Enable tool usage" in result.output
-        
+
         # Test 2: Verify we can call the hook function directly with tools parameter
         from ttt.app_hooks import on_ask
-        
+
         # Mock the API functions to prevent real calls
         with patch("ttt.app_hooks.ttt_stream") as mock_stream, \
              patch("ttt.app_hooks.ttt_ask") as mock_ask:
-            
+
             mock_stream.return_value = iter(["Test response"])
             mock_ask.return_value = "Test response"
-            
+
             # Test that on_ask properly handles tools parameter
             import io
             import sys
             old_stdout = sys.stdout
             sys.stdout = io.StringIO()
-            
+
             try:
                 # Mock stdin to avoid reading from it
                 with patch('sys.stdin.isatty', return_value=True):
@@ -234,15 +235,15 @@ class TestCLIToolSupport:
                         stream=True,
                         json=False
                     )
-                
+
                 # Verify it was called with tools
                 assert mock_stream.called
                 call_kwargs = mock_stream.call_args[1]
                 assert "tools" in call_kwargs
                 assert call_kwargs["tools"] is None  # on_ask converts True to None
-                
+
                 mock_stream.reset_mock()
-                
+
                 # Call with tools=False
                 with patch('sys.stdin.isatty', return_value=True):
                     on_ask(
@@ -256,12 +257,12 @@ class TestCLIToolSupport:
                         stream=True,
                         json=False
                     )
-                
+
                 # Verify it was called without tools
                 assert mock_stream.called
                 call_kwargs = mock_stream.call_args[1]
                 assert "tools" not in call_kwargs
-                
+
             finally:
                 sys.stdout = old_stdout
 

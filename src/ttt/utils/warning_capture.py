@@ -9,7 +9,7 @@ from typing import List
 class WarningCapture:
     """Simple context manager to capture warnings during execution."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.buffer = StringIO()
         self.handler = logging.StreamHandler(self.buffer)
         self.handler.setLevel(logging.WARNING)
@@ -17,11 +17,11 @@ class WarningCapture:
         formatter = logging.Formatter("%(message)s")
         self.handler.setFormatter(formatter)
 
-    def __enter__(self):
+    def __enter__(self) -> "WarningCapture":
         logging.getLogger().addHandler(self.handler)
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args) -> None:
         logging.getLogger().removeHandler(self.handler)
 
     def get_warnings(self) -> List[str]:
@@ -36,17 +36,17 @@ class WarningCapture:
 class EarlyWarningCapture:
     """Capture warnings that happen at import time by redirecting stderr."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.original_stderr = None
         self.buffer = StringIO()
         self.warnings: List[str] = []
 
-    def start(self):
+    def start(self) -> None:
         """Start capturing stderr."""
         self.original_stderr = sys.stderr
         sys.stderr = self.buffer
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop capturing and extract warnings."""
         if self.original_stderr:
             sys.stderr = self.original_stderr

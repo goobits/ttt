@@ -4,26 +4,10 @@ The Unified AI Library
 A single, elegant interface for local and cloud AI models.
 """
 
+# ruff: noqa: I001 (import order critical for avoiding circular imports)
 from .core.api import ChatSession, achat, ask, ask_async, chat, stream, stream_async
 from .backends import CloudBackend, LocalBackend
-from .session.chat import PersistentChatSession
 from .config import configure
-
-
-# Import model_registry lazily to avoid import-time initialization
-def _get_model_registry():
-    from .config import model_registry
-
-    return model_registry
-
-
-# Create a lazy proxy for model_registry
-class _ModelRegistryProxy:
-    def __getattr__(self, name):
-        return getattr(_get_model_registry(), name)
-
-
-model_registry = _ModelRegistryProxy()
 from .core.exceptions import (
     AIError,
     APIKeyError,
@@ -56,9 +40,24 @@ from .core.exceptions import (
 )
 from .core.models import AIResponse, ConfigModel, ImageInput, ModelInfo
 from .plugins import discover_plugins, load_plugin, register_backend
-
-# Auto-load built-in tools when the library is imported
+from .session.chat import PersistentChatSession
 from .tools.builtins import load_builtin_tools
+
+
+# Import model_registry lazily to avoid import-time initialization
+def _get_model_registry():
+    from .config import model_registry
+
+    return model_registry
+
+
+# Create a lazy proxy for model_registry
+class _ModelRegistryProxy:
+    def __getattr__(self, name):
+        return getattr(_get_model_registry(), name)
+
+
+model_registry = _ModelRegistryProxy()
 
 load_builtin_tools()
 

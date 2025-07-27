@@ -3,8 +3,7 @@
 Tests all commands, options, help text, and integration with the app hooks system.
 """
 
-from unittest.mock import MagicMock, Mock, patch
-import json
+from unittest.mock import Mock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -14,7 +13,7 @@ from ttt.cli import main
 
 class TestCLIStructure:
     """Test CLI structure and help display.
-    
+
     Note: These tests focus on functionality rather than specific text content.
     We test that commands exist and work, not what their help text says.
     This makes tests more maintainable and less brittle.
@@ -63,9 +62,9 @@ class TestAskCommand:
         """Test basic ask functionality with hook mocking."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_ask = Mock()
-            
+
             result = self.runner.invoke(main, ["ask", "What is Python?"])
-            
+
             # Should call the hook or execute fallback behavior
             assert result.exit_code == 0
 
@@ -73,7 +72,7 @@ class TestAskCommand:
         """Test ask with various options."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_ask = Mock()
-            
+
             result = self.runner.invoke(main, [
                 "ask", "Debug this code",
                 "--model", "gpt-4",
@@ -81,13 +80,13 @@ class TestAskCommand:
                 "--tools", "true",
                 "--session", "test-session"
             ])
-            
+
             assert result.exit_code == 0
 
     def test_ask_requires_prompt(self):
         """Test that ask command requires a prompt."""
         result = self.runner.invoke(main, ["ask"])
-        
+
         # Should fail when no prompt provided
         assert result.exit_code != 0
         assert "Missing argument" in result.output
@@ -97,7 +96,7 @@ class TestAskCommand:
         result = self.runner.invoke(main, [
             "ask", "test", "--temperature", "invalid"
         ])
-        
+
         assert result.exit_code == 2  # Click validation error
 
 
@@ -118,9 +117,9 @@ class TestChatCommand:
         with patch("ttt.cli.app_hooks") as mock_hooks:
             # Mock to avoid actual chat loop
             mock_hooks.on_chat = Mock()
-            
+
             result = self.runner.invoke(main, ["chat"])
-            
+
             # Should execute without errors
             assert result.exit_code == 0
 
@@ -128,14 +127,14 @@ class TestChatCommand:
         """Test chat with various options."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_chat = Mock()
-            
+
             result = self.runner.invoke(main, [
                 "chat",
-                "--model", "gpt-4", 
+                "--model", "gpt-4",
                 "--session", "my-session",
                 "--tools", "true"
             ])
-            
+
             assert result.exit_code == 0
 
 
@@ -149,44 +148,44 @@ class TestListCommand:
     def test_list_help_shows_resources(self):
         """Test list command help shows available resources."""
         result = self.runner.invoke(main, ["list", "--help"])
-        
+
         assert result.exit_code == 0
         output = result.output
-        
+
         # Should show available resource choices
         assert "models" in output
-        assert "sessions" in output  
+        assert "sessions" in output
         assert "tools" in output
 
     def test_list_models(self):
         """Test listing models."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_list = Mock()
-            
+
             result = self.runner.invoke(main, ["list", "models"])
-            
+
             assert result.exit_code == 0
 
     def test_list_with_format(self):
         """Test list with different format."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_list = Mock()
-            
+
             result = self.runner.invoke(main, ["list", "models", "--format", "json"])
-            
+
             assert result.exit_code == 0
 
     def test_list_requires_resource(self):
         """Test that list command requires a resource argument."""
         result = self.runner.invoke(main, ["list"])
-        
+
         assert result.exit_code == 2  # Click validation error
         assert "Missing argument" in result.output
 
     def test_list_invalid_resource(self):
         """Test validation for resource argument."""
         result = self.runner.invoke(main, ["list", "invalid"])
-        
+
         assert result.exit_code == 2  # Click validation error
 
 
@@ -200,7 +199,7 @@ class TestConfigCommand:
     def test_config_help(self):
         """Test config command help."""
         result = self.runner.invoke(main, ["config", "--help"])
-        
+
         assert result.exit_code == 0
         output = result.output
         assert "Customize your setup" in output
@@ -208,10 +207,10 @@ class TestConfigCommand:
     def test_config_subcommands_exist(self):
         """Test that config subcommands are available."""
         result = self.runner.invoke(main, ["config", "--help"])
-        
+
         assert result.exit_code == 0
         output = result.output
-        
+
         # Should list subcommands
         assert "get" in output
         assert "set" in output
@@ -221,36 +220,36 @@ class TestConfigCommand:
         """Test config get subcommand."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_config_get = Mock()
-            
+
             result = self.runner.invoke(main, ["config", "get", "model"])
-            
+
             assert result.exit_code == 0
 
     def test_config_set(self):
         """Test config set subcommand."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_config_set = Mock()
-            
+
             result = self.runner.invoke(main, ["config", "set", "model", "gpt-4"])
-            
+
             assert result.exit_code == 0
 
     def test_config_list(self):
         """Test config list subcommand."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_config_list = Mock()
-            
+
             result = self.runner.invoke(main, ["config", "list"])
-            
+
             assert result.exit_code == 0
 
     def test_config_list_with_secrets(self):
         """Test config list with show-secrets option."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_config_list = Mock()
-            
+
             result = self.runner.invoke(main, ["config", "list", "--show-secrets", "true"])
-            
+
             assert result.exit_code == 0
 
 
@@ -264,7 +263,7 @@ class TestToolsCommand:
     def test_tools_help(self):
         """Test tools command help."""
         result = self.runner.invoke(main, ["tools", "--help"])
-        
+
         assert result.exit_code == 0
         output = result.output
         assert "Manage CLI tools and extensions" in output
@@ -272,10 +271,10 @@ class TestToolsCommand:
     def test_tools_subcommands_exist(self):
         """Test that tools subcommands are available."""
         result = self.runner.invoke(main, ["tools", "--help"])
-        
+
         assert result.exit_code == 0
         output = result.output
-        
+
         # Should list subcommands
         assert "enable" in output
         assert "disable" in output
@@ -285,27 +284,27 @@ class TestToolsCommand:
         """Test tools enable subcommand."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_tools_enable = Mock()
-            
+
             result = self.runner.invoke(main, ["tools", "enable", "web_search"])
-            
+
             assert result.exit_code == 0
 
     def test_tools_disable(self):
         """Test tools disable subcommand."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_tools_disable = Mock()
-            
+
             result = self.runner.invoke(main, ["tools", "disable", "web_search"])
-            
+
             assert result.exit_code == 0
 
     def test_tools_list(self):
         """Test tools list subcommand."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_tools_list = Mock()
-            
+
             result = self.runner.invoke(main, ["tools", "list"])
-            
+
             assert result.exit_code == 0
 
 
@@ -320,9 +319,9 @@ class TestStatusCommand:
         """Test basic status command."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_status = Mock()
-            
+
             result = self.runner.invoke(main, ["status"])
-            
+
             assert result.exit_code == 0
 
 
@@ -337,9 +336,9 @@ class TestModelsCommand:
         """Test basic models command."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_models = Mock()
-            
+
             result = self.runner.invoke(main, ["models"])
-            
+
             assert result.exit_code == 0
 
 
@@ -354,15 +353,15 @@ class TestInfoCommand:
         """Test basic info command."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_info = Mock()
-            
+
             result = self.runner.invoke(main, ["info", "gpt-4"])
-            
+
             assert result.exit_code == 0
 
     def test_info_requires_model(self):
         """Test that info command requires a model argument."""
         result = self.runner.invoke(main, ["info"])
-        
+
         assert result.exit_code == 2  # Click validation error
         assert "Missing argument" in result.output
 
@@ -378,29 +377,29 @@ class TestExportCommand:
         """Test basic export command."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_export = Mock()
-            
+
             result = self.runner.invoke(main, ["export", "session-1"])
-            
+
             assert result.exit_code == 0
 
     def test_export_with_options(self):
         """Test export with various options."""
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_export = Mock()
-            
+
             result = self.runner.invoke(main, [
                 "export", "session-1",
                 "--format", "json",
                 "--output", "output.json",
                 "--include-metadata", "true"
             ])
-            
+
             assert result.exit_code == 0
 
     def test_export_requires_session(self):
         """Test that export command requires a session argument."""
         result = self.runner.invoke(main, ["export"])
-        
+
         assert result.exit_code == 2  # Click validation error
         assert "Missing argument" in result.output
 
@@ -415,7 +414,7 @@ class TestCLIErrorHandling:
     def test_invalid_command(self):
         """Test handling of invalid commands."""
         result = self.runner.invoke(main, ["invalid-command"])
-        
+
         # The CLI treats unknown commands as prompts for the ask command
         assert result.exit_code == 0
         assert "invalid-command" in result.output
@@ -423,7 +422,7 @@ class TestCLIErrorHandling:
     def test_invalid_option(self):
         """Test handling of invalid options."""
         result = self.runner.invoke(main, ["ask", "test", "--invalid-option"])
-        
+
         assert result.exit_code == 2
         assert "No such option" in result.output
 
@@ -432,9 +431,9 @@ class TestCLIErrorHandling:
         with patch("ttt.cli.app_hooks") as mock_hooks:
             # Make the hook raise an exception
             mock_hooks.on_ask = Mock(side_effect=Exception("Test error"))
-            
+
             result = self.runner.invoke(main, ["ask", "test"])
-            
+
             # Should handle exception gracefully - exact behavior depends on implementation
             # At minimum, shouldn't crash completely
             assert result.exit_code in [0, 1]
@@ -451,7 +450,7 @@ class TestCLIIntegration:
         """Test that commands work with shell pipes and redirects."""
         # Test help for all main commands
         commands = ["ask", "chat", "list", "status", "models", "info", "config", "tools", "export"]
-        
+
         for cmd in commands:
             result = self.runner.invoke(main, [cmd, "--help"])
             assert result.exit_code == 0, f"Help failed for command: {cmd}"
@@ -463,8 +462,8 @@ class TestCLIIntegration:
         for subcmd in config_subcommands:
             result = self.runner.invoke(main, ["config", subcmd, "--help"])
             assert result.exit_code == 0, f"Help failed for config {subcmd}"
-        
-        # Test tools subcommands  
+
+        # Test tools subcommands
         tools_subcommands = ["enable", "disable", "list"]
         for subcmd in tools_subcommands:
             result = self.runner.invoke(main, ["tools", subcmd, "--help"])

@@ -4,11 +4,11 @@ from unittest.mock import patch
 
 import pytest
 
+from ttt import AIResponse, BackendNotAvailableError, ModelInfo
 from ttt.backends import BaseBackend
 from ttt.config import model_registry
-from ttt import BackendNotAvailableError, AIResponse, ModelInfo
-from ttt.plugins import plugin_registry
 from ttt.core.routing import Router
+from ttt.plugins import plugin_registry
 
 
 class MockBackend(BaseBackend):

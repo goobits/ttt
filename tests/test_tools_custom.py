@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from ttt import ask, AIResponse
+from ttt import AIResponse, ask
 from ttt.backends.cloud import CloudBackend
 from ttt.tools import (
     ToolCall,

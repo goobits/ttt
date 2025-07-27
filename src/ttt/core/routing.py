@@ -8,13 +8,13 @@ from .models import AIResponse, ImageInput
 if HAS_LOCAL_BACKEND:
     from ..backends import LocalBackend
 from ..config.schema import get_config
+from ..plugins.loader import plugin_registry
+from ..utils import get_logger
 
 # Import model_registry lazily to avoid import-time initialization
 from .exceptions import (
     BackendNotAvailableError,
 )
-from ..plugins.loader import plugin_registry
-from ..utils import get_logger
 
 logger = get_logger(__name__)
 

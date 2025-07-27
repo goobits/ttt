@@ -4,8 +4,8 @@ from typing import Any, AsyncIterator, Dict, List
 
 import pytest
 
+from ttt import AIResponse, PluginValidationError
 from ttt.backends import BaseBackend
-from ttt import PluginValidationError, AIResponse
 from ttt.plugins import BackendPlugin, PluginRegistry, plugin_registry
 
 

@@ -41,7 +41,7 @@ __all__ = [
     "stream",
     # Data models
     "AIResponse",
-    "ImageInput", 
+    "ImageInput",
     "ModelInfo",
     "Router",
     # Exceptions

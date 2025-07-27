@@ -34,7 +34,6 @@ from ttt.tools.recovery import (
     RetryConfig,
 )
 
-
 # =============================================================================
 # EXCEPTION HIERARCHY TESTS
 # =============================================================================
@@ -146,8 +145,8 @@ class TestBackendExceptions:
 
     def test_local_backend_multimodal_error(self):
         """Test that multi-modal input raises MultiModalError."""
-        from ttt.backends.local import LocalBackend
         from ttt import ImageInput
+        from ttt.backends.local import LocalBackend
 
         backend = LocalBackend()
 

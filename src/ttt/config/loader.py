@@ -1,5 +1,6 @@
 """Configuration loader utility for easy access to project config values."""
 
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -14,8 +15,6 @@ logger = get_logger(__name__)
 _project_config_cache: Optional[Dict[str, Any]] = None
 
 # Check if we should suppress warnings (JSON mode)
-import os
-
 _suppress_warnings = os.environ.get("TTT_JSON_MODE", "").lower() == "true"
 
 

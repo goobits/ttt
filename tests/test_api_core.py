@@ -2,7 +2,7 @@
 
 import pytest
 
-from ttt import chat, AIResponse
+from ttt import AIResponse, chat
 from ttt.backends import BaseBackend
 from ttt.session.chat import PersistentChatSession
 

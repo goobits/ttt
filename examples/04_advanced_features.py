@@ -56,7 +56,7 @@ def basic_image_analysis():
         print(f"Response: {response}")
         print(f"Model used: {response.model}")
         print(f"Time taken: {response.time:.2f}s")
-        
+
     except Exception as e:
         print(f"Image analysis failed: {e}")
         print("This requires a vision-capable model and API key")
@@ -79,7 +79,7 @@ def multiple_images_comparison():
         )  # Will auto-select vision model
 
         print(f"Comparison: {response}")
-        
+
     except Exception as e:
         print(f"Multiple image comparison failed: {e}")
 
@@ -101,7 +101,7 @@ def streaming_with_vision():
         ):
             print(chunk, end="", flush=True)
         print("\n")
-        
+
     except Exception as e:
         print(f"Streaming vision failed: {e}")
 
@@ -143,7 +143,7 @@ def vision_model_selection():
 
     # Try different vision models
     vision_models = ["gpt-4-vision-preview", "gemini-pro-vision", "claude-3-sonnet"]
-    
+
     for model in vision_models:
         try:
             response = ttt.ask(
@@ -176,19 +176,19 @@ def handle_backend_errors():
     try:
         # Save original config
         original_url = os.environ.get("OLLAMA_BASE_URL")
-        
+
         # Set wrong URL to trigger connection error
         os.environ["OLLAMA_BASE_URL"] = "http://localhost:99999"
         response = ask("Hello", backend="local")
-        
+
     except BackendConnectionError as e:
         print(f"\nConnection error: {e}")
         print(f"  Backend: {e.details.get('backend', 'unknown')}")
         print(f"  This often means the local server (like Ollama) isn't running")
-        
+
     except Exception as e:
         print(f"\nConnection issue: {type(e).__name__}: {e}")
-        
+
     finally:
         # Restore original URL
         if original_url:
@@ -215,7 +215,7 @@ def handle_model_errors():
     # 2. Multi-modal error (using vision on non-vision model)
     try:
         response = ask(
-            ["What's in this image?", ImageInput("https://via.placeholder.com/150")], 
+            ["What's in this image?", ImageInput("https://via.placeholder.com/150")],
             model="gpt-3.5-turbo"  # Non-vision model
         )
     except MultiModalError as e:
@@ -239,18 +239,18 @@ def handle_api_key_errors():
     try:
         # Set invalid API key
         os.environ["OPENAI_API_KEY"] = "invalid-key-123"
-        
+
         response = ask("Hello", model="gpt-3.5-turbo", backend="cloud")
-        
+
     except APIKeyError as e:
         print(f"API key error: {e}")
         print(f"  Provider: {e.details.get('provider', 'unknown')}")
         print(f"  Environment variable: {e.details.get('env_var', 'unknown')}")
         print(f"  Solution: Set a valid API key in your environment")
-        
+
     except Exception as e:
         print(f"Authentication error: {type(e).__name__}: {e}")
-        
+
     finally:
         # Restore original key
         if original_key:
@@ -305,7 +305,7 @@ def handle_rate_limit_errors():
     print("Rate limit errors occur when making too many requests too quickly.")
     print("Here's how to handle them:")
     print()
-    
+
     example_code = '''
 import time
 from ai import ask, RateLimitError
@@ -318,15 +318,15 @@ def robust_ask(prompt, max_retries=3):
         except RateLimitError as e:
             if attempt == max_retries - 1:
                 raise  # Re-raise on final attempt
-            
+
             retry_after = e.details.get('retry_after', 60)
             print(f"Rate limited, waiting {retry_after} seconds...")
             time.sleep(retry_after)
-    
+
 # Usage
 response = robust_ask("Hello, world!")
 '''
-    
+
     print(example_code)
 
 
@@ -338,33 +338,33 @@ def production_error_handling():
         """Production-ready AI call with comprehensive error handling."""
         try:
             return ask(prompt, **kwargs)
-            
+
         except APIKeyError as e:
             print(f"Configuration error: {e}")
             print("Please check your API key configuration")
             return None
-            
+
         except ModelNotFoundError as e:
             print(f"Model error: {e}")
             print("Falling back to default model...")
             return ask(prompt, model="gpt-3.5-turbo")
-            
+
         except BackendConnectionError as e:
             print(f"Connection error: {e}")
             print("Trying alternative backend...")
             return ask(prompt, backend="cloud")
-            
+
         except RateLimitError as e:
             print(f"Rate limit exceeded: {e}")
             retry_after = e.details.get('retry_after', 60)
             print(f"Consider implementing retry logic with {retry_after}s delay")
             return None
-            
+
         except AIError as e:
             # Catch-all for any other AI library errors
             print(f"AI library error: {type(e).__name__}: {e}")
             return None
-            
+
         except Exception as e:
             # Unexpected errors
             print(f"Unexpected error: {type(e).__name__}: {e}")
@@ -392,16 +392,16 @@ def config_error_handling():
     try:
         from ttt.config import load_config
         config = load_config(invalid_config)
-        
+
     except ConfigFileError as e:
         print(f"Config file error: {e}")
         print(f"  File: {e.details.get('file_path', 'unknown')}")
         print(f"  Reason: {e.details.get('reason', 'Invalid format')}")
         print(f"  Solution: Check your YAML syntax")
-        
+
     except Exception as e:
         print(f"Configuration error: {type(e).__name__}: {e}")
-        
+
     finally:
         # Clean up
         if invalid_config.exists():

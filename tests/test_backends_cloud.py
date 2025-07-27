@@ -9,10 +9,10 @@ from ttt import (
     APIKeyError,
     BackendNotAvailableError,
     EmptyResponseError,
+    ImageInput,
     ModelNotFoundError,
     QuotaExceededError,
     RateLimitError,
-    ImageInput,
 )
 
 

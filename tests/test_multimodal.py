@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from ttt import ImageInput, ask, stream, AIResponse
+from ttt import AIResponse, ImageInput, ask, stream
 from ttt.backends import CloudBackend, LocalBackend
 
 
@@ -88,7 +88,7 @@ class TestMultiModalAPI:
             )
         )
         mock_backend.name = "mock"
-        
+
         with patch("ttt.core.routing.router.smart_route") as mock_route:
             mock_route.return_value = (mock_backend, "gpt-4-vision-preview")
 
@@ -119,7 +119,7 @@ class TestMultiModalAPI:
                 yield chunk
 
         mock_backend.astream = mock_astream
-        
+
         with patch("ttt.core.routing.router.smart_route") as mock_route:
             mock_route.return_value = (mock_backend, "gpt-4-vision-preview")
 

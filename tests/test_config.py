@@ -2,8 +2,8 @@
 
 import yaml
 
-from ttt.config import configure, get_config, load_config, model_registry, save_config
 from ttt import ConfigModel, ModelInfo
+from ttt.config import configure, get_config, load_config, model_registry, save_config
 
 
 class TestConfigModel:
