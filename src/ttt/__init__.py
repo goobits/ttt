@@ -4,8 +4,6 @@ The Unified AI Library
 A single, elegant interface for local and cloud AI models.
 """
 
-from typing import Any
-
 # ruff: noqa: I001 (import order critical for avoiding circular imports)
 from .core.api import ChatSession, achat, ask, ask_async, chat, stream, stream_async
 from .backends import CloudBackend, LocalBackend
@@ -47,7 +45,7 @@ from .tools.builtins import load_builtin_tools
 
 
 # Import model_registry lazily to avoid import-time initialization
-def _get_model_registry() -> Any:
+def _get_model_registry():
     from .config import model_registry
 
     return model_registry
@@ -55,7 +53,7 @@ def _get_model_registry() -> Any:
 
 # Create a lazy proxy for model_registry
 class _ModelRegistryProxy:
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str):
         return getattr(_get_model_registry(), name)
 
 

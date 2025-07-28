@@ -194,11 +194,7 @@ class TestCLIToolSupport:
         runner = CliRunner()
 
         # Test 1: Verify the --tools flag exists in help
-        result = runner.invoke(
-            main,
-            ["ask", "--help"],
-            catch_exceptions=False
-        )
+        result = runner.invoke(main, ["ask", "--help"], catch_exceptions=False)
 
         assert result.exit_code == 0
         assert "--tools" in result.output
@@ -208,8 +204,9 @@ class TestCLIToolSupport:
         from ttt.app_hooks import on_ask
 
         # Mock the API functions to prevent real calls
-        with patch("ttt.app_hooks.ttt_stream") as mock_stream, \
-             patch("ttt.app_hooks.ttt_ask") as mock_ask:
+        with patch("ttt.app_hooks.ttt_stream") as mock_stream, patch(
+            "ttt.app_hooks.ttt_ask"
+        ) as mock_ask:
 
             mock_stream.return_value = iter(["Test response"])
             mock_ask.return_value = "Test response"
@@ -217,12 +214,13 @@ class TestCLIToolSupport:
             # Test that on_ask properly handles tools parameter
             import io
             import sys
+
             old_stdout = sys.stdout
             sys.stdout = io.StringIO()
 
             try:
                 # Mock stdin to avoid reading from it
-                with patch('sys.stdin.isatty', return_value=True):
+                with patch("sys.stdin.isatty", return_value=True):
                     # Call with tools=True
                     on_ask(
                         prompt=("test",),
@@ -233,7 +231,7 @@ class TestCLIToolSupport:
                         session=None,
                         system=None,
                         stream=True,
-                        json=False
+                        json=False,
                     )
 
                 # Verify it was called with tools
@@ -245,7 +243,7 @@ class TestCLIToolSupport:
                 mock_stream.reset_mock()
 
                 # Call with tools=False
-                with patch('sys.stdin.isatty', return_value=True):
+                with patch("sys.stdin.isatty", return_value=True):
                     on_ask(
                         prompt=("test",),
                         model=None,
@@ -255,7 +253,7 @@ class TestCLIToolSupport:
                         session=None,
                         system=None,
                         stream=True,
-                        json=False
+                        json=False,
                     )
 
                 # Verify it was called without tools

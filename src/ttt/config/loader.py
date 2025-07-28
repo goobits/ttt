@@ -52,8 +52,6 @@ def get_project_config() -> Dict[str, Any]:
                     logger.debug(f"Loaded project config from {config_path}")
                     return _project_config_cache
             except Exception as e:
-                import os
-
                 if os.environ.get("TTT_JSON_MODE", "").lower() != "true":
                     logger.warning(
                         f"Failed to load project config from {config_path}: {e}"
@@ -61,8 +59,6 @@ def get_project_config() -> Dict[str, Any]:
 
     # Return empty dict if no config found
     # Check suppress warnings both from variable and environment
-    import os
-
     json_mode = os.environ.get("TTT_JSON_MODE", "").lower() == "true"
 
     # Debug: Always suppress this warning in any JSON-related context

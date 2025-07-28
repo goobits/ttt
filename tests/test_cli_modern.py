@@ -73,13 +73,21 @@ class TestAskCommand:
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_ask = Mock()
 
-            result = self.runner.invoke(main, [
-                "ask", "Debug this code",
-                "--model", "gpt-4",
-                "--temperature", "0.7",
-                "--tools", "true",
-                "--session", "test-session"
-            ])
+            result = self.runner.invoke(
+                main,
+                [
+                    "ask",
+                    "Debug this code",
+                    "--model",
+                    "gpt-4",
+                    "--temperature",
+                    "0.7",
+                    "--tools",
+                    "true",
+                    "--session",
+                    "test-session",
+                ],
+            )
 
             assert result.exit_code == 0
 
@@ -93,9 +101,7 @@ class TestAskCommand:
 
     def test_ask_invalid_temperature(self):
         """Test validation for temperature values."""
-        result = self.runner.invoke(main, [
-            "ask", "test", "--temperature", "invalid"
-        ])
+        result = self.runner.invoke(main, ["ask", "test", "--temperature", "invalid"])
 
         assert result.exit_code == 2  # Click validation error
 
@@ -128,12 +134,18 @@ class TestChatCommand:
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_chat = Mock()
 
-            result = self.runner.invoke(main, [
-                "chat",
-                "--model", "gpt-4",
-                "--session", "my-session",
-                "--tools", "true"
-            ])
+            result = self.runner.invoke(
+                main,
+                [
+                    "chat",
+                    "--model",
+                    "gpt-4",
+                    "--session",
+                    "my-session",
+                    "--tools",
+                    "true",
+                ],
+            )
 
             assert result.exit_code == 0
 
@@ -248,7 +260,9 @@ class TestConfigCommand:
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_config_list = Mock()
 
-            result = self.runner.invoke(main, ["config", "list", "--show-secrets", "true"])
+            result = self.runner.invoke(
+                main, ["config", "list", "--show-secrets", "true"]
+            )
 
             assert result.exit_code == 0
 
@@ -387,12 +401,19 @@ class TestExportCommand:
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_export = Mock()
 
-            result = self.runner.invoke(main, [
-                "export", "session-1",
-                "--format", "json",
-                "--output", "output.json",
-                "--include-metadata", "true"
-            ])
+            result = self.runner.invoke(
+                main,
+                [
+                    "export",
+                    "session-1",
+                    "--format",
+                    "json",
+                    "--output",
+                    "output.json",
+                    "--include-metadata",
+                    "true",
+                ],
+            )
 
             assert result.exit_code == 0
 
@@ -449,7 +470,17 @@ class TestCLIIntegration:
     def test_command_chain_compatibility(self):
         """Test that commands work with shell pipes and redirects."""
         # Test help for all main commands
-        commands = ["ask", "chat", "list", "status", "models", "info", "config", "tools", "export"]
+        commands = [
+            "ask",
+            "chat",
+            "list",
+            "status",
+            "models",
+            "info",
+            "config",
+            "tools",
+            "export",
+        ]
 
         for cmd in commands:
             result = self.runner.invoke(main, [cmd, "--help"])

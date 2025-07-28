@@ -81,6 +81,113 @@ class CloudBackend(BaseBackend):
         # Configure API keys from environment
         self._configure_api_keys()
 
+    def _build_messages(
+        self,
+        prompt: Union[str, List[Union[str, ImageInput]]],
+        system: Optional[str] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Build messages array for the API request.
+
+        Args:
+            prompt: The user prompt - can be a string or list of content (text/images)
+            system: System prompt (optional)
+            kwargs: Additional parameters that may contain pre-built messages
+
+        Returns:
+            List of message dictionaries formatted for the API
+        """
+        # Check if we received pre-built messages from chat session
+        if kwargs and "messages" in kwargs and kwargs["messages"]:
+            return kwargs["messages"]
+
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+
+        # Handle multi-modal content
+        if isinstance(prompt, str):
+            messages.append({"role": "user", "content": prompt})
+        else:
+            # Build content array for multi-modal input
+            content: List[Dict[str, Any]] = []
+            for item in prompt:
+                if isinstance(item, str):
+                    content.append({"type": "text", "text": item})
+                elif isinstance(item, ImageInput):
+                    # Format image for the provider
+                    if item.is_url:
+                        content.append(
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": str(item.source)},
+                            }
+                        )
+                    else:
+                        # Base64 encode for non-URL images
+                        base64_data = item.to_base64()
+                        mime_type = item.get_mime_type()
+                        content.append(
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{mime_type};base64,{base64_data}"
+                                },
+                            }
+                        )
+            messages.append({"role": "user", "content": content})
+
+        return messages
+
+    def _handle_request_error(
+        self, e: Exception, used_model: str, request_type: str = "request"
+    ) -> None:
+        """
+        Handle errors from API requests by converting them to appropriate exceptions.
+
+        Args:
+            e: The original exception
+            used_model: The model that was being used
+            request_type: Type of request for logging ("request" or "streaming request")
+
+        Raises:
+            Appropriate exception based on error type
+        """
+        error_msg = str(e)
+        logger.error(f"Cloud {request_type} failed: {error_msg}")
+
+        # Check for specific error types
+        if (
+            "api_key" in error_msg.lower()
+            or "api key" in error_msg.lower()
+            or "authentication" in error_msg.lower()
+        ):
+            provider = self._get_provider_from_model(used_model)
+            env_vars = {
+                "openai": "OPENAI_API_KEY",
+                "anthropic": "ANTHROPIC_API_KEY",
+                "google": "GOOGLE_API_KEY",
+                "openrouter": "OPENROUTER_API_KEY",
+            }
+            raise APIKeyError(provider, env_vars.get(provider)) from e
+        elif "rate limit" in error_msg.lower():
+            provider = self._get_provider_from_model(used_model)
+            raise RateLimitError(provider) from e
+        elif "quota" in error_msg.lower():
+            provider = self._get_provider_from_model(used_model)
+            raise QuotaExceededError(provider) from e
+        elif (
+            "model_not_found" in error_msg.lower()
+            or "does not exist" in error_msg.lower()
+            or "not found" in error_msg.lower()
+        ):
+            raise ModelNotFoundError(used_model, self.name) from e
+        elif "timeout" in error_msg.lower():
+            raise BackendTimeoutError(self.name, self.timeout) from e
+        else:
+            raise BackendConnectionError(self.name, e) from e
+
     def _configure_api_keys(self) -> None:
         """Configure API keys from environment variables."""
         # OpenAI
@@ -160,45 +267,7 @@ class CloudBackend(BaseBackend):
         used_model = model or self.default_model
 
         # Build messages
-        # Check if we received pre-built messages from chat session
-        if "messages" in kwargs and kwargs["messages"]:
-            messages = kwargs["messages"]
-        else:
-            messages = []
-            if system:
-                messages.append({"role": "system", "content": system})
-
-            # Handle multi-modal content
-            if isinstance(prompt, str):
-                messages.append({"role": "user", "content": prompt})
-            else:
-                # Build content array for multi-modal input
-                content: List[Dict[str, Any]] = []
-                for item in prompt:
-                    if isinstance(item, str):
-                        content.append({"type": "text", "text": item})
-                    elif isinstance(item, ImageInput):
-                        # Format image for the provider
-                        if item.is_url:
-                            content.append(
-                                {
-                                    "type": "image_url",
-                                    "image_url": {"url": str(item.source)},
-                                }
-                            )
-                        else:
-                            # Base64 encode for non-URL images
-                            base64_data = item.to_base64()
-                            mime_type = item.get_mime_type()
-                            content.append(
-                                {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url": f"data:{mime_type};base64,{base64_data}"
-                                    },
-                                }
-                            )
-                messages.append({"role": "user", "content": content})
+        messages = self._build_messages(prompt, system, kwargs)
 
         # Build parameters
         params = {
@@ -260,7 +329,7 @@ class CloudBackend(BaseBackend):
                         content = chunk.choices[0].delta.content
                         if content:
                             response_content += str(content)
-                
+
                 # For streaming, we don't have tool calls or other metadata
                 # Just return the content
                 return AIResponse(
@@ -272,7 +341,7 @@ class CloudBackend(BaseBackend):
                         "elapsed_time": time.time() - start_time,
                     },
                 )
-            
+
             # Extract response content for non-streaming
             if not response.choices:
                 raise EmptyResponseError(used_model, self.name)
@@ -370,39 +439,7 @@ class CloudBackend(BaseBackend):
             # Re-raise EmptyResponseError as-is
             raise
         except Exception as e:
-            error_msg = str(e)
-            logger.error(f"Cloud request failed: {error_msg}")
-
-            # Check for specific error types
-            if (
-                "api_key" in error_msg.lower()
-                or "api key" in error_msg.lower()
-                or "authentication" in error_msg.lower()
-            ):
-                provider = self._get_provider_from_model(used_model)
-                env_vars = {
-                    "openai": "OPENAI_API_KEY",
-                    "anthropic": "ANTHROPIC_API_KEY",
-                    "google": "GOOGLE_API_KEY",
-                    "openrouter": "OPENROUTER_API_KEY",
-                }
-                raise APIKeyError(provider, env_vars.get(provider)) from e
-            elif "rate limit" in error_msg.lower():
-                provider = self._get_provider_from_model(used_model)
-                raise RateLimitError(provider) from e
-            elif "quota" in error_msg.lower():
-                provider = self._get_provider_from_model(used_model)
-                raise QuotaExceededError(provider) from e
-            elif (
-                "model_not_found" in error_msg.lower()
-                or "does not exist" in error_msg.lower()
-                or "not found" in error_msg.lower()
-            ):
-                raise ModelNotFoundError(used_model, self.name) from e
-            elif "timeout" in error_msg.lower():
-                raise BackendTimeoutError(self.name, self.timeout) from e
-            else:
-                raise BackendConnectionError(self.name, e) from e
+            self._handle_request_error(e, used_model)
 
     async def astream(  # type: ignore[override]
         self,
@@ -432,41 +469,7 @@ class CloudBackend(BaseBackend):
         used_model = model or self.default_model
 
         # Build messages
-        messages: List[Dict[str, Any]] = []
-        if system:
-            messages.append({"role": "system", "content": system})
-
-        # Handle multi-modal content (same as ask method)
-        if isinstance(prompt, str):
-            messages.append({"role": "user", "content": prompt})
-        else:
-            # Build content array for multi-modal input
-            content: List[Dict[str, Any]] = []
-            for item in prompt:
-                if isinstance(item, str):
-                    content.append({"type": "text", "text": item})
-                elif isinstance(item, ImageInput):
-                    # Format image for the provider
-                    if item.is_url:
-                        content.append(
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": str(item.source)},
-                            }
-                        )
-                    else:
-                        # Base64 encode for non-URL images
-                        base64_data = item.to_base64()
-                        mime_type = item.get_mime_type()
-                        content.append(
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:{mime_type};base64,{base64_data}"
-                                },
-                            }
-                        )
-            messages.append({"role": "user", "content": content})
+        messages = self._build_messages(prompt, system)
 
         # Build parameters
         params = {
@@ -526,39 +529,7 @@ class CloudBackend(BaseBackend):
                         yield str(content)
 
         except Exception as e:
-            error_msg = str(e)
-            logger.error(f"Streaming request failed: {error_msg}")
-
-            # Apply same error handling as ask method
-            if (
-                "api_key" in error_msg.lower()
-                or "api key" in error_msg.lower()
-                or "authentication" in error_msg.lower()
-            ):
-                provider = self._get_provider_from_model(used_model)
-                env_vars = {
-                    "openai": "OPENAI_API_KEY",
-                    "anthropic": "ANTHROPIC_API_KEY",
-                    "google": "GOOGLE_API_KEY",
-                    "openrouter": "OPENROUTER_API_KEY",
-                }
-                raise APIKeyError(provider, env_vars.get(provider)) from e
-            elif "rate limit" in error_msg.lower():
-                provider = self._get_provider_from_model(used_model)
-                raise RateLimitError(provider) from e
-            elif "quota" in error_msg.lower():
-                provider = self._get_provider_from_model(used_model)
-                raise QuotaExceededError(provider) from e
-            elif (
-                "model_not_found" in error_msg.lower()
-                or "does not exist" in error_msg.lower()
-                or "not found" in error_msg.lower()
-            ):
-                raise ModelNotFoundError(used_model, self.name) from e
-            elif "timeout" in error_msg.lower():
-                raise BackendTimeoutError(self.name, self.timeout) from e
-            else:
-                raise BackendConnectionError(self.name, e) from e
+            self._handle_request_error(e, used_model, "streaming request")
 
     async def models(self) -> List[str]:
         """

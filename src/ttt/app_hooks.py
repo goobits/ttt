@@ -280,6 +280,7 @@ def on_ask(
     system: Optional[str],
     stream: bool,
     json: bool,
+    **kwargs,
 ) -> None:
     """Hook for 'ask' command.
 
@@ -429,7 +430,7 @@ def on_ask(
 
 
 def on_chat(
-    model: Optional[str], session: Optional[str], tools: bool, markdown: bool
+    model: Optional[str], session: Optional[str], tools: bool, markdown: bool, **kwargs
 ) -> None:
     """Hook for 'chat' command.
 
@@ -588,17 +589,65 @@ def on_chat(
             console.print(f"[red]Error starting chat session: {e}[/red]")
 
 
-def on_list(resource: str, format: str, verbose: bool) -> None:
+def on_list(resource: Optional[str] = None, format: str = "table", verbose: bool = False, **kwargs) -> None:
     """Hook for 'list' command.
 
     Lists various TTT resources like models, sessions, or tools in either
-    tabular or JSON format.
+    tabular or JSON format. If no resource is specified, shows a summary
+    of all available resources.
 
     Args:
-        resource: Type of resource to list ('models', 'sessions', 'tools')
+        resource: Type of resource to list ('models', 'sessions', 'tools'), or None for summary
         format: Output format ('table', 'json')
         verbose: Whether to show additional details (currently unused)
     """
+    if resource is None:
+        # No resource specified, show summary of all resources
+        if format == "json":
+            from ttt.config.schema import get_model_registry
+            from ttt.tools import list_tools
+            
+            session_manager = ChatSessionManager()
+            model_registry = get_model_registry()
+            tools = list_tools()
+            
+            summary = {
+                "models": {
+                    "count": len(model_registry.models),
+                    "available": list(model_registry.models.keys())[:5]  # First 5 models
+                },
+                "sessions": {
+                    "count": len(session_manager.list_sessions()),
+                    "recent": session_manager.list_sessions()[:3]  # 3 most recent
+                },
+                "tools": {
+                    "count": len(tools),
+                    "available": [t.name for t in tools[:5]]  # First 5 tools
+                }
+            }
+            click.echo(json_module.dumps(summary, indent=2))
+        else:
+            console.print("\n[bold]TTT Resources Summary[/bold]\n")
+            
+            # Models count
+            from ttt.config.schema import get_model_registry
+            model_registry = get_model_registry()
+            console.print(f"[cyan]Models:[/cyan] {len(model_registry.models)} available")
+            console.print("  Run [green]ttt list models[/green] to see all models\n")
+            
+            # Sessions count
+            session_manager = ChatSessionManager()
+            sessions = session_manager.list_sessions()
+            console.print(f"[cyan]Sessions:[/cyan] {len(sessions)} saved")
+            console.print("  Run [green]ttt list sessions[/green] to see all sessions\n")
+            
+            # Tools count
+            from ttt.tools import list_tools
+            tools = list_tools()
+            console.print(f"[cyan]Tools:[/cyan] {len(tools)} available")
+            console.print("  Run [green]ttt list tools[/green] to see all tools\n")
+        return
+    
     if resource == "models":
         show_models_list(json_output=(format == "json"))
     elif resource == "sessions":
@@ -621,7 +670,7 @@ def on_list(resource: str, format: str, verbose: bool) -> None:
                 console.print(f"  • [cyan]{tool.name}[/cyan]: {tool.description}")
 
 
-def on_config_get(key: str) -> None:
+def on_config_get(key: str, **kwargs) -> None:
     """Hook for 'config get' subcommand.
 
     Retrieves and displays a specific configuration value using dot notation.
@@ -633,7 +682,7 @@ def on_config_get(key: str) -> None:
     config_manager.show_value(key)
 
 
-def on_config_set(key: str, value: str) -> None:
+def on_config_set(key: str, value: str, **kwargs) -> None:
     """Hook for 'config set' subcommand.
 
     Sets a configuration value using dot notation. Creates nested
@@ -647,7 +696,7 @@ def on_config_set(key: str, value: str) -> None:
     config_manager.set_value(key, value)
 
 
-def on_config_list(show_secrets: bool) -> None:
+def on_config_list(show_secrets: bool, **kwargs) -> None:
     """Hook for 'config list' subcommand.
 
     Displays the complete merged configuration from all sources.
@@ -682,12 +731,13 @@ def on_config_list(show_secrets: bool) -> None:
 
 
 def on_export(
-    session: str, format: str, output: Optional[str], include_metadata: bool
+    session: Optional[str] = None, format: str = "markdown", output: Optional[str] = None, include_metadata: bool = False, **kwargs
 ) -> None:
     """Hook for 'export' command.
 
     Exports a chat session to various formats (JSON, YAML, Markdown).
     Can output to file or stdout with optional metadata inclusion.
+    If no session is specified, shows the list of available sessions.
 
     Args:
         session: Session ID to export
@@ -698,6 +748,11 @@ def on_export(
     Raises:
         SystemExit: If session not found or PyYAML missing for YAML format
     """
+    if session is None:
+        # No session specified, show available sessions
+        on_list(resource="sessions", format="table", verbose=False)
+        return
+    
     session_manager = ChatSessionManager()
 
     # Load session
@@ -753,7 +808,7 @@ def on_export(
         click.echo(output_text)
 
 
-def on_tools_enable(tool_name: str) -> None:
+def on_tools_enable(tool_name: str, **kwargs) -> None:
     """Hook for 'tools enable' subcommand.
 
     Removes a tool from the disabled list, making it available for use.
@@ -773,7 +828,7 @@ def on_tools_enable(tool_name: str) -> None:
         click.echo(f"Tool '{tool_name}' is already enabled")
 
 
-def on_tools_disable(tool_name: str) -> None:
+def on_tools_disable(tool_name: str, **kwargs) -> None:
     """Hook for 'tools disable' subcommand.
 
     Adds a tool to the disabled list, preventing it from being used.
@@ -793,7 +848,7 @@ def on_tools_disable(tool_name: str) -> None:
         click.echo(f"Tool '{tool_name}' is already disabled")
 
 
-def on_tools_list(show_disabled: bool) -> None:
+def on_tools_list(show_disabled: bool, **kwargs) -> None:
     """Hook for 'tools list' subcommand.
 
     Lists all available tools with their status (enabled/disabled).
@@ -1076,7 +1131,7 @@ def show_backend_status(json_output: bool = False) -> None:
 
 
 # Add hook functions for missing commands that need to be added to CLI
-def on_status(json: bool) -> None:
+def on_status(json: bool, **kwargs) -> None:
     """Hook for 'status' command.
 
     Shows the overall status of TTT backends and connectivity.
@@ -1087,7 +1142,7 @@ def on_status(json: bool) -> None:
     show_backend_status(json_output=json)
 
 
-def on_models(json: bool) -> None:
+def on_models(json: bool, **kwargs) -> None:
     """Hook for 'models' command.
 
     Lists all available AI models with their details.
@@ -1098,13 +1153,18 @@ def on_models(json: bool) -> None:
     show_models_list(json_output=json)
 
 
-def on_info(model: str, json: bool) -> None:
+def on_info(model: Optional[str] = None, json: bool = False, **kwargs) -> None:
     """Hook for 'info' command.
 
     Shows detailed information about a specific AI model.
+    If no model is specified, shows the list of available models.
 
     Args:
         model: Name or alias of the model to show information for
         json: If True, outputs JSON format; otherwise shows formatted info
     """
-    show_model_info(model, json_output=json)
+    if model is None:
+        # No model specified, show available models
+        on_models(json=json)
+    else:
+        show_model_info(model, json_output=json)

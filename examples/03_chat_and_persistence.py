@@ -10,10 +10,11 @@ This script demonstrates advanced chat session functionality including:
 - Cost tracking and session management
 """
 
-import ttt
-from ttt import chat, PersistentChatSession
-from ttt.tools import tool
 from pathlib import Path
+
+import ttt
+from ttt import PersistentChatSession, chat
+from ttt.tools import tool
 
 
 def basic_chat_examples():
@@ -37,7 +38,9 @@ def basic_chat_examples():
     print()
 
     print("2. Chat with system prompt:")
-    with chat(system="You are an expert Python tutor who gives concise, practical answers") as tutor:
+    with chat(
+        system="You are an expert Python tutor who gives concise, practical answers"
+    ) as tutor:
         response = tutor.ask("How do I create a dictionary in Python?")
         print(f"User: How do I create a dictionary in Python?")
         print(f"Tutor: {response}")
@@ -85,12 +88,14 @@ def advanced_session_management():
     # Create session with custom ID
     session = PersistentChatSession(
         session_id="project_manager_001",
-        system="You are a project management assistant specialized in software development"
+        system="You are a project management assistant specialized in software development",
     )
 
     # Build conversation
     session.ask("I need to plan a web application project")
-    session.ask("The app should have user authentication, a dashboard, and data visualization")
+    session.ask(
+        "The app should have user authentication, a dashboard, and data visualization"
+    )
     session.ask("We have 2 developers and 8 weeks")
 
     # Save in different formats
@@ -107,7 +112,9 @@ def advanced_session_management():
     print(f"\nSession Summary:")
     print(f"  ID: {summary['session_id']}")
     print(f"  Messages: {summary['message_count']}")
-    print(f"  Tokens used: {summary['total_tokens_in']} in, {summary['total_tokens_out']} out")
+    print(
+        f"  Tokens used: {summary['total_tokens_in']} in, {summary['total_tokens_out']} out"
+    )
     print(f"  Estimated cost: ${summary['total_cost']:.4f}")
 
     # Clean up
@@ -125,16 +132,14 @@ def multi_session_tracking():
     # Create different sessions for different purposes
     sessions = {
         "coding": PersistentChatSession(
-            system="You are an expert Python developer",
-            session_id="coding_helper"
+            system="You are an expert Python developer", session_id="coding_helper"
         ),
         "learning": PersistentChatSession(
             system="You are a patient teacher who explains concepts clearly",
-            session_id="learning_helper"
+            session_id="learning_helper",
         ),
         "planning": PersistentChatSession(
-            system="You are a strategic thinking partner",
-            session_id="planning_helper"
+            system="You are a strategic thinking partner", session_id="planning_helper"
         ),
     }
 
@@ -155,10 +160,13 @@ def multi_session_tracking():
         path = sessions_dir / f"{name}_session.json"
         loaded_session = PersistentChatSession.load(path)
         summary = loaded_session.get_summary()
-        print(f"  {name}: {summary['message_count']} messages, {summary['total_tokens_in']} tokens")
+        print(
+            f"  {name}: {summary['message_count']} messages, {summary['total_tokens_in']} tokens"
+        )
 
     # Clean up
     import shutil
+
     shutil.rmtree(sessions_dir)
 
 
@@ -177,7 +185,7 @@ def incremental_conversation():
         print("Starting new learning session...")
         session = PersistentChatSession(
             system="You are a coding tutor who tracks student progress",
-            session_id="python_learning"
+            session_id="python_learning",
         )
 
     # Learning topics to cover
@@ -200,7 +208,9 @@ def incremental_conversation():
 
         # Save progress
         session.save(session_file)
-        print(f"\nProgress saved. Run again to continue learning! ({len(topics) - topic_index - 1} topics remaining)")
+        print(
+            f"\nProgress saved. Run again to continue learning! ({len(topics) - topic_index - 1} topics remaining)"
+        )
     else:
         print("\nAll topics covered! Here's your learning journey:")
         print(session.export_messages(format="text"))
@@ -241,7 +251,7 @@ def persistent_chat_with_tools():
     session = PersistentChatSession(
         system="You are a helpful assistant with access to weather and calculation tools.",
         tools=[get_weather, calculate],
-        session_id="weather_calc_assistant"
+        session_id="weather_calc_assistant",
     )
 
     # First conversation
@@ -271,7 +281,7 @@ def persistent_chat_with_tools():
 
     # Show tool usage statistics
     print(f"\nTool usage statistics:")
-    if hasattr(loaded_session, 'metadata') and 'tools_used' in loaded_session.metadata:
+    if hasattr(loaded_session, "metadata") and "tools_used" in loaded_session.metadata:
         for tool_name, count in loaded_session.metadata["tools_used"].items():
             print(f"  - {tool_name}: {count} calls")
 
@@ -286,14 +296,20 @@ def session_with_multimodal():
     try:
         with ttt.chat(persist=True, model="gpt-4-vision-preview") as session:
             # First interaction with image
-            session.ask([
-                "I'm going to show you images for analysis.",
-                "Here's a Python logo:",
-                ttt.ImageInput("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/200px-Python-logo-notext.svg.png")
-            ])
+            session.ask(
+                [
+                    "I'm going to show you images for analysis.",
+                    "Here's a Python logo:",
+                    ttt.ImageInput(
+                        "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/200px-Python-logo-notext.svg.png"
+                    ),
+                ]
+            )
 
             # Follow-up without image
-            response = session.ask("What programming language does this logo represent?")
+            response = session.ask(
+                "What programming language does this logo represent?"
+            )
             print(f"User: What programming language does this logo represent?")
             print(f"AI: {response}")
 
@@ -333,7 +349,7 @@ def cost_tracking_example():
         print(f"  Estimated cost: ${summary['total_cost']:.4f}")
 
         # Model usage breakdown
-        if 'model_usage' in summary:
+        if "model_usage" in summary:
             print(f"\nModel Usage:")
             for model, usage in summary["model_usage"].items():
                 print(f"  {model}:")

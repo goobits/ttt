@@ -319,10 +319,10 @@ import asyncio
 async def main():
     response = await ask_async("Hello")
     print(response)
-    
+
     async for chunk in stream_async("Tell me a story"):
         print(chunk, end="")
-    
+
     async with achat() as session:
         response = await session.ask("Hi")
 
@@ -391,7 +391,7 @@ Common error scenarios:
 5. **Use Type Hints**:
    ```python
    from ai import AIResponse
-   
+
    def process_response(response: AIResponse) -> str:
        return response.upper()
    ```

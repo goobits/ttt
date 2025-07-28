@@ -18,14 +18,17 @@ import pytest
 
 def has_valid_api_key():
     """Check if any valid API keys are available."""
+
     def is_valid_key(key):
         return key and "test-key" not in key and len(key) > 10
 
-    return any([
-        is_valid_key(os.getenv("OPENAI_API_KEY")),
-        is_valid_key(os.getenv("ANTHROPIC_API_KEY")),
-        is_valid_key(os.getenv("OPENROUTER_API_KEY")),
-    ])
+    return any(
+        [
+            is_valid_key(os.getenv("OPENAI_API_KEY")),
+            is_valid_key(os.getenv("ANTHROPIC_API_KEY")),
+            is_valid_key(os.getenv("OPENROUTER_API_KEY")),
+        ]
+    )
 
 
 def run_ttt_command(args, input_text=None, timeout=10):
@@ -41,7 +44,7 @@ def run_ttt_command(args, input_text=None, timeout=10):
             text=True,
             capture_output=True,
             timeout=timeout,
-            env=env
+            env=env,
         )
         return result
     except subprocess.TimeoutExpired:
@@ -49,7 +52,7 @@ def run_ttt_command(args, input_text=None, timeout=10):
             args=["ttt"] + args,
             returncode=124,  # Timeout return code
             stdout="",
-            stderr="Command timed out"
+            stderr="Command timed out",
         )
 
 
@@ -138,7 +141,9 @@ class TestModelSelectionOptions:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
-        result = run_ttt_command(["ask", "--model", "openrouter/google/gemini-flash-1.5", "hello"])
+        result = run_ttt_command(
+            ["ask", "--model", "openrouter/google/gemini-flash-1.5", "hello"]
+        )
         assert result.returncode in [0, 124]
 
 
@@ -385,7 +390,9 @@ class TestPipelineUsage:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
-        result = run_ttt_command(["ask", "make this uppercase"], input_text="hello world")
+        result = run_ttt_command(
+            ["ask", "make this uppercase"], input_text="hello world"
+        )
         assert result.returncode in [0, 124]
 
 
@@ -462,10 +469,19 @@ class TestComplexCombinations:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
-        result = run_ttt_command([
-            "ask", "--model", "@claude", "--temperature", "0.2",
-            "--tools", "true", "--json", "write a simple function"
-        ])
+        result = run_ttt_command(
+            [
+                "ask",
+                "--model",
+                "@claude",
+                "--temperature",
+                "0.2",
+                "--tools",
+                "true",
+                "--json",
+                "write a simple function",
+            ]
+        )
         assert result.returncode in [0, 124]
 
     @pytest.mark.requires_api
@@ -474,10 +490,17 @@ class TestComplexCombinations:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
-        result = run_ttt_command([
-            "ask", "--json", "--model", "gpt-4",
-            "--max-tokens", "500", "analyze this briefly"
-        ])
+        result = run_ttt_command(
+            [
+                "ask",
+                "--json",
+                "--model",
+                "gpt-4",
+                "--max-tokens",
+                "500",
+                "analyze this briefly",
+            ]
+        )
         assert result.returncode in [0, 124]
 
     @pytest.mark.requires_api
@@ -486,9 +509,9 @@ class TestComplexCombinations:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
-        result = run_ttt_command([
-            "ask", "-m", "@gpt4", "--stream", "true", "--json", "explain sorting"
-        ])
+        result = run_ttt_command(
+            ["ask", "-m", "@gpt4", "--stream", "true", "--json", "explain sorting"]
+        )
         assert result.returncode in [0, 124]
 
     @pytest.mark.requires_api
@@ -497,9 +520,18 @@ class TestComplexCombinations:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
-        result = run_ttt_command([
-            "ask", "--model", "@claude", "--tools", "true", "--json", "analyze this data"
-        ], input_text="sample data for analysis")
+        result = run_ttt_command(
+            [
+                "ask",
+                "--model",
+                "@claude",
+                "--tools",
+                "true",
+                "--json",
+                "analyze this data",
+            ],
+            input_text="sample data for analysis",
+        )
         assert result.returncode in [0, 124]
 
     @pytest.mark.requires_api
@@ -508,10 +540,20 @@ class TestComplexCombinations:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
-        result = run_ttt_command([
-            "ask", "--model", "@claude", "--temperature", "0.7",
-            "--max-tokens", "1000", "--tools", "true", "research Python"
-        ])
+        result = run_ttt_command(
+            [
+                "ask",
+                "--model",
+                "@claude",
+                "--temperature",
+                "0.7",
+                "--max-tokens",
+                "1000",
+                "--tools",
+                "true",
+                "research Python",
+            ]
+        )
         assert result.returncode in [0, 124]
 
     @pytest.mark.requires_api
@@ -520,9 +562,9 @@ class TestComplexCombinations:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
-        result = run_ttt_command([
-            "ask", "-m", "@fast", "--json", "--stream", "true", "quick hello"
-        ])
+        result = run_ttt_command(
+            ["ask", "-m", "@fast", "--json", "--stream", "true", "quick hello"]
+        )
         assert result.returncode in [0, 124]
 
 

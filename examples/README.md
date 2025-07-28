@@ -52,7 +52,7 @@ You'll need either:
    # Make sure you have API keys set up
    export OPENAI_API_KEY="your-key-here"
    export ANTHROPIC_API_KEY="your-key-here"
-   
+
    # Run examples
    python3 01_basic_usage.py
    python3 02_tools_and_workflows.py
@@ -172,7 +172,7 @@ Examples demonstrate:
    # Check your environment variables
    echo $OPENAI_API_KEY
    echo $ANTHROPIC_API_KEY
-   
+
    # Or use mock backend for testing
    python3 examples/run_example.py 01_basic_usage
    ```
@@ -181,7 +181,7 @@ Examples demonstrate:
    ```bash
    # For local backend, make sure Ollama is running
    ollama serve
-   
+
    # For cloud backend, check your API keys
    python3 -c "import os; print('OPENAI_API_KEY' in os.environ)"
    ```

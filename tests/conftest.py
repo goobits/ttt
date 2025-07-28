@@ -15,7 +15,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 env_path = Path(__file__).parent.parent / ".env"
 if env_path.exists():
     load_dotenv(env_path)
-    print(f"Loaded .env file from {env_path}")
 
 
 # Configuration for rate limiting delays

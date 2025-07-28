@@ -117,6 +117,7 @@ def _stop_background_loop() -> None:
         if _background_thread:
             # Use thread join timeout from constants
             from ..config.loader import get_config_value
+
             join_timeout = get_config_value("constants.timeouts.async_thread_join", 2.0)
             _background_thread.join(timeout=join_timeout)
         _background_loop = None

@@ -285,7 +285,6 @@ class TestPerformanceBenchmarks:
         assert len(results) > 0
         for model, duration in results.items():
             assert duration > 0
-            print(f"{model}: {duration:.2f}s")
 
 
 # Usage examples for documentation

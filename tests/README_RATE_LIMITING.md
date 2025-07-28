@@ -25,13 +25,13 @@ A basic fixture that provides a delay function:
 def test_with_manual_delay(rate_limit_delay):
     # Add delay for OpenRouter
     rate_limit_delay("openrouter")
-    
+
     # Make API call
     response = ask("Hello", model="openrouter/google/gemini-2.5-flash")
-    
+
     # Add delay for OpenAI
     rate_limit_delay("openai")
-    
+
     # Make another API call
     response2 = ask("World", model="gpt-3.5-turbo")
 ```
@@ -56,7 +56,7 @@ def test_with_delayed_ask(delayed_ask):
     # Automatically adds delay based on model
     response = delayed_ask("Hello", model="openrouter/google/gemini-2.5-flash")
     assert response.succeeded
-    
+
     # Multiple calls will each have delays
     response2 = delayed_ask("World", model="gpt-3.5-turbo")
     assert response2.succeeded
@@ -72,7 +72,7 @@ def test_with_delayed_stream(delayed_stream):
     # Automatically adds delay before streaming
     for chunk in delayed_stream("Count to 3", model="gpt-3.5-turbo"):
         chunks.append(chunk)
-    
+
     assert len(chunks) > 0
 ```
 
@@ -86,7 +86,7 @@ def test_with_delayed_chat(delayed_chat):
         # Each ask() call will have automatic delays
         response1 = session.ask("My name is Alice")
         response2 = session.ask("What's my name?")
-        
+
         assert "Alice" in str(response2)
 ```
 
@@ -99,7 +99,7 @@ You can override default delays using environment variables:
 ```bash
 # Set custom delays for each provider
 export OPENROUTER_RATE_DELAY=2.0  # 2 seconds for OpenRouter
-export OPENAI_RATE_DELAY=1.0      # 1 second for OpenAI  
+export OPENAI_RATE_DELAY=1.0      # 1 second for OpenAI
 export ANTHROPIC_RATE_DELAY=0.3   # 0.3 seconds for Anthropic
 
 # Run tests with custom delays
@@ -124,7 +124,7 @@ pytest tests/test_integration.py --rate-delay 1.5
 def test_basic_api_call(delayed_ask):
     """Test with automatic rate limiting."""
     response = delayed_ask(
-        "What is 2+2?", 
+        "What is 2+2?",
         model="openrouter/google/gemini-2.5-flash"
     )
     assert "4" in str(response)
@@ -141,7 +141,7 @@ def test_multiple_providers(delayed_ask):
         ("gpt-3.5-turbo", "OpenAI test"),
         ("claude-3-haiku-20240307", "Anthropic test")
     ]
-    
+
     for model, prompt in providers:
         response = delayed_ask(prompt, model=model)
         assert response.succeeded
@@ -155,20 +155,20 @@ def test_multiple_providers(delayed_ask):
 def test_stress_with_rate_limits(delayed_ask, rate_limit_delay):
     """Stress test with proper rate limiting."""
     responses = []
-    
+
     # Make 10 rapid requests with delays
     for i in range(10):
         # delayed_ask automatically adds provider-specific delay
         response = delayed_ask(
-            f"Request {i}", 
+            f"Request {i}",
             model="openrouter/google/gemini-2.5-flash"
         )
         responses.append(response)
-        
+
         # Add extra delay every 5 requests
         if i % 5 == 4:
             rate_limit_delay("openrouter")
-    
+
     # Verify all succeeded
     assert all(r.succeeded for r in responses)
 ```

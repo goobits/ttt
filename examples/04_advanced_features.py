@@ -10,33 +10,34 @@ This script demonstrates advanced functionality including:
 """
 
 import os
+from pathlib import Path
+
 import ttt
 from ttt import (
-    ask,
-    stream,
-    chat,
-    ImageInput,
-    PersistentChatSession,
-    configure,
     # Import all exception types
     AIError,
-    BackendNotAvailableError,
+    APIKeyError,
     BackendConnectionError,
+    BackendNotAvailableError,
     BackendTimeoutError,
+    ConfigFileError,
+    EmptyResponseError,
+    ImageInput,
+    InvalidParameterError,
+    InvalidPromptError,
     ModelNotFoundError,
     ModelNotSupportedError,
-    APIKeyError,
-    ConfigFileError,
-    InvalidPromptError,
-    InvalidParameterError,
-    EmptyResponseError,
     MultiModalError,
-    RateLimitError,
+    PersistentChatSession,
     QuotaExceededError,
+    RateLimitError,
     SessionLoadError,
     SessionSaveError,
+    ask,
+    chat,
+    configure,
+    stream,
 )
-from pathlib import Path
 
 
 def basic_image_analysis():
@@ -48,7 +49,9 @@ def basic_image_analysis():
         response = ttt.ask(
             [
                 "What's in this image? Describe what you see in detail.",
-                ImageInput("https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/YellowLabradorLooking_new.jpg/640px-YellowLabradorLooking_new.jpg"),
+                ImageInput(
+                    "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/YellowLabradorLooking_new.jpg/640px-YellowLabradorLooking_new.jpg"
+                ),
             ],
             model="gpt-4-vision-preview",
         )
@@ -72,8 +75,12 @@ def multiple_images_comparison():
         response = ttt.ask(
             [
                 "Compare these two images. What breed of dog do you see in each?",
-                ImageInput("https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/YellowLabradorLooking_new.jpg/640px-YellowLabradorLooking_new.jpg"),
-                ImageInput("https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Golde33443.jpg/640px-Golde33443.jpg"),
+                ImageInput(
+                    "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/YellowLabradorLooking_new.jpg/640px-YellowLabradorLooking_new.jpg"
+                ),
+                ImageInput(
+                    "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Golde33443.jpg/640px-Golde33443.jpg"
+                ),
             ],
             backend="cloud",
         )  # Will auto-select vision model
@@ -95,7 +102,9 @@ def streaming_with_vision():
         for chunk in ttt.stream(
             [
                 "Write a detailed analysis of this image, including colors, composition, and mood. Take your time to describe everything you observe.",
-                ImageInput("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/200px-Python-logo-notext.svg.png"),
+                ImageInput(
+                    "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/200px-Python-logo-notext.svg.png"
+                ),
             ],
             model="gpt-4-vision-preview",
         ):
@@ -118,13 +127,17 @@ def chat_with_images():
             response1 = session.ask(
                 [
                     "Look at this logo and tell me what programming language it represents.",
-                    ImageInput("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/200px-Python-logo-notext.svg.png"),
+                    ImageInput(
+                        "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/200px-Python-logo-notext.svg.png"
+                    ),
                 ]
             )
             print(f"AI: {response1}")
 
             # Follow-up without image - AI remembers the previous image
-            response2 = session.ask("What are the main design elements and colors in that logo?")
+            response2 = session.ask(
+                "What are the main design elements and colors in that logo?"
+            )
             print(f"AI: {response2}")
 
             # Another follow-up
@@ -149,7 +162,9 @@ def vision_model_selection():
             response = ttt.ask(
                 [
                     "Describe this image in one sentence.",
-                    ImageInput("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/200px-Python-logo-notext.svg.png"),
+                    ImageInput(
+                        "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/200px-Python-logo-notext.svg.png"
+                    ),
                 ],
                 model=model,
             )
@@ -216,7 +231,7 @@ def handle_model_errors():
     try:
         response = ask(
             ["What's in this image?", ImageInput("https://via.placeholder.com/150")],
-            model="gpt-3.5-turbo"  # Non-vision model
+            model="gpt-3.5-turbo",  # Non-vision model
         )
     except MultiModalError as e:
         print(f"\nMulti-modal error: {e}")
@@ -356,7 +371,7 @@ def production_error_handling():
 
         except RateLimitError as e:
             print(f"Rate limit exceeded: {e}")
-            retry_after = e.details.get('retry_after', 60)
+            retry_after = e.details.get("retry_after", 60)
             print(f"Consider implementing retry logic with {retry_after}s delay")
             return None
 
@@ -391,6 +406,7 @@ def config_error_handling():
 
     try:
         from ttt.config import load_config
+
         config = load_config(invalid_config)
 
     except ConfigFileError as e:
@@ -415,7 +431,8 @@ def best_practices():
     print("=== Best Practices ===\n")
 
     print("1. Always handle specific exceptions first:")
-    print("""
+    print(
+        """
 try:
     response = ask(prompt, model=user_model)
 except ModelNotFoundError:
@@ -428,17 +445,21 @@ except APIKeyError as e:
 except AIError as e:
     # Catch-all for AI library errors
     logger.error(f"AI operation failed: {e}")
-""")
+"""
+    )
 
     print("\n2. Use context managers for sessions:")
-    print("""
+    print(
+        """
 with chat(persist=True) as session:
     # Session is automatically saved/cleaned up
     response = session.ask("Hello")
-""")
+"""
+    )
 
     print("\n3. Implement retry logic for production:")
-    print("""
+    print(
+        """
 import time
 from ai import RateLimitError
 
@@ -450,17 +471,20 @@ def ask_with_retry(prompt, max_retries=3):
             if attempt == max_retries - 1:
                 raise
             time.sleep(e.details.get('retry_after', 60))
-""")
+"""
+    )
 
     print("\n4. Check response success:")
-    print("""
+    print(
+        """
 response = ask("Hello")
 if response.failed:
     print(f"Request failed: {response.error}")
     # Handle failure
 else:
     print(f"Success: {response}")
-""")
+"""
+    )
 
     print()
 

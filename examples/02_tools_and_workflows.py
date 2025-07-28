@@ -7,17 +7,19 @@ and create custom tools for complex workflows.
 """
 
 import asyncio
+
 from ai import ask, chat
-from ttt.tools import list_tools, get_tool, tool
+
+from ttt.tools import get_tool, list_tools, tool
 from ttt.tools.builtins import (
-    web_search,
-    read_file,
-    write_file,
-    list_directory,
     calculate,
     get_current_time,
     http_request,
+    list_directory,
+    read_file,
     run_python,
+    web_search,
+    write_file,
 )
 
 
@@ -207,8 +209,12 @@ def demo_chat_with_tools():
         print(f"Assistant: {response}")
 
         # Ask for something requiring both tools
-        response = session.ask("What's the weather in Tokyo, and if it's 68°F, what's that in Celsius?")
-        print(f"\nUser: What's the weather in Tokyo, and if it's 68°F, what's that in Celsius?")
+        response = session.ask(
+            "What's the weather in Tokyo, and if it's 68°F, what's that in Celsius?"
+        )
+        print(
+            f"\nUser: What's the weather in Tokyo, and if it's 68°F, what's that in Celsius?"
+        )
         print(f"Assistant: {response}")
 
 
@@ -226,7 +232,7 @@ def demo_builtin_tools_in_chat():
         print(f"Assistant: {response}")
 
         # Check what tools were used
-        if hasattr(response, 'tool_calls') and response.tool_calls:
+        if hasattr(response, "tool_calls") and response.tool_calls:
             print("\nTools used in this conversation:")
             for call in response.tool_calls:
                 print(f"  - {call.name}: {'Success' if call.succeeded else 'Failed'}")
@@ -244,7 +250,9 @@ def demo_cli_examples():
     print()
 
     print("2. Using multiple tools:")
-    print('   ttt "Search for weather data and calculate averages" --tools "web_search,calculate"')
+    print(
+        '   ttt "Search for weather data and calculate averages" --tools "web_search,calculate"'
+    )
     print()
 
     print("3. Using custom tools from modules:")
@@ -256,7 +264,9 @@ def demo_cli_examples():
     print()
 
     print("5. Complex workflows:")
-    print('   ttt "Research topic, analyze data, create report" --tools "web_search,calculate,write_file"')
+    print(
+        '   ttt "Research topic, analyze data, create report" --tools "web_search,calculate,write_file"'
+    )
 
 
 def main():
@@ -306,6 +316,7 @@ def main():
 
     # Cleanup
     import os
+
     for file in ["test_output.txt", "list_comp_demo.py", "japan_stats.txt"]:
         if os.path.exists(file):
             os.remove(file)

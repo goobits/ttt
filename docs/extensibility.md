@@ -217,22 +217,22 @@ class MyBackend(BaseBackend):
         super().__init__(config)
         # Your initialization code
         # Access configuration via self.backend_config
-    
+
     @property
     def name(self) -> str:
         """Backend identifier."""
         return "my-backend"
-    
+
     @property
     def is_available(self) -> bool:
         """Check if backend is available."""
         # Return True if your backend can be used
         return True
-    
+
     async def ask(
-        self, 
-        prompt: str, 
-        *, 
+        self,
+        prompt: str,
+        *,
         model: Optional[str] = None,
         system: Optional[str] = None,
         temperature: Optional[float] = None,
@@ -242,7 +242,7 @@ class MyBackend(BaseBackend):
         """Generate a complete response."""
         # Your implementation
         response_text = await your_api_call(prompt)
-        
+
         return AIResponse(
             response_text,
             model=model or "default",
@@ -252,7 +252,7 @@ class MyBackend(BaseBackend):
             time_taken=elapsed_time,
             metadata={"custom": "data"}
         )
-    
+
     async def astream(
         self,
         prompt: str,
@@ -261,11 +261,11 @@ class MyBackend(BaseBackend):
         """Stream response chunks."""
         async for chunk in your_streaming_api(prompt):
             yield chunk
-    
+
     async def models(self) -> List[str]:
         """List available models."""
         return ["model1", "model2"]
-    
+
     async def status(self) -> Dict[str, Any]:
         """Get backend status."""
         return {
@@ -283,11 +283,11 @@ Backends receive configuration through their constructor:
 class ConfigurableBackend(BaseBackend):
     def __init__(self, config=None):
         super().__init__(config)
-        
+
         # Access merged configuration
         self.api_url = self.backend_config.get("api_url", "https://api.example.com")
         self.api_key = self.backend_config.get("api_key")
-        
+
         # Backend-specific config takes precedence
         # If config has backends.my-backend.timeout, it overrides global timeout
         self.timeout = self.timeout  # Already set by base class
@@ -362,7 +362,7 @@ routing:
   code_keywords: [algorithm, implement, syntax]
   speed_keywords: [quick, brief, tldr]
   quality_keywords: [detailed, thorough, comprehensive]
-  
+
   # Model selection rules
   rules:
     - if: {contains: [code, python]}

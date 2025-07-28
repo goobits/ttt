@@ -8,7 +8,8 @@ Useful for testing, development, and demos.
 import asyncio
 import random
 import time
-from typing import AsyncIterator, Dict, Any, Optional, List
+from typing import Any, AsyncIterator, Dict, List, Optional
+
 from ttt.backends import BaseBackend
 from ttt.models import AIResponse
 

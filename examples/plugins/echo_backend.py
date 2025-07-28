@@ -4,9 +4,10 @@ Example custom backend plugin that echoes back the prompt.
 This demonstrates how to create a custom backend for the AI library.
 """
 
-from typing import AsyncIterator, Dict, Any, Optional, List
 import asyncio
 import time
+from typing import Any, AsyncIterator, Dict, List, Optional
+
 from ttt.backends import BaseBackend
 from ttt.models import AIResponse
 

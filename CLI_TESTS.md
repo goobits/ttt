@@ -15,7 +15,7 @@
 - [x] `ttt ask -m @claude "prompt"` - Tested 2025-07-24
 - [x] `ttt ask --model openrouter/google/gemini-flash-1.5 "prompt"` - Tested 2025-07-24
 
-## System Prompt Options  
+## System Prompt Options
 - [x] `ttt ask --system "system prompt" "user prompt"` - Tested 2025-07-24
 - [ ] `ttt ask -s "system prompt" "user prompt"`
 

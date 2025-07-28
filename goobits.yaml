@@ -8,7 +8,8 @@ display_name: "TTT - Terminal Tools for Thoughts"
 description: "A powerful AI assistant for your terminal"
 
 # CLI generation configuration
-cli_output_path: "src/{package_name}/cli.py"
+cli_output_path: "src/ttt/cli.py"
+hooks_path: "src/ttt/app_hooks.py"
 
 python:
   minimum_version: "3.8"
@@ -44,29 +45,29 @@ messages:
   install_success: |
     TTT has been installed successfully!
     You can now use 'ttt' or 't' (if shell integration is enabled) from your terminal.
-    
+
     Quick start:
       ttt "Hello, how can I help you today?"
       ttt status
       ttt models
-  
+
   install_dev_success: |
     TTT has been installed in development mode!
     ✅ Your local changes will be reflected immediately - no reinstalling needed!
-    
+
     Development workflow:
       - Edit code in src/ttt/ directory
-      - Test immediately with: ttt --stream "test"  
+      - Test immediately with: ttt --stream "test"
       - Run tests with: ./test.sh
       - Format code with: ruff format src/ttt/
       - Check types with: mypy src/ttt/
-      
+
     💡 No need to run ./setup.sh upgrade after code changes!
-  
+
   upgrade_success: |
     TTT has been upgraded successfully!
     Check out the latest features with: ttt --version
-  
+
   uninstall_success: |
     TTT has been uninstalled.
     Thank you for using TTT!
@@ -81,7 +82,7 @@ cli:
   icon: "🤖"
   enable_recursive_help: true
   enable_help_json: true
-  
+
   header_sections:
     - title: "💡 Quick Start"
       items:
@@ -97,9 +98,9 @@ cli:
         - { item: "2. Add API key", desc: "export OPENROUTER_API_KEY='your-key-here'", style: "setup" }
         - { item: "3. Check setup", desc: "ttt status", style: "setup" }
         - { item: "4. Start chatting", desc: "ttt chat", style: "setup" }
-  
+
   footer_note: "📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6]"
-  
+
   command_groups:
     - name: "Core Commands"
       commands: ["ask", "chat", "list", "status"]
@@ -150,7 +151,7 @@ cli:
         - name: "json"
           type: "flag"
           desc: "Output response in JSON format"
-    
+
     chat:
       desc: "Chat interactively with AI"
       icon: "💬"
@@ -171,7 +172,7 @@ cli:
           type: "bool"
           desc: "Render markdown in responses"
           default: true
-    
+
     list:
       desc: "See available resources"
       icon: "📜"
@@ -179,6 +180,7 @@ cli:
         - name: "resource"
           desc: "Type of resource to list"
           choices: ["models", "sessions", "tools"]
+          required: false
       options:
         - name: "format"
           short: "f"
@@ -191,7 +193,7 @@ cli:
           type: "bool"
           desc: "Show detailed information"
           default: false
-    
+
     status:
       desc: "Verify system and API health"
       icon: "✅"
@@ -199,7 +201,7 @@ cli:
         - name: "json"
           type: "flag"
           desc: "Output status in JSON format"
-    
+
     models:
       desc: "View AI models"
       icon: "🧠"
@@ -207,24 +209,26 @@ cli:
         - name: "json"
           type: "flag"
           desc: "Output models in JSON format"
-    
+
     info:
       desc: "Detailed model information"
       icon: "ℹ️"
       args:
         - name: "model"
           desc: "Model name"
+          required: false
       options:
         - name: "json"
           type: "flag"
           desc: "Output model info in JSON format"
-    
+
     export:
       desc: "Save your chat history"
       icon: "💾"
       args:
         - name: "session"
           desc: "Session ID to export"
+          required: false
       options:
         - name: "format"
           short: "f"
@@ -240,7 +244,7 @@ cli:
           type: "bool"
           desc: "Include timestamps and model info"
           default: false
-    
+
     config:
       desc: "Customize your setup"
       icon: "⚙️"
@@ -264,7 +268,7 @@ cli:
               type: "bool"
               desc: "Include API keys in output"
               default: false
-    
+
     tools:
       desc: "Manage CLI tools and extensions"
       icon: "🛠️"
@@ -286,7 +290,7 @@ cli:
               type: "bool"
               desc: "Include disabled tools"
               default: false
-  
+
   config:
     rich_help_panel: true
     show_metavars_column: false

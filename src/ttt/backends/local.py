@@ -46,7 +46,9 @@ class LocalBackend(BaseBackend):
             local_config.get("base_url")
             or self.backend_config.get("ollama_base_url")
             or get_config_value("backends.local.base_url")
-            or get_config_value("constants.urls.ollama_default", "http://localhost:11434")
+            or get_config_value(
+                "constants.urls.ollama_default", "http://localhost:11434"
+            )
         )
 
         self.default_model = local_config.get("default_model") or get_config_value(
@@ -65,6 +67,7 @@ class LocalBackend(BaseBackend):
             # Create a simple sync check
             async def check() -> bool:
                 from ..config.loader import get_config_value
+
                 availability_timeout = get_config_value(
                     "constants.timeouts.availability_check", 5
                 )
@@ -296,6 +299,7 @@ class LocalBackend(BaseBackend):
         """
         try:
             from ..config.loader import get_config_value
+
             model_list_timeout = get_config_value("constants.timeouts.model_list", 10)
             async with httpx.AsyncClient(timeout=model_list_timeout) as client:
                 response = await client.get(f"{self.base_url}/api/tags")
@@ -309,6 +313,7 @@ class LocalBackend(BaseBackend):
 
         except httpx.TimeoutException:
             from ..config.loader import get_config_value
+
             model_list_timeout = get_config_value("constants.timeouts.model_list", 10)
             raise BackendTimeoutError(self.name, float(model_list_timeout)) from None
         except Exception as e:

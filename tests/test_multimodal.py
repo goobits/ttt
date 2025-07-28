@@ -124,7 +124,9 @@ class TestMultiModalAPI:
             mock_route.return_value = (mock_backend, "gpt-4-vision-preview")
 
             # Test streaming with image
-            chunks = list(stream(["Describe this image:", ImageInput(b"fake image data")]))
+            chunks = list(
+                stream(["Describe this image:", ImageInput(b"fake image data")])
+            )
 
             assert chunks == ["This ", "is ", "a ", "cat"]
 

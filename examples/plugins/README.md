@@ -62,7 +62,7 @@ To create a custom backend plugin:
 2. **Inherit from BaseBackend**:
    ```python
    from ttt.backends import BaseBackend
-   
+
    class MyBackend(BaseBackend):
        # Implementation here
    ```
@@ -122,11 +122,11 @@ class HTTPBackend(BaseBackend):
         super().__init__(config)
         self.api_url = self.backend_config.get("api_url", "http://localhost:8000")
         self.api_key = self.backend_config.get("api_key")
-    
+
     @property
     def name(self):
         return "http"
-    
+
     @property
     def is_available(self):
         try:
@@ -134,7 +134,7 @@ class HTTPBackend(BaseBackend):
             return response.status_code == 200
         except:
             return False
-    
+
     async def ask(self, prompt, **kwargs):
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -143,7 +143,7 @@ class HTTPBackend(BaseBackend):
                 headers={"Authorization": f"Bearer {self.api_key}"}
             )
             data = response.json()
-            
+
             return AIResponse(
                 data["text"],
                 model=data.get("model", "custom"),
@@ -151,7 +151,7 @@ class HTTPBackend(BaseBackend):
                 tokens_in=data.get("tokens_in"),
                 tokens_out=data.get("tokens_out")
             )
-    
+
     # ... implement other required methods
 ```
 

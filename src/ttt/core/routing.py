@@ -33,7 +33,10 @@ class Router:
         self._cache_timestamp: Optional[float] = None
         # Get cache TTL from constants
         from ..config.loader import get_config_value
-        self._cache_ttl = get_config_value("constants.timeouts.cache_ttl", 30)  # Cache TTL in seconds
+
+        self._cache_ttl = get_config_value(
+            "constants.timeouts.cache_ttl", 30
+        )  # Cache TTL in seconds
 
     def get_backend(self, backend_name: str) -> BaseBackend:
         """Get or create a backend instance."""
@@ -186,8 +189,13 @@ class Router:
                         return []
                     # Use backend health check timeout from constants
                     from ..config.loader import get_config_value
-                    health_check_timeout = get_config_value("constants.timeouts.backend_health_check", 3)
-                    async with httpx.AsyncClient(timeout=health_check_timeout) as client:
+
+                    health_check_timeout = get_config_value(
+                        "constants.timeouts.backend_health_check", 3
+                    )
+                    async with httpx.AsyncClient(
+                        timeout=health_check_timeout
+                    ) as client:
                         response = await client.get(
                             f"{local_backend.base_url}/api/tags"
                         )
@@ -414,7 +422,12 @@ class Router:
                     if not response.failed:
                         return response
 
-            except (BackendNotAvailableError, ConnectionError, TimeoutError, ValueError) as e:
+            except (
+                BackendNotAvailableError,
+                ConnectionError,
+                TimeoutError,
+                ValueError,
+            ) as e:
                 logger.warning(f"Fallback backend {backend_name} failed: {e}")
 
         # All backends failed

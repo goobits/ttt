@@ -32,21 +32,21 @@ model_aliases:
   # Speed-optimized models
   fast: gpt-3.5-turbo
   quick: gpt-3.5-turbo
-  
+
   # Quality-optimized models
   best: gpt-4
   quality: gpt-4
   smart: gpt-4
-  
+
   # Task-specific models
   coding: claude-3-sonnet
   code: claude-3-sonnet
   analysis: claude-3-sonnet
-  
+
   # Cost-optimized models
   cheap: gpt-3.5-turbo
   affordable: gpt-3.5-turbo
-  
+
   # Privacy-focused models (local)
   local: llama2
   private: llama2
@@ -70,7 +70,7 @@ models:
       - code
     context_length: 128000
     cost_per_token: 0.00001
-  
+
   # Example: Custom local model
   - name: codellama
     provider: local
@@ -84,7 +84,7 @@ models:
       - code
       - text
     context_length: 4096
-  
+
   # Example: Fine-tuned model
   - name: my-custom-model
     provider: openai
@@ -105,7 +105,7 @@ backends:
     default_model: llama2
     timeout: 60
     # Add any other Ollama-specific options here
-  
+
   cloud:
     # Cloud backend settings
     default_model: gpt-3.5-turbo
@@ -129,7 +129,7 @@ routing:
     - "fix"
     - "error"
     - "syntax"
-  
+
   # Keywords that suggest fast response needed
   speed_keywords:
     - "quick"
@@ -138,7 +138,7 @@ routing:
     - "brief"
     - "summary"
     - "tldr"
-  
+
   # Keywords that suggest quality/complex response needed
   quality_keywords:
     - "analyze"
@@ -160,11 +160,11 @@ advanced:
   # Enable response caching
   enable_cache: false
   cache_ttl: 3600  # Cache time-to-live in seconds
-  
+
   # Enable usage tracking
   track_usage: false
   usage_file: ~/.config/ttt/usage.json
-  
+
   # Enable model performance monitoring
   track_performance: false
   performance_file: ~/.config/ttt/performance.json

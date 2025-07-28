@@ -3,7 +3,7 @@
 import logging
 import sys
 from io import StringIO
-from typing import List
+from typing import Any, List, Optional, TextIO
 
 
 class WarningCapture:
@@ -21,7 +21,7 @@ class WarningCapture:
         logging.getLogger().addHandler(self.handler)
         return self
 
-    def __exit__(self, *args) -> None:
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         logging.getLogger().removeHandler(self.handler)
 
     def get_warnings(self) -> List[str]:
@@ -37,7 +37,7 @@ class EarlyWarningCapture:
     """Capture warnings that happen at import time by redirecting stderr."""
 
     def __init__(self) -> None:
-        self.original_stderr = None
+        self.original_stderr: Optional[TextIO] = None
         self.buffer = StringIO()
         self.warnings: List[str] = []
 

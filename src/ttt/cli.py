@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 """Auto-generated from goobits.yaml"""
-import importlib.util
 import os
 import sys
+import importlib.util
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
-
 import rich_click as click
-from rich_click import RichGroup
+from rich_click import RichGroup, RichCommand
 
 # Set up rich-click configuration globally
-click.rich_click.USE_RICH_MARKUP = True
+click.rich_click.USE_RICH_MARKUP = True  
 click.rich_click.USE_MARKDOWN = False  # Disable markdown to avoid conflicts
 click.rich_click.MARKUP_MODE = "rich"
 
@@ -22,9 +20,7 @@ click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
 click.rich_click.SHOW_METAVARS_COLUMN = False
 click.rich_click.APPEND_METAVARS_HELP = True
 click.rich_click.STYLE_ERRORS_SUGGESTION = "#ff5555"
-click.rich_click.ERRORS_SUGGESTION = (
-    "Try running the '--help' flag for more information."
-)
+click.rich_click.ERRORS_SUGGESTION = "Try running the '--help' flag for more information."
 click.rich_click.ERRORS_EPILOGUE = "To find out more, visit https://github.com/anthropics/claude-code"
 click.rich_click.MAX_WIDTH = 120  # Set reasonable width
 click.rich_click.WIDTH = 120  # Set consistent width
@@ -33,23 +29,23 @@ click.rich_click.SHOW_SUBCOMMAND_ALIASES = True
 click.rich_click.ALIGN_OPTIONS_SWITCHES = True
 click.rich_click.STYLE_OPTION = "#ff79c6"      # Dracula Pink - for option flags
 click.rich_click.STYLE_SWITCH = "#50fa7b"      # Dracula Green - for switches
-click.rich_click.STYLE_METAVAR = "#8BE9FD not bold"   # Light cyan - arg types
+click.rich_click.STYLE_METAVAR = "#8BE9FD not bold"   # Light cyan - for argument types (OPTIONS, COMMAND)  
 click.rich_click.STYLE_METAVAR_SEPARATOR = "#6272a4"  # Dracula Comment
-click.rich_click.STYLE_HEADER_TEXT = "bold yellow"    # Bold yellow - headers
+click.rich_click.STYLE_HEADER_TEXT = "bold yellow"    # Bold yellow - for section headers
 click.rich_click.STYLE_EPILOGUE_TEXT = "#6272a4"      # Dracula Comment
 click.rich_click.STYLE_FOOTER_TEXT = "#6272a4"        # Dracula Comment
 click.rich_click.STYLE_USAGE = "#BD93F9"              # Purple - for "Usage:" line
 click.rich_click.STYLE_USAGE_COMMAND = "bold"         # Bold for main command name
 click.rich_click.STYLE_DEPRECATED = "#ff5555"         # Dracula Red
 click.rich_click.STYLE_HELPTEXT_FIRST_LINE = "#f8f8f2" # Dracula Foreground
-click.rich_click.STYLE_HELPTEXT = "#B3B8C0"           # Light gray - help text
+click.rich_click.STYLE_HELPTEXT = "#B3B8C0"           # Light gray - for help descriptions
 click.rich_click.STYLE_OPTION_DEFAULT = "#ffb86c"     # Dracula Orange
 click.rich_click.STYLE_REQUIRED_SHORT = "#ff5555"     # Dracula Red
 click.rich_click.STYLE_REQUIRED_LONG = "#ff5555"      # Dracula Red
 click.rich_click.STYLE_OPTIONS_PANEL_BORDER = "dim"   # Dim for subtle borders
 click.rich_click.STYLE_COMMANDS_PANEL_BORDER = "dim"  # Dim for subtle borders
-click.rich_click.STYLE_COMMAND = "#50fa7b"            # Dracula Green - commands
-click.rich_click.STYLE_COMMANDS_TABLE_COLUMN_WIDTH_RATIO = (1, 3)  # Cmd:Desc ratio
+click.rich_click.STYLE_COMMAND = "#50fa7b"            # Dracula Green - for command names in list
+click.rich_click.STYLE_COMMANDS_TABLE_COLUMN_WIDTH_RATIO = (1, 3)  # Command:Description ratio (1/4 : 3/4)
 
 
 # Command groups will be set after main function is defined
@@ -58,22 +54,106 @@ click.rich_click.STYLE_COMMANDS_TABLE_COLUMN_WIDTH_RATIO = (1, 3)  # Cmd:Desc ra
 # Hooks system - try to import app_hooks module
 app_hooks = None
 try:
-    # Try to import from the same directory as this script
-    script_dir = Path(__file__).parent
-    hooks_path = script_dir / "app_hooks.py"
 
+    # Use configured hooks path
+    hooks_path = Path("src/ttt/app_hooks.py")
+    if not hooks_path.is_absolute():
+        # Make relative to the CLI file's directory
+        script_dir = Path(__file__).parent
+        # Calculate relative path from CLI location to hooks
+        cli_parts = Path("src/ttt/cli.py").parts
+        cli_depth = len([p for p in cli_parts if p not in ['.', '..']])
+        hooks_path = script_dir / ('/'.join(['..'] * (cli_depth - 1))) / "src/ttt/app_hooks.py"
+    
     if hooks_path.exists():
         spec = importlib.util.spec_from_file_location("app_hooks", hooks_path)
         app_hooks = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(app_hooks)
     else:
-        # Try to import from Python path
-        import app_hooks
+        # Fallback: try multiple common locations
+        script_dir = Path(__file__).parent
+        possible_locations = [
+            script_dir / "app_hooks.py",  # Same directory as generated CLI
+            script_dir.parent.parent.parent / "app_hooks.py",  # Project root
+            script_dir.parent / "app_hooks.py",  # One level up
+        ]
+        
+        for fallback_path in possible_locations:
+            if fallback_path.exists():
+                spec = importlib.util.spec_from_file_location("app_hooks", fallback_path)
+                app_hooks = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(app_hooks)
+                break
+        else:
+            # Try to import from Python path
+            import app_hooks
+
 except (ImportError, FileNotFoundError):
     # No hooks module found, use default behavior
     pass
 
-def load_plugins(cli_group: RichGroup) -> None:
+# Built-in commands
+
+def builtin_upgrade_command(check_only=False, pre=False, version=None, dry_run=False):
+    """Built-in upgrade function for TTT - Terminal Tools for Thoughts - uses enhanced setup.sh script."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    if check_only:
+        print(f"Checking for updates to TTT - Terminal Tools for Thoughts...")
+        print("Update check not yet implemented. Run without --check to upgrade.")
+        return
+
+    if dry_run:
+        print("Dry run - would execute: pipx upgrade goobits-ttt")
+        return
+
+    # Find the setup.sh script - look in common locations
+    setup_script = None
+    search_paths = [
+        Path.cwd() / "setup.sh",  # Current directory
+        Path(__file__).parent.parent / "setup.sh",  # Package directory
+        Path.home() / ".local" / "share" / "goobits-ttt" / "setup.sh",  # User data
+    ]
+    
+    for path in search_paths:
+        if path.exists():
+            setup_script = path
+            break
+    
+    if setup_script is None:
+        # Fallback to basic upgrade if setup.sh not found
+        print(f"Enhanced setup script not found. Using basic upgrade for TTT - Terminal Tools for Thoughts...")
+        import shutil
+        
+        package_name = "goobits-ttt"
+        pypi_name = "goobits-ttt"
+        
+        if shutil.which("pipx"):
+            result = subprocess.run(["pipx", "list"], capture_output=True, text=True)
+            if package_name in result.stdout or pypi_name in result.stdout:
+                cmd = ["pipx", "upgrade", pypi_name]
+            else:
+                cmd = [sys.executable, "-m", "pip", "install", "--upgrade", pypi_name]
+        else:
+            cmd = [sys.executable, "-m", "pip", "install", "--upgrade", pypi_name]
+        
+        result = subprocess.run(cmd)
+        if result.returncode == 0:
+            print(f"✅ TTT - Terminal Tools for Thoughts upgraded successfully!")
+            print(f"Run 'ttt --version' to verify the new version.")
+        else:
+            print(f"❌ Upgrade failed with exit code {result.returncode}")
+            sys.exit(1)
+        return
+
+    # Use the enhanced setup.sh script
+    result = subprocess.run([str(setup_script), "upgrade"])
+    sys.exit(result.returncode)
+
+
+def load_plugins(cli_group):
     """Load plugins from the conventional plugin directory."""
     # Define plugin directories to search
     plugin_dirs = [
@@ -82,31 +162,31 @@ def load_plugins(cli_group: RichGroup) -> None:
         # Local plugin directory (same as script)
         Path(__file__).parent / "plugins",
     ]
-
+    
     for plugin_dir in plugin_dirs:
         if not plugin_dir.exists():
             continue
-
+            
         # Add plugin directory to Python path
         sys.path.insert(0, str(plugin_dir))
-
+        
         # Scan for plugin files
         for plugin_file in plugin_dir.glob("*.py"):
             if plugin_file.name.startswith("_"):
                 continue
-
+                
             # Skip core system files that aren't plugins
             if plugin_file.name in ["loader.py", "__init__.py"]:
                 continue
-
+                
             plugin_name = plugin_file.stem
-
+            
             try:
                 # Import the plugin module
                 spec = importlib.util.spec_from_file_location(plugin_name, plugin_file)
                 plugin_module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(plugin_module)
-
+                
                 # Call register_plugin if it exists
                 if hasattr(plugin_module, "register_plugin"):
                     plugin_module.register_plugin(cli_group)
@@ -120,10 +200,10 @@ def load_plugins(cli_group: RichGroup) -> None:
 
 
 
-def get_version() -> str:
+def get_version():
     """Get version from pyproject.toml or __init__.py"""
     import re
-
+    
     try:
         # Try to get version from pyproject.toml FIRST (most authoritative)
         toml_path = Path(__file__).parent.parent / "pyproject.toml"
@@ -134,7 +214,7 @@ def get_version() -> str:
                 return match.group(1)
     except Exception:
         pass
-
+    
     try:
         # Fallback to __init__.py
         init_path = Path(__file__).parent / "__init__.py"
@@ -145,12 +225,12 @@ def get_version() -> str:
                 return match.group(1)
     except Exception:
         pass
-
+        
     # Final fallback
     return "1.0.0"
 
 
-def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> None:
+def show_help_json(ctx, param, value):
     """Callback for --help-json option."""
     if not value or ctx.resilient_parsing:
         return
@@ -217,11 +297,13 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
     }
   ],
   "footer_note": "📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6]",
+  "options": [],
   "commands": {
     "ask": {
       "desc": "Quickly ask one-off questions",
       "icon": "💬",
       "is_default": true,
+      "lifecycle": "standard",
       "args": [
         {
           "name": "prompt",
@@ -238,7 +320,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "str",
           "desc": "LLM model to use",
           "default": null,
-          "choices": null
+          "choices": null,
+          "multiple": false
         },
         {
           "name": "temperature",
@@ -246,7 +329,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "float",
           "desc": "Sampling temperature (0.0-2.0)",
           "default": 0.7,
-          "choices": null
+          "choices": null,
+          "multiple": false
         },
         {
           "name": "max-tokens",
@@ -254,7 +338,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "int",
           "desc": "Maximum response length",
           "default": null,
-          "choices": null
+          "choices": null,
+          "multiple": false
         },
         {
           "name": "tools",
@@ -262,7 +347,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "bool",
           "desc": "Enable tool usage",
           "default": false,
-          "choices": null
+          "choices": null,
+          "multiple": false
         },
         {
           "name": "session",
@@ -270,7 +356,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "str",
           "desc": "Session ID for context",
           "default": null,
-          "choices": null
+          "choices": null,
+          "multiple": false
         },
         {
           "name": "system",
@@ -278,7 +365,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "str",
           "desc": "System prompt to set AI behavior",
           "default": null,
-          "choices": null
+          "choices": null,
+          "multiple": false
         },
         {
           "name": "stream",
@@ -286,7 +374,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "bool",
           "desc": "Stream the response",
           "default": true,
-          "choices": null
+          "choices": null,
+          "multiple": false
         },
         {
           "name": "json",
@@ -294,7 +383,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "flag",
           "desc": "Output response in JSON format",
           "default": null,
-          "choices": null
+          "choices": null,
+          "multiple": false
         }
       ],
       "subcommands": null
@@ -303,6 +393,7 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
       "desc": "Chat interactively with AI",
       "icon": "💬",
       "is_default": false,
+      "lifecycle": "standard",
       "args": [],
       "options": [
         {
@@ -311,7 +402,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "str",
           "desc": "LLM model to use",
           "default": null,
-          "choices": null
+          "choices": null,
+          "multiple": false
         },
         {
           "name": "session",
@@ -319,7 +411,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "str",
           "desc": "Session ID to resume or create",
           "default": null,
-          "choices": null
+          "choices": null,
+          "multiple": false
         },
         {
           "name": "tools",
@@ -327,7 +420,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "bool",
           "desc": "Enable tool usage in chat",
           "default": false,
-          "choices": null
+          "choices": null,
+          "multiple": false
         },
         {
           "name": "markdown",
@@ -335,7 +429,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "bool",
           "desc": "Render markdown in responses",
           "default": true,
-          "choices": null
+          "choices": null,
+          "multiple": false
         }
       ],
       "subcommands": null
@@ -344,6 +439,7 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
       "desc": "See available resources",
       "icon": "📜",
       "is_default": false,
+      "lifecycle": "standard",
       "args": [
         {
           "name": "resource",
@@ -354,7 +450,7 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
             "sessions",
             "tools"
           ],
-          "required": true
+          "required": false
         }
       ],
       "options": [
@@ -368,7 +464,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
             "table",
             "json",
             "yaml"
-          ]
+          ],
+          "multiple": false
         },
         {
           "name": "verbose",
@@ -376,7 +473,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "bool",
           "desc": "Show detailed information",
           "default": false,
-          "choices": null
+          "choices": null,
+          "multiple": false
         }
       ],
       "subcommands": null
@@ -385,6 +483,7 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
       "desc": "Verify system and API health",
       "icon": "✅",
       "is_default": false,
+      "lifecycle": "standard",
       "args": [],
       "options": [
         {
@@ -393,7 +492,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "flag",
           "desc": "Output status in JSON format",
           "default": null,
-          "choices": null
+          "choices": null,
+          "multiple": false
         }
       ],
       "subcommands": null
@@ -402,6 +502,7 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
       "desc": "View AI models",
       "icon": "🧠",
       "is_default": false,
+      "lifecycle": "standard",
       "args": [],
       "options": [
         {
@@ -410,7 +511,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "flag",
           "desc": "Output models in JSON format",
           "default": null,
-          "choices": null
+          "choices": null,
+          "multiple": false
         }
       ],
       "subcommands": null
@@ -419,13 +521,14 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
       "desc": "Detailed model information",
       "icon": "ℹ️",
       "is_default": false,
+      "lifecycle": "standard",
       "args": [
         {
           "name": "model",
           "desc": "Model name",
           "nargs": null,
           "choices": null,
-          "required": true
+          "required": false
         }
       ],
       "options": [
@@ -435,7 +538,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "flag",
           "desc": "Output model info in JSON format",
           "default": null,
-          "choices": null
+          "choices": null,
+          "multiple": false
         }
       ],
       "subcommands": null
@@ -444,13 +548,14 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
       "desc": "Save your chat history",
       "icon": "💾",
       "is_default": false,
+      "lifecycle": "standard",
       "args": [
         {
           "name": "session",
           "desc": "Session ID to export",
           "nargs": null,
           "choices": null,
-          "required": true
+          "required": false
         }
       ],
       "options": [
@@ -464,7 +569,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
             "markdown",
             "json",
             "txt"
-          ]
+          ],
+          "multiple": false
         },
         {
           "name": "output",
@@ -472,7 +578,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "str",
           "desc": "Output file path",
           "default": null,
-          "choices": null
+          "choices": null,
+          "multiple": false
         },
         {
           "name": "include-metadata",
@@ -480,7 +587,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "type": "bool",
           "desc": "Include timestamps and model info",
           "default": false,
-          "choices": null
+          "choices": null,
+          "multiple": false
         }
       ],
       "subcommands": null
@@ -489,6 +597,7 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
       "desc": "Customize your setup",
       "icon": "⚙️",
       "is_default": false,
+      "lifecycle": "standard",
       "args": [],
       "options": [],
       "subcommands": {
@@ -496,6 +605,7 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "desc": "Get a configuration value",
           "icon": null,
           "is_default": false,
+          "lifecycle": "standard",
           "args": [
             {
               "name": "key",
@@ -512,6 +622,7 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "desc": "Set a configuration value",
           "icon": null,
           "is_default": false,
+          "lifecycle": "standard",
           "args": [
             {
               "name": "key",
@@ -535,6 +646,7 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "desc": "List all configuration",
           "icon": null,
           "is_default": false,
+          "lifecycle": "standard",
           "args": [],
           "options": [
             {
@@ -543,7 +655,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
               "type": "bool",
               "desc": "Include API keys in output",
               "default": false,
-              "choices": null
+              "choices": null,
+              "multiple": false
             }
           ],
           "subcommands": null
@@ -554,6 +667,7 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
       "desc": "Manage CLI tools and extensions",
       "icon": "🛠️",
       "is_default": false,
+      "lifecycle": "standard",
       "args": [],
       "options": [],
       "subcommands": {
@@ -561,6 +675,7 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "desc": "Enable a tool",
           "icon": null,
           "is_default": false,
+          "lifecycle": "standard",
           "args": [
             {
               "name": "tool_name",
@@ -577,6 +692,7 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "desc": "Disable a tool",
           "icon": null,
           "is_default": false,
+          "lifecycle": "standard",
           "args": [
             {
               "name": "tool_name",
@@ -593,6 +709,7 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
           "desc": "List all tools",
           "icon": null,
           "is_default": false,
+          "lifecycle": "standard",
           "args": [],
           "options": [
             {
@@ -601,7 +718,8 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
               "type": "bool",
               "desc": "Include disabled tools",
               "default": false,
-              "choices": null
+              "choices": null,
+              "multiple": false
             }
           ],
           "subcommands": null
@@ -660,41 +778,41 @@ def show_help_json(ctx: click.Context, param: click.Parameter, value: bool) -> N
 
 
 
+  
+    
+  
 
+  
 
+  
 
+  
 
+  
 
+  
 
+  
 
+  
 
-
-
-
-
-
-
-
-
-
-
-
+  
 
 
 
 class DefaultGroup(RichGroup):
     """Allow a default command to be invoked without being specified."""
-
-    def __init__(self, *args: Any, default: Optional[str] = None, **kwargs: Any) -> None:
+    
+    def __init__(self, *args, default=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.default_command = default
-
-    def main(self, *args: Any, **kwargs: Any) -> Any:
+    
+    def main(self, *args, **kwargs):
         """Override main to handle stdin input when no command is provided."""
+        import sys
         import os
         import stat
-        import sys
-
+        
         # Check if we need to inject the default command due to stdin input
         if len(sys.argv) == 1 and self.default_command:  # Only script name provided
             # Check if stdin is coming from a pipe or redirection
@@ -703,20 +821,20 @@ class DefaultGroup(RichGroup):
                 # Check if stdin is a pipe or file (not a terminal)
                 stdin_stat = os.fstat(sys.stdin.fileno())
                 has_stdin = stat.S_ISFIFO(stdin_stat.st_mode) or stat.S_ISREG(stdin_stat.st_mode)
-            except Exception:
+            except:
                 # Fallback to isatty check
                 has_stdin = not sys.stdin.isatty()
-
+            
             if has_stdin:
                 # Inject the default command into sys.argv
                 sys.argv.append(self.default_command)
-
+        
         return super().main(*args, **kwargs)
-
-    def resolve_command(self, ctx: click.Context, args: List[str]) -> Tuple[str, click.Command, List[str]]:
-        import os
+    
+    def resolve_command(self, ctx, args):
         import sys
-
+        import os
+        
         try:
             # Try normal command resolution first
             return super().resolve_command(ctx, args)
@@ -730,12 +848,12 @@ class DefaultGroup(RichGroup):
                 # Use S_ISFIFO to check if it's a pipe, or S_ISREG to check if it's a regular file
                 import stat
                 has_stdin = stat.S_ISFIFO(stdin_stat.st_mode) or stat.S_ISREG(stdin_stat.st_mode)
-            except Exception:
+            except Exception as e:
                 # Fallback to isatty check
                 has_stdin = not sys.stdin.isatty()
-
+            
             is_help_request = any(arg in ['--help-all', '--help-json'] for arg in args)
-
+            
             if self.default_command and not is_help_request:
                 # Trigger default command if:
                 # 1. We have args (existing behavior)
@@ -759,35 +877,36 @@ class DefaultGroup(RichGroup):
 
 @click.option('--help-all', is_flag=True, is_eager=True, help='Show help for all commands.', hidden=True)
 
-def main(ctx: click.Context, help_json: bool = False, help_all: bool = False) -> None:
+
+def main(ctx, help_json=False, help_all=False):
     """🤖 [bold color(6)]GOOBITS TTT CLI v1.0.0[/bold color(6)] - Talk to Transformer
 
-
+    
     \b
     [#B3B8C0]AI-powered conversations, straight from your command line[/#B3B8C0]
+    
 
-
-
+    
     \b
     [bold yellow]💡 Quick Start:[/bold yellow]
     [green]ttt "What is the meaning of life?"  [/green] [italic][#B3B8C0]# Instant response[/#B3B8C0][/italic]
     [green]ttt chat                            [/green] [italic][#B3B8C0]# Interactive session[/#B3B8C0][/italic]
     [green]ttt models                          [/green] [italic][#B3B8C0]# Explore available models[/#B3B8C0][/italic]
     [green]ttt config set model gpt-4          [/green] [italic][#B3B8C0]# Set your preferred model[/#B3B8C0][/italic]
-
+    
     \b
     [bold yellow]🔑 Initial Setup:[/bold yellow]
     1. See providers:  [green]ttt providers[/green]
     2. Add API key:    [green]export OPENROUTER_API_KEY='your-key-here'[/green]
     3. Check setup:    [green]ttt status[/green]
     4. Start chatting: [green]ttt chat[/green]
-
+    
     \b
-
+    
        [#B3B8C0]📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6][/#B3B8C0]
     """
 
-
+    
     if help_all:
         # Print main help
         click.echo(ctx.get_help())
@@ -809,7 +928,10 @@ def main(ctx: click.Context, help_json: bool = False, help_all: bool = False) ->
 
         # Exit after printing all help
         ctx.exit()
-
+    
+    
+    # Store global options in context for use by commands
+    
 
     pass
 
@@ -817,34 +939,47 @@ def main(ctx: click.Context, help_json: bool = False, help_all: bool = False) ->
 # Set command groups after main function is defined
 click.rich_click.COMMAND_GROUPS = {
     "main": [
-
+        
         {
             "name": "Core Commands",
             "commands": ['ask', 'chat', 'list', 'status'],
         },
-
+        
         {
             "name": "Model Management",
             "commands": ['models', 'info'],
         },
-
+        
         {
             "name": "Configuration",
             "commands": ['config', 'tools'],
         },
-
+        
         {
             "name": "Data Management",
             "commands": ['export'],
         },
-
+        
     ]
 }
+
+
+# Built-in upgrade command (enabled by default)
+
+@main.command()
+@click.option('--check', is_flag=True, help='Check for updates without installing')
+@click.option('--version', type=str, help='Install specific version')
+@click.option('--pre', is_flag=True, help='Include pre-release versions')
+@click.option('--dry-run', is_flag=True, help='Show what would be done without doing it')
+def upgrade(check, version, pre, dry_run):
+    """Upgrade TTT - Terminal Tools for Thoughts to the latest version."""
+    builtin_upgrade_command(check_only=check, version=version, pre=pre, dry_run=dry_run)
 
 
 
 
 @main.command()
+@click.pass_context
 
 @click.argument(
     "PROMPT",
@@ -895,49 +1030,109 @@ click.rich_click.COMMAND_GROUPS = {
     help="Output response in JSON format"
 )
 
-def ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float, max_tokens: Optional[int], tools: bool, session: Optional[str], system: Optional[str], stream: bool, json: bool) -> None:
+def ask(ctx, prompt, model, temperature, max_tokens, tools, session, system, stream, json):
     """💬 Quickly ask one-off questions"""
-    # Check if hook function exists
-    hook_name = "on_ask"
+    
+    # Check for built-in commands first
+    
+    # Standard command - use the existing hook pattern
+    hook_name = f"on_ask"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
-        result = hook_func(prompt, model, temperature, max_tokens, tools, session, system, stream, json)
-
+        
+        # Prepare arguments including global options
+        kwargs = {}
+        kwargs['command_name'] = 'ask'  # Pass command name for all commands
+        
+        
+        kwargs['prompt'] = prompt
+        
+        
+        
+        
+        
+        
+        
+        kwargs['model'] = model
+        
+        
+        
+        
+        kwargs['temperature'] = temperature
+        
+        
+        
+        
+        kwargs['max_tokens'] = max_tokens
+        
+        
+        
+        
+        kwargs['tools'] = tools
+        
+        
+        
+        
+        kwargs['session'] = session
+        
+        
+        
+        
+        kwargs['system'] = system
+        
+        
+        
+        
+        kwargs['stream'] = stream
+        
+        
+        
+        
+        kwargs['json'] = json
+        
+        
+        
+        # Add global options from context
+        
+        
+        result = hook_func(**kwargs)
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing ask command...")
-
-
+        click.echo(f"Executing ask command...")
+        
+        
         click.echo(f"  prompt: {prompt}")
-
-
-
-
+        
+        
+        
+        
         click.echo(f"  model: {model}")
-
+        
         click.echo(f"  temperature: {temperature}")
-
+        
         click.echo(f"  max-tokens: {max_tokens}")
-
+        
         click.echo(f"  tools: {tools}")
-
+        
         click.echo(f"  session: {session}")
-
+        
         click.echo(f"  system: {system}")
-
+        
         click.echo(f"  stream: {stream}")
-
+        
         click.echo(f"  json: {json}")
-
-
+        
+        
+    
+    
 
 
 
 
 @main.command()
+@click.pass_context
 
 
 @click.option("-m", "--model",
@@ -962,40 +1157,77 @@ def ask(prompt: Tuple[str, ...], model: Optional[str], temperature: float, max_t
     help="Render markdown in responses"
 )
 
-def chat(model: Optional[str], session: Optional[str], tools: bool, markdown: bool) -> None:
+def chat(ctx, model, session, tools, markdown):
     """💬 Chat interactively with AI"""
-    # Check if hook function exists
-    hook_name = "on_chat"
+    
+    # Check for built-in commands first
+    
+    # Standard command - use the existing hook pattern
+    hook_name = f"on_chat"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
-        result = hook_func(model, session, tools, markdown)
-
+        
+        # Prepare arguments including global options
+        kwargs = {}
+        kwargs['command_name'] = 'chat'  # Pass command name for all commands
+        
+        
+        
+        
+        
+        
+        kwargs['model'] = model
+        
+        
+        
+        
+        kwargs['session'] = session
+        
+        
+        
+        
+        kwargs['tools'] = tools
+        
+        
+        
+        
+        kwargs['markdown'] = markdown
+        
+        
+        
+        # Add global options from context
+        
+        
+        result = hook_func(**kwargs)
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing chat command...")
-
-
-
+        click.echo(f"Executing chat command...")
+        
+        
+        
         click.echo(f"  model: {model}")
-
+        
         click.echo(f"  session: {session}")
-
+        
         click.echo(f"  tools: {tools}")
-
+        
         click.echo(f"  markdown: {markdown}")
-
-
+        
+        
+    
+    
 
 
 
 
 @main.command()
+@click.pass_context
 
 @click.argument(
     "RESOURCE",
+    required=False,
     type=click.Choice(['models', 'sessions', 'tools'])
 )
 
@@ -1012,37 +1244,67 @@ def chat(model: Optional[str], session: Optional[str], tools: bool, markdown: bo
     help="Show detailed information"
 )
 
-def list(resource: str, format: str, verbose: bool) -> None:
+def list(ctx, resource, format, verbose):
     """📜 See available resources"""
-    # Check if hook function exists
-    hook_name = "on_list"
+    
+    # Check for built-in commands first
+    
+    # Standard command - use the existing hook pattern
+    hook_name = f"on_list"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
-        result = hook_func(resource, format, verbose)
-
+        
+        # Prepare arguments including global options
+        kwargs = {}
+        kwargs['command_name'] = 'list'  # Pass command name for all commands
+        
+        
+        kwargs['resource'] = resource
+        
+        
+        
+        
+        
+        
+        
+        kwargs['format'] = format
+        
+        
+        
+        
+        kwargs['verbose'] = verbose
+        
+        
+        
+        # Add global options from context
+        
+        
+        result = hook_func(**kwargs)
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing list command...")
-
-
+        click.echo(f"Executing list command...")
+        
+        
         click.echo(f"  resource: {resource}")
-
-
-
-
+        
+        
+        
+        
         click.echo(f"  format: {format}")
-
+        
         click.echo(f"  verbose: {verbose}")
-
-
+        
+        
+    
+    
 
 
 
 
 @main.command()
+@click.pass_context
 
 
 @click.option("--json",
@@ -1050,31 +1312,52 @@ def list(resource: str, format: str, verbose: bool) -> None:
     help="Output status in JSON format"
 )
 
-def status(json: bool) -> None:
+def status(ctx, json):
     """✅ Verify system and API health"""
-    # Check if hook function exists
-    hook_name = "on_status"
+    
+    # Check for built-in commands first
+    
+    # Standard command - use the existing hook pattern
+    hook_name = f"on_status"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
-        result = hook_func(json)
-
+        
+        # Prepare arguments including global options
+        kwargs = {}
+        kwargs['command_name'] = 'status'  # Pass command name for all commands
+        
+        
+        
+        
+        
+        
+        kwargs['json'] = json
+        
+        
+        
+        # Add global options from context
+        
+        
+        result = hook_func(**kwargs)
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing status command...")
-
-
-
+        click.echo(f"Executing status command...")
+        
+        
+        
         click.echo(f"  json: {json}")
-
-
+        
+        
+    
+    
 
 
 
 
 @main.command()
+@click.pass_context
 
 
 @click.option("--json",
@@ -1082,34 +1365,56 @@ def status(json: bool) -> None:
     help="Output models in JSON format"
 )
 
-def models(json: bool) -> None:
+def models(ctx, json):
     """🧠 View AI models"""
-    # Check if hook function exists
-    hook_name = "on_models"
+    
+    # Check for built-in commands first
+    
+    # Standard command - use the existing hook pattern
+    hook_name = f"on_models"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
-        result = hook_func(json)
-
+        
+        # Prepare arguments including global options
+        kwargs = {}
+        kwargs['command_name'] = 'models'  # Pass command name for all commands
+        
+        
+        
+        
+        
+        
+        kwargs['json'] = json
+        
+        
+        
+        # Add global options from context
+        
+        
+        result = hook_func(**kwargs)
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing models command...")
-
-
-
+        click.echo(f"Executing models command...")
+        
+        
+        
         click.echo(f"  json: {json}")
-
-
+        
+        
+    
+    
 
 
 
 
 @main.command()
+@click.pass_context
 
 @click.argument(
-    "MODEL"
+    "MODEL",
+    required=False
 )
 
 
@@ -1118,38 +1423,64 @@ def models(json: bool) -> None:
     help="Output model info in JSON format"
 )
 
-def info(model: str, json: bool) -> None:
+def info(ctx, model, json):
     """ℹ️  Detailed model information"""
-    # Check if hook function exists
-    hook_name = "on_info"
+    
+    # Check for built-in commands first
+    
+    # Standard command - use the existing hook pattern
+    hook_name = f"on_info"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
-        result = hook_func(model, json)
-
+        
+        # Prepare arguments including global options
+        kwargs = {}
+        kwargs['command_name'] = 'info'  # Pass command name for all commands
+        
+        
+        kwargs['model'] = model
+        
+        
+        
+        
+        
+        
+        
+        kwargs['json'] = json
+        
+        
+        
+        # Add global options from context
+        
+        
+        result = hook_func(**kwargs)
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing info command...")
-
-
+        click.echo(f"Executing info command...")
+        
+        
         click.echo(f"  model: {model}")
-
-
-
-
+        
+        
+        
+        
         click.echo(f"  json: {json}")
-
-
+        
+        
+    
+    
 
 
 
 
 @main.command()
+@click.pass_context
 
 @click.argument(
-    "SESSION"
+    "SESSION",
+    required=False
 )
 
 
@@ -1170,73 +1501,121 @@ def info(model: str, json: bool) -> None:
     help="Include timestamps and model info"
 )
 
-def export(session: str, format: str, output: Optional[str], include_metadata: bool) -> None:
+def export(ctx, session, format, output, include_metadata):
     """💾 Save your chat history"""
-    # Check if hook function exists
-    hook_name = "on_export"
+    
+    # Check for built-in commands first
+    
+    # Standard command - use the existing hook pattern
+    hook_name = f"on_export"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
-        result = hook_func(session, format, output, include_metadata)
-
+        
+        # Prepare arguments including global options
+        kwargs = {}
+        kwargs['command_name'] = 'export'  # Pass command name for all commands
+        
+        
+        kwargs['session'] = session
+        
+        
+        
+        
+        
+        
+        
+        kwargs['format'] = format
+        
+        
+        
+        
+        kwargs['output'] = output
+        
+        
+        
+        
+        kwargs['include_metadata'] = include_metadata
+        
+        
+        
+        # Add global options from context
+        
+        
+        result = hook_func(**kwargs)
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing export command...")
-
-
+        click.echo(f"Executing export command...")
+        
+        
         click.echo(f"  session: {session}")
-
-
-
-
+        
+        
+        
+        
         click.echo(f"  format: {format}")
-
+        
         click.echo(f"  output: {output}")
-
+        
         click.echo(f"  include-metadata: {include_metadata}")
-
-
+        
+        
+    
+    
 
 
 
 
 @main.group()
-def config() -> None:
+def config():
     """⚙️  Customize your setup"""
     pass
 
 
 @config.command()
+@click.pass_context
 
 @click.argument(
     "KEY"
 )
 
 
-def get(key: str) -> None:
+def get(ctx, key):
     """Get a configuration value"""
     # Check if hook function exists
-    hook_name = "on_config_get"
+    hook_name = f"on_config_get"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
-        result = hook_func(key)
-
+        
+        # Prepare arguments including global options
+        kwargs = {}
+        kwargs['command_name'] = 'get'  # Pass command name for all commands
+        
+        
+        kwargs['key'] = key
+        
+        
+        
+        
+        # Add global options from context
+        
+        
+        result = hook_func(**kwargs)
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing get command...")
-
-
+        click.echo(f"Executing get command...")
+        
+        
         click.echo(f"  key: {key}")
-
-
-
+        
+        
+        
 
 @config.command()
+@click.pass_context
 
 @click.argument(
     "KEY"
@@ -1247,30 +1626,45 @@ def get(key: str) -> None:
 )
 
 
-def set(key: str, value: str) -> None:
+def set(ctx, key, value):
     """Set a configuration value"""
     # Check if hook function exists
-    hook_name = "on_config_set"
+    hook_name = f"on_config_set"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
-        result = hook_func(key, value)
-
+        
+        # Prepare arguments including global options
+        kwargs = {}
+        kwargs['command_name'] = 'set'  # Pass command name for all commands
+        
+        
+        kwargs['key'] = key
+        
+        kwargs['value'] = value
+        
+        
+        
+        
+        # Add global options from context
+        
+        
+        result = hook_func(**kwargs)
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing set command...")
-
-
+        click.echo(f"Executing set command...")
+        
+        
         click.echo(f"  key: {key}")
-
+        
         click.echo(f"  value: {value}")
+        
+        
+        
 
-
-
-
-@config.command(name="list")
+@config.command()
+@click.pass_context
 
 
 @click.option("--show-secrets",
@@ -1279,94 +1673,133 @@ def set(key: str, value: str) -> None:
     help="Include API keys in output"
 )
 
-def config_list(show_secrets: bool) -> None:
+def list(ctx, show_secrets):
     """List all configuration"""
     # Check if hook function exists
-    hook_name = "on_config_list"
+    hook_name = f"on_config_list"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
-        result = hook_func(show_secrets)
-
+        
+        # Prepare arguments including global options
+        kwargs = {}
+        kwargs['command_name'] = 'list'  # Pass command name for all commands
+        
+        
+        
+        kwargs['show_secrets'] = show_secrets
+        
+        
+        
+        # Add global options from context
+        
+        
+        result = hook_func(**kwargs)
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing list command...")
-
-
-
+        click.echo(f"Executing list command...")
+        
+        
+        
         click.echo(f"  show-secrets: {show_secrets}")
-
-
+        
+        
 
 
 
 
 
 @main.group()
-def tools() -> None:
+def tools():
     """🛠️  Manage CLI tools and extensions"""
     pass
 
 
 @tools.command()
+@click.pass_context
 
 @click.argument(
     "TOOL_NAME"
 )
 
 
-def enable(tool_name: str) -> None:
+def enable(ctx, tool_name):
     """Enable a tool"""
     # Check if hook function exists
-    hook_name = "on_tools_enable"
+    hook_name = f"on_tools_enable"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
-        result = hook_func(tool_name)
-
+        
+        # Prepare arguments including global options
+        kwargs = {}
+        kwargs['command_name'] = 'enable'  # Pass command name for all commands
+        
+        
+        kwargs['tool_name'] = tool_name
+        
+        
+        
+        
+        # Add global options from context
+        
+        
+        result = hook_func(**kwargs)
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing enable command...")
-
-
+        click.echo(f"Executing enable command...")
+        
+        
         click.echo(f"  tool_name: {tool_name}")
-
-
-
+        
+        
+        
 
 @tools.command()
+@click.pass_context
 
 @click.argument(
     "TOOL_NAME"
 )
 
 
-def disable(tool_name: str) -> None:
+def disable(ctx, tool_name):
     """Disable a tool"""
     # Check if hook function exists
-    hook_name = "on_tools_disable"
+    hook_name = f"on_tools_disable"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
-        result = hook_func(tool_name)
-
+        
+        # Prepare arguments including global options
+        kwargs = {}
+        kwargs['command_name'] = 'disable'  # Pass command name for all commands
+        
+        
+        kwargs['tool_name'] = tool_name
+        
+        
+        
+        
+        # Add global options from context
+        
+        
+        result = hook_func(**kwargs)
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing disable command...")
-
-
+        click.echo(f"Executing disable command...")
+        
+        
         click.echo(f"  tool_name: {tool_name}")
+        
+        
+        
 
-
-
-
-@tools.command(name="list")
+@tools.command()
+@click.pass_context
 
 
 @click.option("--show-disabled",
@@ -1375,24 +1808,38 @@ def disable(tool_name: str) -> None:
     help="Include disabled tools"
 )
 
-def tools_list(show_disabled: bool) -> None:
+def list(ctx, show_disabled):
     """List all tools"""
     # Check if hook function exists
-    hook_name = "on_tools_list"
+    hook_name = f"on_tools_list"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
-
-        result = hook_func(show_disabled)
-
+        
+        # Prepare arguments including global options
+        kwargs = {}
+        kwargs['command_name'] = 'list'  # Pass command name for all commands
+        
+        
+        
+        kwargs['show_disabled'] = show_disabled
+        
+        
+        
+        # Add global options from context
+        
+        
+        result = hook_func(**kwargs)
         return result
     else:
         # Default placeholder behavior
-        click.echo("Executing list command...")
-
-
-
+        click.echo(f"Executing list command...")
+        
+        
+        
         click.echo(f"  show-disabled: {show_disabled}")
+        
+        
 
 
 
@@ -1400,7 +1847,28 @@ def tools_list(show_disabled: bool) -> None:
 
 
 
-def cli_entry() -> None:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def cli_entry():
     """Entry point for the CLI when installed via pipx."""
     # Load plugins before running the CLI
     load_plugins(main)

@@ -30,7 +30,7 @@ CLI Interface / Python API
     ┌─────────────────────────────────────┐
     │  Backend Abstraction Layer          │
     │  • Cloud provider routing          │
-    │  • Local model support (Ollama)    │  
+    │  • Local model support (Ollama)    │
     │  • Error handling and retries      │
     │  • Response streaming              │
     └─────────────┬───────────────────────┘
@@ -152,7 +152,7 @@ ttt config                        # View all current settings
 
 # Flexible flag positioning (all equivalent):
 ttt "write a function" --code
-ttt --code "write a function"  
+ttt --code "write a function"
 ttt "write" --code "a function"
 
 # Interactive chat mode with session management
@@ -220,7 +220,7 @@ response = ask(
 **Available Built-in Tools:**
 
 - **web_search**: Search the web for information
-- **read_file**: Read contents of a file  
+- **read_file**: Read contents of a file
 - **write_file**: Write content to a file
 - **list_directory**: List files in a directory
 - **run_python**: Execute Python code safely
@@ -264,7 +264,7 @@ from ttt.tools import tool
 @tool
 def get_weather(city: str, units: str = "fahrenheit") -> str:
     """Get weather information for a city.
-    
+
     Args:
         city: Name of the city
         units: Temperature units (fahrenheit or celsius)
@@ -274,7 +274,7 @@ def get_weather(city: str, units: str = "fahrenheit") -> str:
 @tool(category="database", description="Query user database")
 def get_user(user_id: int) -> dict:
     """Get user information by ID.
-    
+
     Args:
         user_id: The user's ID number
     """
@@ -397,7 +397,7 @@ ttt "Calculate 15% of 250" --tools calculate
 
 # Flexible flag positioning (all equivalent)
 ttt "write a function" --code --verbose
-ttt --code "write a function" --verbose  
+ttt --code "write a function" --verbose
 ttt --verbose --code "write a function"
 ```
 
@@ -563,11 +563,11 @@ async def main():
     # Async ask - non-blocking
     response = await ask_async("What is Python?")
     print(response)
-    
+
     # Async streaming
     async for chunk in stream_async("Tell me a story"):
         print(chunk, end="", flush=True)
-    
+
     # Async chat sessions
     async with achat(system="You are helpful") as session:
         response = session.ask("Hello")  # Session.ask() works in async context
@@ -803,7 +803,7 @@ curl http://localhost:11434/api/tags
 
 **Response Times:**
 - OpenRouter: ~1-3 seconds
-- Direct APIs: ~0.5-2 seconds  
+- Direct APIs: ~0.5-2 seconds
 - Local models: ~2-10 seconds (depends on hardware)
 
 **Optimization:**

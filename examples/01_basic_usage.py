@@ -8,7 +8,7 @@ showing how to use the ask(), stream(), and basic chat() functions.
 This is the perfect starting point for learning the library.
 """
 
-from ai import ask, stream, chat
+from ai import ask, chat, stream
 
 
 def basic_ask_examples():
@@ -65,7 +65,9 @@ def streaming_examples():
     print("2. Streaming with preferences:")
     print("AI (fast mode): ", end="", flush=True)
 
-    for chunk in stream("Explain machine learning in simple terms", model="gpt-3.5-turbo"):
+    for chunk in stream(
+        "Explain machine learning in simple terms", model="gpt-3.5-turbo"
+    ):
         print(chunk, end="", flush=True)
 
     print("\n\n")
@@ -172,7 +174,9 @@ def main():
     print("AI Library - Basic Usage Examples")
     print("=" * 50)
     print()
-    print("This example shows the core functionality: ask(), stream(), and basic chat()")
+    print(
+        "This example shows the core functionality: ask(), stream(), and basic chat()"
+    )
     print("For more advanced features, see the other numbered examples.")
     print()
 

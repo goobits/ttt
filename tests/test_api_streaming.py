@@ -192,7 +192,9 @@ class TestStreamFunction:
         with patch("ttt.core.routing.router.smart_route") as mock_route:
             mock_route.return_value = (mock_backend, "mock-model")
 
-            chunks = list(stream(["Describe this", ImageInput(b"fake_image_data_for_testing")]))
+            chunks = list(
+                stream(["Describe this", ImageInput(b"fake_image_data_for_testing")])
+            )
 
             assert isinstance(mock_backend.last_prompt, list)
             assert len(chunks) > 0
@@ -441,7 +443,9 @@ class TestErrorHandling:
                 pass  # Expected to fail
 
             # We should get at least the partial result
-            assert "Start " in chunks or len(chunks) == 3  # Either partial or full mock response
+            assert (
+                "Start " in chunks or len(chunks) == 3
+            )  # Either partial or full mock response
 
 
 class TestBackendSelection:

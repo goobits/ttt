@@ -13,7 +13,7 @@ The testing suite is built on pytest with comprehensive coverage across all comp
 - **Streaming API** (`test_api_streaming.py`): Streaming responses and async operations
 - **Response objects**: AIResponse, error handling, metadata validation
 
-#### 2. **Backend Testing** (`test_backends_*.py`) 
+#### 2. **Backend Testing** (`test_backends_*.py`)
 - **Cloud Backend** (`test_backends_cloud.py`): LiteLLM integration, provider routing
 - **Local Backend** (`test_backends_local.py`): Ollama integration with mocked HTTP calls
 - **Error Handling**: Rate limits, authentication, model availability
@@ -44,10 +44,10 @@ from ttt.cli import main
 def test_ask_command():
     """Test the modern Click-based CLI."""
     runner = CliRunner()
-    
+
     with patch("ttt.app_hooks.on_ask") as mock_hook:
         result = runner.invoke(main, ["ask", "What is Python?"])
-        
+
         assert result.exit_code == 0
         mock_hook.assert_called_once()
 ```
@@ -60,11 +60,11 @@ async def test_local_backend():
     with patch("httpx.AsyncClient") as mock_client_class:
         mock_response = Mock()
         mock_response.json.return_value = {"response": "Hello!"}
-        
+
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(return_value=mock_response)
         mock_client_class.return_value.__aenter__ = AsyncMock(return_value=mock_client)
-        
+
         backend = LocalBackend()
         response = await backend.ask("Hello, AI!")
         assert str(response) == "Hello!"
@@ -75,15 +75,15 @@ async def test_local_backend():
 def test_calculate_tool_security():
     """Test that unsafe operations are blocked."""
     from ttt.tools.builtins import calculate
-    
+
     # Valid operation
     result = calculate("2 + 2")
     assert "Result: 4" in result
-    
+
     # Security: unsafe operations should be blocked
     result = calculate("__import__('os')")
     assert "Error" in result
-    
+
     # Edge case: division by zero
     result = calculate("1 / 0")
     assert "Error: Division by zero" in result
@@ -96,11 +96,11 @@ def test_chat_command_integration(mock_hook):
     """Test CLI integration with hook system."""
     runner = CliRunner()
     mock_hook.return_value = None  # Avoid actual chat loop
-    
+
     result = runner.invoke(main, [
         "chat", "--model", "gpt-4", "--session", "test"
     ])
-    
+
     assert result.exit_code == 0
     mock_hook.assert_called_once()
 ```
@@ -113,7 +113,7 @@ def test_chat_command_integration(mock_hook):
 ./test.sh unit
 
 # Run integration tests (requires API keys, costs money)
-./test.sh integration  
+./test.sh integration
 
 # Run all tests
 ./test.sh all
@@ -146,7 +146,7 @@ pytest tests/ --cov=ttt --cov-report=html
 Tests are marked with these pytest markers:
 
 - `unit`: Fast tests with mocking, no external dependencies
-- `integration`: Real API calls, requires API keys and costs money  
+- `integration`: Real API calls, requires API keys and costs money
 - `slow`: Time-intensive tests
 - `asyncio`: Async test functions
 
@@ -182,7 +182,7 @@ Tests mock these hooks to verify CLI integration without executing actual functi
 
 See `README_RATE_LIMITING.md` for details on:
 - API rate limit management
-- Environment variable configuration  
+- Environment variable configuration
 - `delayed_ask`, `delayed_stream`, `delayed_chat` fixtures
 - Cost awareness for integration tests
 
@@ -190,7 +190,7 @@ See `README_RATE_LIMITING.md` for details on:
 
 ### **Required (already in pyproject.toml)**
 - `pytest ^7.0.0`
-- `pytest-asyncio ^0.21.0` 
+- `pytest-asyncio ^0.21.0`
 - `pytest-cov ^4.0.0`
 
 ### **CLI Testing**
@@ -214,14 +214,14 @@ See `README_RATE_LIMITING.md` for details on:
 - Mock app hooks to test CLI integration without side effects
 - Test help text, option parsing, command validation
 
-### **4. Async Testing** 
+### **4. Async Testing**
 - Use `@pytest.mark.asyncio` for async test functions
 - Use `AsyncMock` for async dependencies
 - Proper async context manager mocking with `__aenter__`
 
 ### **5. Integration Testing**
 - Mark with `@pytest.mark.integration`
-- Use rate limiting fixtures (`delayed_ask`, etc.)  
+- Use rate limiting fixtures (`delayed_ask`, etc.)
 - Require explicit API keys and cost acknowledgment
 
 ## File Organization
@@ -229,7 +229,7 @@ See `README_RATE_LIMITING.md` for details on:
 ```
 tests/
 ├── conftest.py                 # Pytest configuration and fixtures
-├── test_api_*.py              # API functionality tests  
+├── test_api_*.py              # API functionality tests
 ├── test_backends_*.py         # Backend implementation tests
 ├── test_cli_modern.py         # Modern Click CLI tests
 ├── test_tools_*.py            # Tool system tests
@@ -243,7 +243,7 @@ tests/
 
 See individual test files for comprehensive examples:
 
-- **CLI Testing**: `test_cli_modern.py` 
+- **CLI Testing**: `test_cli_modern.py`
 - **Backend Testing**: `test_backends_local.py`, `test_backends_cloud.py`
 - **Tool Testing**: `test_tools_builtin.py`
 - **Integration Testing**: `test_integration.py`
