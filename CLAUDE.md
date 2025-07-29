@@ -22,12 +22,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `mypy src/ttt/` - Type checking
 
 ### Installation and Setup
-- `./setup.sh install` - Install with pipx (for end users)
+- `./setup.sh install` - Install with pipx (for end users) - automatically installs all dependencies
 - `./setup.sh install --dev` - Install in development mode with pipx --editable (RECOMMENDED FOR DEVELOPMENT)
 - `./setup.sh upgrade` - Upgrade to latest version
 - `./setup.sh uninstall` - Remove the TTT library
 
-**IMPORTANT FOR DEVELOPMENT**: Always use `./setup.sh install --dev` for development work. This creates an editable installation where code changes are immediately reflected without needing to reinstall or upgrade.
+**Automatic Dependency Management**: The setup script automatically handles:
+- Python extras installation (`local` extra for httpx)
+- System package installation (git, pipx, curl) via apt-get
+- No manual dependency installation required
+
+**IMPORTANT FOR DEVELOPMENT**: Always use `./setup.sh install --dev` for development work. This creates an editable installation where code changes are immediately reflected without needing to reinstall or upgrade. All dependencies (Python extras and system packages) are automatically handled by the setup script.
 
 ### CLI Testing
 - `ttt` - Show help menu
@@ -111,12 +116,9 @@ CLI Interface / Python API
 ./test.sh unit --coverage      # With coverage report
 
 # Integration tests (costs money, requires API keys)
-source .env && export OPENROUTER_API_KEY
+export OPENROUTER_API_KEY=your-key-here
 ./test.sh integration          # Will prompt for confirmation
 ./test.sh integration --force  # Skip confirmation
-
-# Custom rate limiting for strict APIs
-OPENROUTER_RATE_DELAY=2.0 ./test.sh integration --force
 ```
 
 The test.sh script ensures proper rate limiting, validates API keys, and separates test types to prevent unexpected costs.
@@ -188,3 +190,5 @@ Plugins must have a `register_plugin(registry)` function.
 ## CLI Generation
 The project uses Goobits CLI framework: run `goobits build` to generate CLI and setup scripts from goobits.yaml configuration.
 After generation, use `./setup.sh install --dev` for development installation with immediate code change reflection.
+
+**Note**: The goobits.yaml configuration automatically handles all dependencies through the structured extras format, so no manual installation steps are needed.

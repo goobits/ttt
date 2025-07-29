@@ -63,7 +63,7 @@ local = [ "httpx",]
 
 [tool.poetry.scripts]
 goobits-ttt = "ttt.cli:cli_entry"
-ttt = "ttt.cli:cli_entry"
+ttt = "goobits_ttt.cli:cli_entry"
 
 [tool.ruff.lint]
 select = [ "E", "W", "F", "I", "B", "C4", "UP",]

@@ -16,21 +16,16 @@ python:
   maximum_version: "3.13"
 
 dependencies:
-  required:
-    - git
-    - pipx
-  optional:
-    - curl  # For downloading models
-    - wget  # Alternative to curl
-  development:
-    - ruff    # Modern Python linter and formatter
-    - mypy    # Static type checker
-    - black   # Code formatter
-    - pytest  # Testing framework
+  required: []
+  optional: []
+  development: []
 
 installation:
   pypi_name: "goobits-ttt"
   development_path: "."
+  extras:
+    python: ["local"]  # For local backend with httpx
+    apt: ["git", "pipx", "curl"]  # Required: git, pipx; Optional: curl for Ollama installation
 
 shell_integration:
   enabled: false

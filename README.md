@@ -503,17 +503,11 @@ The cloud backend uses LiteLLM to provide unified access to multiple AI provider
 The local backend uses Ollama for privacy-focused local inference:
 
 ```bash
-# Install Ollama first
-curl https://ollama.ai/install.sh | sh
-
-# Pull models
-ollama pull llama2
-ollama pull codellama
-ollama pull mistral
-
 # Use local models (automatic routing)
 ttt "Question" --model llama2
 ```
+
+**Note**: Ollama and models will be automatically set up when needed through the setup.sh installation process.
 
 **Configuration:**
 ```bash
@@ -635,7 +629,7 @@ OpenRouter provides access to 100+ models through a single API key:
 
 1. Sign up at [openrouter.ai](https://openrouter.ai)
 2. Get your API key from the dashboard
-3. Add to `.env`: `OPENROUTER_API_KEY=sk-or-v1-...`
+3. Set environment variable: `export OPENROUTER_API_KEY=sk-or-v1-...`
 
 ### Direct Provider Keys
 
@@ -745,12 +739,10 @@ export ANTHROPIC_API_KEY="your-key-here"
 # Install in development mode
 ./setup.sh install --dev  # Recommended: uses pipx with editable install
 
-# Install development dependencies
-pip install -r requirements-dev.txt
-
 # Run linting
-flake8 ttt/ tests/
-black ttt/ tests/
+ruff src/ttt/ tests/
+black src/ttt/ tests/
+mypy src/ttt/
 ```
 
 ## Troubleshooting
@@ -780,7 +772,7 @@ cat .env
 # Check Ollama status
 ollama list
 
-# Test Ollama directly
+# Test Ollama directly (if manually installed)
 curl http://localhost:11434/api/tags
 ```
 
