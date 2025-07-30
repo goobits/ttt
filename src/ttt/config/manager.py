@@ -35,10 +35,26 @@ class ConfigManager:
 
         # If no config found, use empty dict
         if self.default_config_path is None:
-            # Only show warning if not in JSON mode
+            # Only show warning in verbose mode and not in JSON mode
             import os
 
-            if os.environ.get("TTT_JSON_MODE", "").lower() != "true":
+            is_json_mode = os.environ.get("TTT_JSON_MODE", "").lower() == "true"
+            is_verbose = (
+                os.environ.get("TTT_VERBOSE", "").lower() == "true" or
+                os.environ.get("TTT_DEBUG", "").lower() == "true"
+            )
+            
+            # Try to get debug flag from click context if available
+            if not is_verbose:
+                try:
+                    import click
+                    ctx = click.get_current_context(silent=True)
+                    if ctx and hasattr(ctx, 'obj') and ctx.obj and ctx.obj.get('debug'):
+                        is_verbose = True
+                except (RuntimeError, AttributeError):
+                    pass
+            
+            if not is_json_mode and is_verbose:
                 console.print("[yellow]Warning: Default config.yaml not found, using minimal defaults[/yellow]")
 
         # Ensure user config directory exists

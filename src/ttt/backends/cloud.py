@@ -149,11 +149,29 @@ class CloudBackend(BaseBackend):
         Raises:
             Appropriate exception based on error type
         """
+        from ..utils.error_display import format_model_overload_error, get_model_suggestions
+        
         error_msg = str(e)
         logger.error(f"Cloud {request_type} failed: {error_msg}")
 
         # Check for specific error types
-        if "api_key" in error_msg.lower() or "api key" in error_msg.lower() or "authentication" in error_msg.lower():
+        # ServiceUnavailableError (503) - model overloaded or service down
+        if hasattr(e, '__class__') and e.__class__.__name__ == 'ServiceUnavailableError':
+            # Extract key information from the error message
+            if "overloaded" in error_msg.lower():
+                # Model is temporarily overloaded - provide clean formatted message
+                formatted_msg = format_model_overload_error(used_model)
+                raise BackendConnectionError(
+                    self.name, 
+                    Exception(formatted_msg)
+                ) from e
+            else:
+                # General service unavailable
+                raise BackendConnectionError(
+                    self.name,
+                    Exception("⚠️  Service temporarily unavailable (503). Please try again")
+                ) from e
+        elif "api_key" in error_msg.lower() or "api key" in error_msg.lower() or "authentication" in error_msg.lower():
             provider = self._get_provider_from_model(used_model)
             env_vars = {
                 "openai": "OPENAI_API_KEY",
@@ -164,15 +182,37 @@ class CloudBackend(BaseBackend):
             raise APIKeyError(provider, env_vars.get(provider)) from e
         elif "rate limit" in error_msg.lower():
             provider = self._get_provider_from_model(used_model)
-            raise RateLimitError(provider) from e
+            # Extract retry_after if available
+            retry_after = None
+            if hasattr(e, 'response') and hasattr(e.response, 'headers'):
+                retry_after = e.response.headers.get('retry-after')
+                if retry_after:
+                    try:
+                        retry_after = int(retry_after)
+                    except (ValueError, TypeError):
+                        retry_after = None
+            raise RateLimitError(provider, retry_after) from e
         elif "quota" in error_msg.lower():
             provider = self._get_provider_from_model(used_model)
-            raise QuotaExceededError(provider) from e
+            quota_type = "requests"
+            if "token" in error_msg.lower():
+                quota_type = "tokens"
+            raise QuotaExceededError(provider, quota_type) from e
         elif (
             "model_not_found" in error_msg.lower()
             or "does not exist" in error_msg.lower()
             or "not found" in error_msg.lower()
         ):
+            # Try to get model suggestions
+            try:
+                from ..config.schema import get_model_registry
+                registry = get_model_registry()
+                available_models = list(registry.models.keys())
+                suggestions = get_model_suggestions(used_model, available_models)
+            except Exception:
+                suggestions = ["@fast", "@best", "@cheap"]
+            
+            # Create enhanced ModelNotFoundError with suggestions
             raise ModelNotFoundError(used_model, self.name) from e
         elif "timeout" in error_msg.lower():
             raise BackendTimeoutError(self.name, self.timeout) from e

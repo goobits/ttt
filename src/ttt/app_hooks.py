@@ -21,12 +21,39 @@ console = Console()
 
 
 # Import helper functions we'll need
+
+def is_verbose_mode() -> bool:
+    """Check if verbose mode is enabled via environment variables or click context."""
+    # Check environment variables first
+    if (os.environ.get("TTT_VERBOSE", "").lower() == "true" or
+        os.environ.get("TTT_DEBUG", "").lower() == "true"):
+        return True
+    
+    # Try to get debug flag from click context if available
+    try:
+        import click
+        ctx = click.get_current_context(silent=True)
+        if ctx and hasattr(ctx, 'obj') and ctx.obj and ctx.obj.get('debug'):
+            return True
+    except (RuntimeError, AttributeError):
+        pass
+    
+    return False
+
 def setup_logging_level(verbose: bool = False, debug: bool = False, json_output: bool = False) -> None:
     """Setup logging level based on verbosity flags."""
     import asyncio
     import logging
 
     from rich.logging import RichHandler
+
+    # Set environment variables for verbosity to be used by other parts of the system
+    if verbose:
+        os.environ["TTT_VERBOSE"] = "true"
+    if debug:
+        os.environ["TTT_DEBUG"] = "true"
+    if json_output:
+        os.environ["TTT_JSON_MODE"] = "true"
 
     if json_output:
         level = logging.WARNING
@@ -107,10 +134,40 @@ def resolve_model_alias(model: str) -> str:
                     if alias in model_aliases:
                         return str(model_name)
 
-            console.print(f"[yellow]Warning: Unknown model alias '@{alias}', " f"using '{alias}'[/yellow]")
-            return alias
+            # Use smart suggestions for unknown aliases
+            from ttt.utils.smart_suggestions import suggest_alias_fixes
+            
+            console.print(f"[red]Error: Unknown model alias '@{alias}'[/red]")
+            
+            suggestions = suggest_alias_fixes(alias, limit=3)
+            if suggestions:
+                console.print("\n[cyan]💡 Did you mean:[/cyan]")
+                for suggestion in suggestions:
+                    status = "[green]✓[/green]" if suggestion["available"] else "[red]✗[/red]"
+                    console.print(f"   {status} [bold]{suggestion['alias']}[/bold]  {suggestion['description']}")
+                console.print()
+            
+            # Show some available aliases as fallback
+            console.print("[dim]Popular aliases:[/dim]")
+            popular_aliases = ["fast", "best", "claude", "gpt4", "gpt3", "local"]
+            available_popular = [a for a in popular_aliases if a in aliases]
+            if available_popular:
+                for available_alias in available_popular[:5]:
+                    console.print(f"  @{available_alias}")
+            else:
+                # Fallback to first few aliases
+                sorted_aliases = sorted(aliases.keys())
+                for available_alias in sorted_aliases[:5]:
+                    console.print(f"  @{available_alias}")
+            
+            console.print(f"\nTip: Use [green]ttt models[/green] to see all available models")
+            
+            # Exit with error instead of proceeding
+            import sys
+            sys.exit(1)
         except (KeyError, ValueError, TypeError) as e:
-            console.print(f"[yellow]Warning: Could not resolve model alias: {e}[/yellow]")
+            if is_verbose_mode():
+                console.print(f"[yellow]Warning: Could not resolve model alias: {e}[/yellow]")
             return alias
 
     if model and not model.startswith("openrouter/"):
@@ -132,7 +189,8 @@ def resolve_model_alias(model: str) -> str:
             }
 
             if model in openrouter_mappings:
-                console.print(f"[dim]Routing {model} through OpenRouter...[/dim]")
+                if is_verbose_mode():
+                    console.print(f"[dim]Routing {model} through OpenRouter...[/dim]")
                 return openrouter_mappings[model]
 
     return model
@@ -212,13 +270,15 @@ def resolve_tools(tool_specs: List[str]) -> List[Any]:
                 if found_tool:
                     tools.append(found_tool)
                 else:
-                    console.print(f"[yellow]Warning: Tool {tool_name} not found in " f"category {category}[/yellow]")
+                    if is_verbose_mode():
+                        console.print(f"[yellow]Warning: Tool {tool_name} not found in " f"category {category}[/yellow]")
             else:
                 found_tool_def = get_tool(spec)
                 if found_tool_def:
                     tools.append(found_tool_def.function)
                 else:
-                    console.print(f"[yellow]Warning: Tool {spec} not found[/yellow]")
+                    if is_verbose_mode():
+                        console.print(f"[yellow]Warning: Tool {spec} not found[/yellow]")
     except (ImportError, AttributeError, ValueError) as e:
         console.print(f"[red]Error resolving tools: {e}[/red]")
 
@@ -402,16 +462,129 @@ def on_ask(
         else:
             response = ttt_ask(prompt_text, **kwargs)
             click.echo(str(response).strip())
-    except (ConnectionError, TimeoutError, ValueError, RuntimeError) as e:
+    except Exception as e:
+        # Import exception types for better error handling
+        from ttt.core.exceptions import (
+            APIKeyError,
+            BackendConnectionError,
+            BackendTimeoutError,
+            ModelNotFoundError,
+            RateLimitError,
+            QuotaExceededError,
+        )
+        from ttt.utils.smart_suggestions import (
+            suggest_model_alternatives,
+            suggest_provider_alternatives,
+            suggest_troubleshooting_steps,
+        )
+        
         if json:
+            # For JSON mode, return structured error
             error_output = {
                 "error": str(e),
+                "error_type": e.__class__.__name__,
                 "model": kwargs.get("model"),
                 "parameters": kwargs,
             }
             click.echo(json_module.dumps(error_output, indent=2), err=True)
         else:
-            click.echo(f"Error: {e}", err=True)
+            # Format error messages with smart suggestions
+            debug_mode = kwargs.get("debug") or os.getenv("TTT_DEBUG")
+            
+            if isinstance(e, APIKeyError):
+                click.echo(f"❌ API key error: {e.message}", err=True)
+                # Suggest provider alternatives
+                provider_suggestions = suggest_provider_alternatives(str(e), kwargs.get("model"))
+                if provider_suggestions:
+                    click.echo("\n[cyan]💡 Try these alternatives:[/cyan]", err=True)
+                    for suggestion in provider_suggestions[:3]:
+                        click.echo(f"   • [bold]{suggestion['provider']}[/bold]: {suggestion['description']}", err=True)
+                        click.echo(f"     Example: {suggestion['example']}", err=True)
+                        
+            elif isinstance(e, BackendConnectionError):
+                # Check for specific patterns in the error message
+                error_msg = str(e.details.get("original_error", str(e)))
+                if "Model temporarily overloaded" in error_msg or "Service temporarily unavailable" in error_msg:
+                    click.echo(f"⚠️  {error_msg}", err=True)
+                else:
+                    click.echo(f"❌ Connection error: {e.message}", err=True)
+                
+                # Suggest alternatives
+                provider_suggestions = suggest_provider_alternatives(error_msg, kwargs.get("model"))
+                if provider_suggestions:
+                    click.echo("\n[cyan]💡 Try these alternatives:[/cyan]", err=True)
+                    for suggestion in provider_suggestions[:2]:
+                        click.echo(f"   • [bold]{suggestion['provider']}[/bold]: {suggestion['description']}", err=True)
+                        click.echo(f"     {suggestion['example']}", err=True)
+                
+                # Show troubleshooting steps
+                steps = suggest_troubleshooting_steps("connection", error_msg)
+                if steps:
+                    click.echo("\n[dim]Troubleshooting steps:[/dim]", err=True)
+                    for i, step in enumerate(steps[:3], 1):
+                        click.echo(f"   {i}. {step}", err=True)
+                        
+            elif isinstance(e, BackendTimeoutError):
+                click.echo(f"⏱️  Request timed out after {e.details.get('timeout', 'unknown')}s", err=True)
+                steps = suggest_troubleshooting_steps("timeout", str(e))
+                if steps:
+                    click.echo("\n[dim]Try these solutions:[/dim]", err=True)
+                    for i, step in enumerate(steps[:3], 1):
+                        click.echo(f"   {i}. {step}", err=True)
+                        
+            elif isinstance(e, ModelNotFoundError):
+                click.echo(f"❌ Model not found: {e.message}", err=True)
+                
+                # Suggest model alternatives
+                failed_model = e.details.get("model", "")
+                if failed_model:
+                    model_suggestions = suggest_model_alternatives(failed_model, limit=3)
+                    if model_suggestions:
+                        click.echo("\n[cyan]💡 Similar models you can try:[/cyan]", err=True)
+                        for suggestion in model_suggestions:
+                            status = "[green]✓[/green]" if suggestion["available"] else "[red]✗[/red]"
+                            click.echo(f"   {status} [bold]{suggestion['alias']}[/bold]  {suggestion['description']}", err=True)
+                
+                click.echo("\n[dim]Run 'ttt models' to see all available models[/dim]", err=True)
+                
+            elif isinstance(e, RateLimitError):
+                click.echo(f"⚠️  Rate limit exceeded: {e.message}", err=True)
+                if e.details.get("retry_after"):
+                    click.echo(f"  Retry after {e.details['retry_after']} seconds", err=True)
+                
+                # Suggest alternatives
+                provider_suggestions = suggest_provider_alternatives(str(e))
+                if provider_suggestions:
+                    click.echo("\n[cyan]💡 Try a different provider:[/cyan]", err=True)
+                    for suggestion in provider_suggestions[:2]:
+                        if suggestion["provider"] != e.details.get("provider"):
+                            click.echo(f"   • [bold]{suggestion['provider']}[/bold]: {suggestion['description']}", err=True)
+                            
+            elif isinstance(e, QuotaExceededError):
+                click.echo(f"❌ Quota exceeded: {e.message}", err=True)
+                # Suggest alternatives
+                provider_suggestions = suggest_provider_alternatives(str(e))
+                if provider_suggestions:
+                    click.echo("\n[cyan]💡 Alternative providers:[/cyan]", err=True)
+                    for suggestion in provider_suggestions[:2]:
+                        click.echo(f"   • [bold]{suggestion['provider']}[/bold]: {suggestion['description']}", err=True)
+                        
+            else:
+                # For other exceptions, show simplified message
+                click.echo(f"Error: {str(e)}", err=True)
+                
+                # Try to provide generic troubleshooting steps
+                steps = suggest_troubleshooting_steps("generic", str(e))
+                if steps:
+                    click.echo("\n[dim]Troubleshooting steps:[/dim]", err=True)
+                    for i, step in enumerate(steps[:3], 1):
+                        click.echo(f"   {i}. {step}", err=True)
+            
+            # Show full traceback in debug mode
+            if debug_mode:
+                import traceback
+                traceback.print_exc()
+        
         sys.exit(1)
 
 
@@ -555,8 +728,52 @@ def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown:
                         model=response.model if hasattr(response, "model") else None,
                     )
 
-                except (ConnectionError, TimeoutError, ValueError, RuntimeError) as e:
-                    console.print(f"[red]Error: {e}[/red]")
+                except Exception as e:
+                    # Import exception types for better error handling
+                    from ttt.core.exceptions import (
+                        APIKeyError,
+                        BackendConnectionError,
+                        BackendTimeoutError,
+                        ModelNotFoundError,
+                        RateLimitError,
+                        QuotaExceededError,
+                    )
+                    from ttt.utils.smart_suggestions import suggest_provider_alternatives
+                    
+                    # Format error messages with smart suggestions for chat
+                    if isinstance(e, APIKeyError):
+                        console.print(f"[red]❌ API key error: {e.message}[/red]")
+                        # Suggest alternatives inline
+                        provider_suggestions = suggest_provider_alternatives(str(e))
+                        if provider_suggestions:
+                            console.print("[cyan]💡 Try these alternatives:[/cyan]")
+                            for suggestion in provider_suggestions[:2]:
+                                console.print(f"   • [bold]{suggestion['provider']}[/bold]: {suggestion['description']}")
+                    elif isinstance(e, BackendConnectionError):
+                        # Check for specific patterns in the error message
+                        error_msg = str(e.details.get("original_error", str(e)))
+                        if "Model temporarily overloaded" in error_msg:
+                            console.print(f"[yellow]⚠️  {error_msg}[/yellow]")
+                        elif "Service temporarily unavailable" in error_msg:
+                            console.print(f"[yellow]⚠️  {error_msg}[/yellow]")
+                        else:
+                            console.print(f"[red]❌ Connection error: {e.message}[/red]")
+                        
+                        # Brief suggestion for chat mode
+                        provider_suggestions = suggest_provider_alternatives(error_msg)
+                        if provider_suggestions and provider_suggestions[0]["provider"] != "Local (Ollama)":
+                            suggestion = provider_suggestions[0]
+                            console.print(f"[dim]💡 Try: {suggestion['example']}[/dim]")
+                    elif isinstance(e, BackendTimeoutError):
+                        console.print(f"[yellow]⏱️  Request timed out after {e.details.get('timeout', 'unknown')}s[/yellow]")
+                    elif isinstance(e, ModelNotFoundError):
+                        console.print(f"[red]❌ Model not found: {e.message}[/red]")
+                    elif isinstance(e, RateLimitError):
+                        console.print(f"[yellow]⚠️  Rate limit exceeded: {e.message}[/yellow]")
+                    elif isinstance(e, QuotaExceededError):
+                        console.print(f"[red]❌ Quota exceeded: {e.message}[/red]")
+                    else:
+                        console.print(f"[red]Error: {str(e)}[/red]")
 
     except (EOFError, KeyboardInterrupt):
         # Normal exit, don't show error

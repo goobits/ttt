@@ -14,7 +14,9 @@ _json_mode = os.environ.get("TTT_JSON_MODE", "").lower() == "true"
 
 if not _json_mode:
     # Only install rich traceback handler if not in JSON mode
-    install(show_locals=True)
+    # Respect the RICH_TRACEBACK_SHOW_LOCALS environment variable
+    show_locals = os.environ.get("RICH_TRACEBACK_SHOW_LOCALS", "false").lower() == "true"
+    install(show_locals=show_locals)
 
 # Create console instance
 console = Console()
