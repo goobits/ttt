@@ -53,21 +53,33 @@ click.rich_click.STYLE_COMMANDS_TABLE_COLUMN_WIDTH_RATIO = (1, 3)  # Command:Des
 
 # Hooks system - try to import app_hooks module
 app_hooks = None
+
+# Using configured hooks path: src/ttt/app_hooks.py
 try:
-    # Try to import from the project root directory
-    script_dir = Path(__file__).parent.parent.parent
-    hooks_path = script_dir / "app_hooks.py"
+    # First try as a module import (e.g., "ttt.app_hooks")
+    module_path = "src/ttt/app_hooks.py".replace(".py", "").replace("/", ".")
+    if module_path.startswith("src."):
+        module_path = module_path[4:]  # Remove 'src.' prefix
     
-    if hooks_path.exists():
-        spec = importlib.util.spec_from_file_location("app_hooks", hooks_path)
-        app_hooks = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(app_hooks)
-    else:
-        # Try to import from Python path
-        import app_hooks
-except (ImportError, FileNotFoundError):
+    try:
+        app_hooks = importlib.import_module(module_path)
+    except ImportError:
+        # If module import fails, try relative import
+        try:
+            from . import app_hooks
+        except ImportError:
+            # If relative import fails, try file-based import as last resort
+            script_dir = Path(__file__).parent.parent.parent
+            hooks_file = script_dir / "src/ttt/app_hooks.py"
+            
+            if hooks_file.exists():
+                spec = importlib.util.spec_from_file_location("app_hooks", hooks_file)
+                app_hooks = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(app_hooks)
+except Exception:
     # No hooks module found, use default behavior
     pass
+
 
 # Built-in commands
 
@@ -89,9 +101,10 @@ def builtin_upgrade_command(check_only=False, pre=False, version=None, dry_run=F
     # Find the setup.sh script - look in common locations
     setup_script = None
     search_paths = [
-        Path.cwd() / "setup.sh",  # Current directory
-        Path(__file__).parent.parent / "setup.sh",  # Package directory
+        Path(__file__).parent / "setup.sh",  # Package directory (installed packages)
+        Path(__file__).parent.parent / "setup.sh",  # Development mode 
         Path.home() / ".local" / "share" / "goobits-ttt" / "setup.sh",  # User data
+        # Remove Path.cwd() to prevent cross-contamination
     ]
     
     for path in search_paths:
@@ -864,12 +877,39 @@ def main(ctx, help_json=False, help_all=False):
     
 
     
-    \b
-    [bold yellow]💡 Quick Start:[/bold yellow][green]ttt "What is the meaning of life?"  [/green] [italic][#B3B8C0]# Instant response[/#B3B8C0][/italic][green]ttt chat                            [/green] [italic][#B3B8C0]# Interactive session[/#B3B8C0][/italic][green]ttt models                          [/green] [italic][#B3B8C0]# Explore available models[/#B3B8C0][/italic][green]ttt config set model gpt-4          [/green] [italic][#B3B8C0]# Set your preferred model[/#B3B8C0][/italic]
-    \b
-    [bold yellow]🔑 Initial Setup:[/bold yellow]1. See providers:  [green]ttt providers[/green]2. Add API key:    [green]export OPENROUTER_API_KEY='your-key-here'[/green]3. Check setup:    [green]ttt status[/green]4. Start chatting: [green]ttt chat[/green]
-    \b
-       [#B3B8C0]📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6][/#B3B8C0]
+    
+    [bold yellow]💡 Quick Start[/bold yellow]
+    
+    
+    [green]   ttt "What is the meaning of life?"  [/green] [italic][#B3B8C0]# Instant response[/#B3B8C0][/italic]
+    
+    
+    [green]   ttt chat                            [/green] [italic][#B3B8C0]# Interactive session[/#B3B8C0][/italic]
+    
+    
+    [green]   ttt models                          [/green] [italic][#B3B8C0]# Explore available models[/#B3B8C0][/italic]
+    
+    
+    [green]   ttt config set model gpt-4          [/green] [italic][#B3B8C0]# Set your preferred model[/#B3B8C0][/italic]
+    
+    [green] [/green]
+    
+    [bold yellow]🔑 Initial Setup[/bold yellow]
+    
+    
+    [#B3B8C0]   1. See providers:  [/#B3B8C0][green]ttt providers[/green]
+    
+    [#B3B8C0]   2. Add API key:    [/#B3B8C0][green]export OPENROUTER_API_KEY='your-key-here'[/green]
+    
+    [#B3B8C0]   3. Check setup:    [/#B3B8C0][green]ttt status[/green]
+    
+    [#B3B8C0]   4. Start chatting: [/#B3B8C0][green]ttt chat[/green]
+    [green] [/green]
+    
+    
+    
+    [#B3B8C0]📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6][/#B3B8C0]
+    
     """
 
     
