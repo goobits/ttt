@@ -217,7 +217,7 @@ def get_version():
         pass
         
     # Final fallback
-    return "1.0.1"
+    return "1.0.3"
 
 
 def show_help_json(ctx, param, value):
@@ -227,7 +227,7 @@ def show_help_json(ctx, param, value):
     # The triple quotes are important to correctly handle the multi-line JSON string
     click.echo('''{
   "name": "GOOBITS TTT CLI",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "display_version": true,
   "tagline": "Talk to Transformer",
   "description": "AI-powered conversations, straight from your command line",
@@ -869,7 +869,7 @@ class DefaultGroup(RichGroup):
 
 
 def main(ctx, help_json=False, help_all=False):
-    """🤖 [bold color(6)]GOOBITS TTT CLI v1.0.1[/bold color(6)] - Talk to Transformer
+    """🤖 [bold color(6)]GOOBITS TTT CLI v1.0.3[/bold color(6)] - Talk to Transformer
 
     
     \b
