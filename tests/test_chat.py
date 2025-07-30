@@ -97,9 +97,7 @@ class TestPersistentChatSession:
 
     def test_session_initialization(self):
         """Test creating a new persistent session."""
-        session = PersistentChatSession(
-            system="Test system prompt", model="gpt-3.5-turbo", session_id="test_123"
-        )
+        session = PersistentChatSession(system="Test system prompt", model="gpt-3.5-turbo", session_id="test_123")
 
         assert session.system == "Test system prompt"
         assert session.model == "gpt-3.5-turbo"
@@ -157,9 +155,7 @@ class TestPersistentChatSession:
         # Setup mock backend
         mock_backend = Mock()
         mock_backend.ask = AsyncMock(
-            return_value=AIResponse(
-                "Response", model="gpt-4", tokens_in=50, tokens_out=100, cost=0.01
-            )
+            return_value=AIResponse("Response", model="gpt-4", tokens_in=50, tokens_out=100, cost=0.01)
         )
 
         # Mock router to return our backend
@@ -186,9 +182,7 @@ class TestPersistentChatSession:
 
     def test_save_json(self, tmp_path):
         """Test saving session as JSON."""
-        session = PersistentChatSession(
-            system="Test system", model="test-model", session_id="save_test"
-        )
+        session = PersistentChatSession(system="Test system", model="test-model", session_id="save_test")
 
         # Add some history
         session.history.append(
@@ -383,9 +377,7 @@ class TestPersistentChatSession:
 
         # Setup mock
         mock_backend = Mock()
-        mock_backend.ask = AsyncMock(
-            return_value=AIResponse("I see an image", model="gpt-4-vision-preview")
-        )
+        mock_backend.ask = AsyncMock(return_value=AIResponse("I see an image", model="gpt-4-vision-preview"))
         mock_router.smart_route.return_value = (mock_backend, "gpt-4-vision-preview")
         mock_router.resolve_backend.return_value = mock_backend
 
@@ -425,9 +417,7 @@ class TestPersistentChatSessionAdvanced:
     def test_auto_generate_session_id(self, mock_router):
         """Test automatic session ID generation."""
         # Need to patch the _generate_session_id method directly
-        with patch.object(
-            PersistentChatSession, "_generate_session_id"
-        ) as mock_generate:
+        with patch.object(PersistentChatSession, "_generate_session_id") as mock_generate:
             mock_generate.return_value = "chat_20240101_120000_abcd1234"
 
             session = PersistentChatSession()
@@ -557,9 +547,7 @@ class TestChatContextManager:
         with chat(system="Test assistant") as session:
             # Mock the backend
             with patch.object(session, "backend") as mock_backend:
-                mock_backend.ask = AsyncMock(
-                    return_value=AIResponse("I'll remember that", model="test-model")
-                )
+                mock_backend.ask = AsyncMock(return_value=AIResponse("I'll remember that", model="test-model"))
 
                 session.ask("Remember: The secret code is 42")
                 session.save(save_path)
@@ -628,9 +616,7 @@ class TestDurationCalculation:
 
         session.metadata["created_at"] = start.isoformat()
         # Add a message with specific timestamp
-        session.history.append(
-            {"role": "user", "content": "test message", "timestamp": end.isoformat()}
-        )
+        session.history.append({"role": "user", "content": "test message", "timestamp": end.isoformat()})
 
         summary = session.get_summary()
 
@@ -647,9 +633,7 @@ class TestDurationCalculation:
 
         session.metadata["created_at"] = start.isoformat()
         # Add a message with specific timestamp
-        session.history.append(
-            {"role": "user", "content": "test message", "timestamp": end.isoformat()}
-        )
+        session.history.append({"role": "user", "content": "test message", "timestamp": end.isoformat()})
 
         summary = session.get_summary()
 

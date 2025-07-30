@@ -22,8 +22,7 @@ class ConfigManager:
 
         # Try multiple locations for default config
         possible_config_paths = [
-            Path(__file__).parent
-            / "defaults.yaml",  # Installed in ttt package (preferred)
+            Path(__file__).parent / "defaults.yaml",  # Installed in ttt package (preferred)
             Path(__file__).parent / "defaults.yaml",  # Same directory
             Path(__file__).parent.parent / "config.yaml",  # Development fallback
         ]
@@ -40,9 +39,7 @@ class ConfigManager:
             import os
 
             if os.environ.get("TTT_JSON_MODE", "").lower() != "true":
-                console.print(
-                    "[yellow]Warning: Default config.yaml not found, using minimal defaults[/yellow]"
-                )
+                console.print("[yellow]Warning: Default config.yaml not found, using minimal defaults[/yellow]")
 
         # Ensure user config directory exists
         self.user_config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -60,7 +57,7 @@ class ConfigManager:
                 env_key = key.upper()
                 if not os.environ.get(env_key):
                     os.environ[env_key] = value
-        except Exception:
+        except (OSError, IOError, yaml.YAMLError, KeyError, ValueError, TypeError):
             # Silently fail if config loading fails during initialization
             pass
 
@@ -116,11 +113,7 @@ class ConfigManager:
         def deep_merge(base: Dict, override: Dict) -> Dict:
             result = base.copy()
             for key, value in override.items():
-                if (
-                    key in result
-                    and isinstance(result[key], dict)
-                    and isinstance(value, dict)
-                ):
+                if key in result and isinstance(result[key], dict) and isinstance(value, dict):
                     result[key] = deep_merge(result[key], value)
                 else:
                     result[key] = value
@@ -141,18 +134,14 @@ class ConfigManager:
 
         # Default model
         default_model = config.get("models", {}).get("default", "Not set")
-        is_user_set = "models" in user_config and "default" in user_config.get(
-            "models", {}
-        )
+        is_user_set = "models" in user_config and "default" in user_config.get("models", {})
         console.print(
             f"  Default Model: {default_model} {'[dim](user)[/dim]' if is_user_set else '[dim](default)[/dim]'}"
         )
 
         # Default backend
         default_backend = config.get("backends", {}).get("default", "Not set")
-        is_user_set = "backends" in user_config and "default" in user_config.get(
-            "backends", {}
-        )
+        is_user_set = "backends" in user_config and "default" in user_config.get("backends", {})
         console.print(
             f"  Default Backend: {default_backend} {'[dim](user)[/dim]' if is_user_set else '[dim](default)[/dim]'}"
         )
@@ -196,14 +185,10 @@ class ConfigManager:
             "OPENROUTER_API_KEY",
         ]:
             is_set = bool(os.getenv(key_name))
-            console.print(
-                f"  {key_name}: {'[green]Configured[/green]' if is_set else '[red]Not set[/red]'}"
-            )
+            console.print(f"  {key_name}: {'[green]Configured[/green]' if is_set else '[red]Not set[/red]'}")
 
         console.print()
-        console.print(
-            "[dim]User config location: " + str(self.user_config_path) + "[/dim]"
-        )
+        console.print("[dim]User config location: " + str(self.user_config_path) + "[/dim]")
 
     def set_value(self, key: str, value: str) -> None:
         """Set a configuration value."""
@@ -248,9 +233,7 @@ class ConfigManager:
                 if part not in current:
                     current[part] = {}
                 elif not isinstance(current[part], dict):
-                    console.print(
-                        f"[red]Error: Cannot set {key} - {'.'.join(parts[:i+1])} is not a dictionary[/red]"
-                    )
+                    console.print(f"[red]Error: Cannot set {key} - {'.'.join(parts[:i+1])} is not a dictionary[/red]")
                     return
                 current = current[part]
 
@@ -300,23 +283,15 @@ class ConfigManager:
         try:
             for part in parts:
                 current = current[part]
-                user_current = (
-                    user_current.get(part, {}) if isinstance(user_current, dict) else {}
-                )
+                user_current = user_current.get(part, {}) if isinstance(user_current, dict) else {}
 
             # Check if this value is from user config
-            is_user_set = (
-                user_current == current
-                if not isinstance(current, dict)
-                else bool(user_current)
-            )
+            is_user_set = user_current == current if not isinstance(current, dict) else bool(user_current)
 
             if isinstance(current, dict):
                 # Display as YAML
                 console.print(f"[bold blue]{key}:[/bold blue]")
-                yaml_str = yaml.safe_dump(
-                    current, default_flow_style=False, sort_keys=False
-                )
+                yaml_str = yaml.safe_dump(current, default_flow_style=False, sort_keys=False)
                 syntax = Syntax(yaml_str, "yaml", theme="monokai")
                 console.print(syntax)
             else:

@@ -83,9 +83,7 @@ class TestMultiModalAPI:
         # Setup mock
         mock_backend = Mock()
         mock_backend.ask = AsyncMock(
-            return_value=AIResponse(
-                "This is a dog", model="gpt-4-vision-preview", backend="cloud"
-            )
+            return_value=AIResponse("This is a dog", model="gpt-4-vision-preview", backend="cloud")
         )
         mock_backend.name = "mock"
 
@@ -93,9 +91,7 @@ class TestMultiModalAPI:
             mock_route.return_value = (mock_backend, "gpt-4-vision-preview")
 
             # Test with image
-            response = ask(
-                ["What's in this image?", ImageInput("https://example.com/dog.jpg")]
-            )
+            response = ask(["What's in this image?", ImageInput("https://example.com/dog.jpg")])
 
             assert response == "This is a dog"
             assert response.model == "gpt-4-vision-preview"
@@ -124,9 +120,7 @@ class TestMultiModalAPI:
             mock_route.return_value = (mock_backend, "gpt-4-vision-preview")
 
             # Test streaming with image
-            chunks = list(
-                stream(["Describe this image:", ImageInput(b"fake image data")])
-            )
+            chunks = list(stream(["Describe this image:", ImageInput(b"fake image data")]))
 
             assert chunks == ["This ", "is ", "a ", "cat"]
 
@@ -141,9 +135,7 @@ class TestCloudBackendMultiModal:
 
         # Mock litellm
         mock_response = Mock()
-        mock_response.choices = [
-            Mock(message=Mock(content="A beautiful sunset", tool_calls=None))
-        ]
+        mock_response.choices = [Mock(message=Mock(content="A beautiful sunset", tool_calls=None))]
         mock_response.usage = Mock(prompt_tokens=100, completion_tokens=20)
 
         with patch.object(backend, "litellm") as mock_litellm:
@@ -191,9 +183,7 @@ class TestCloudBackendMultiModal:
 
         # Mock litellm
         mock_response = Mock()
-        mock_response.choices = [
-            Mock(message=Mock(content="Response", tool_calls=None))
-        ]
+        mock_response.choices = [Mock(message=Mock(content="Response", tool_calls=None))]
         mock_response.usage = Mock(prompt_tokens=100, completion_tokens=20)
 
         with patch.object(backend, "litellm") as mock_litellm:
@@ -279,9 +269,7 @@ class TestRoutingMultiModal:
             mock_get.return_value = mock_cloud
 
             # Route with images
-            backend, model = router.smart_route(
-                ["What's this?", ImageInput("image.jpg")]
-            )
+            backend, model = router.smart_route(["What's this?", ImageInput("image.jpg")])
 
             assert backend == mock_cloud
             assert model == "gpt-4-vision-preview"

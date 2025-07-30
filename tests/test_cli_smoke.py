@@ -141,9 +141,7 @@ class TestModelSelectionOptions:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
-        result = run_ttt_command(
-            ["ask", "--model", "openrouter/google/gemini-flash-1.5", "hello"]
-        )
+        result = run_ttt_command(["ask", "--model", "openrouter/google/gemini-flash-1.5", "hello"])
         assert result.returncode in [0, 124]
 
 
@@ -390,9 +388,7 @@ class TestPipelineUsage:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
-        result = run_ttt_command(
-            ["ask", "make this uppercase"], input_text="hello world"
-        )
+        result = run_ttt_command(["ask", "make this uppercase"], input_text="hello world")
         assert result.returncode in [0, 124]
 
 
@@ -509,9 +505,7 @@ class TestComplexCombinations:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
-        result = run_ttt_command(
-            ["ask", "-m", "@gpt4", "--stream", "true", "--json", "explain sorting"]
-        )
+        result = run_ttt_command(["ask", "-m", "@gpt4", "--stream", "true", "--json", "explain sorting"])
         assert result.returncode in [0, 124]
 
     @pytest.mark.requires_api
@@ -562,9 +556,7 @@ class TestComplexCombinations:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
-        result = run_ttt_command(
-            ["ask", "-m", "@fast", "--json", "--stream", "true", "quick hello"]
-        )
+        result = run_ttt_command(["ask", "-m", "@fast", "--json", "--stream", "true", "quick hello"])
         assert result.returncode in [0, 124]
 
 

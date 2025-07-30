@@ -50,9 +50,7 @@ class TestLocalBackend:
             mock_response.json.return_value = mock_response_data
             mock_response.raise_for_status = MagicMock()
 
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
 
             result = await local_backend.ask("Test prompt")
 
@@ -74,9 +72,7 @@ class TestLocalBackend:
             mock_response.json.return_value = mock_response_data
             mock_response.raise_for_status = MagicMock()
 
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
 
             await local_backend.ask(
                 "Test prompt",
@@ -107,9 +103,7 @@ class TestLocalBackend:
             mock_response.text = "Model not found"
 
             mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-                side_effect=httpx.HTTPStatusError(
-                    "404", request=MagicMock(), response=mock_response
-                )
+                side_effect=httpx.HTTPStatusError("404", request=MagicMock(), response=mock_response)
             )
 
             with pytest.raises(ModelNotFoundError) as exc_info:
@@ -140,9 +134,7 @@ class TestLocalBackend:
             mock_stream.__aenter__ = AsyncMock(return_value=mock_response)
             mock_stream.__aexit__ = AsyncMock(return_value=None)
 
-            mock_client.return_value.__aenter__.return_value.stream = MagicMock(
-                return_value=mock_stream
-            )
+            mock_client.return_value.__aenter__.return_value.stream = MagicMock(return_value=mock_stream)
 
             chunks = []
             async for chunk in local_backend.astream("Test prompt"):
@@ -153,18 +145,14 @@ class TestLocalBackend:
     @pytest.mark.asyncio
     async def test_models_success(self, local_backend):
         """Test successful models listing."""
-        mock_response_data = {
-            "models": [{"name": "llama2"}, {"name": "codellama"}, {"name": "mistral"}]
-        }
+        mock_response_data = {"models": [{"name": "llama2"}, {"name": "codellama"}, {"name": "mistral"}]}
 
         with patch("httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.json.return_value = mock_response_data
             mock_response.raise_for_status = MagicMock()
 
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
 
             models = await local_backend.models()
 
@@ -176,9 +164,7 @@ class TestLocalBackend:
         from ttt import BackendConnectionError
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-                side_effect=Exception("Connection failed")
-            )
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(side_effect=Exception("Connection failed"))
 
             with pytest.raises(BackendConnectionError) as exc_info:
                 await local_backend.models()

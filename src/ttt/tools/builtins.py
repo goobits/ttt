@@ -51,7 +51,7 @@ def _get_max_file_size() -> int:
             constants = getattr(config, "model_dump", lambda: {})().get("constants", {})
             size = constants.get("file_sizes", {}).get("max_file_size")
         return int(size or 10485760)  # 10MB fallback from constants
-    except Exception:
+    except (AttributeError, KeyError, ValueError, TypeError):
         return 10485760  # Fallback to constants value
 
 
@@ -66,7 +66,7 @@ def _get_code_timeout() -> int:
             constants = getattr(config, "model_dump", lambda: {})().get("constants", {})
             timeout = constants.get("tool_bounds", {}).get("default_code_timeout")
         return int(timeout or 30)  # fallback from constants
-    except Exception:
+    except (AttributeError, KeyError, ValueError, TypeError):
         return 30  # Fallback to constants value
 
 
@@ -81,7 +81,7 @@ def _get_web_timeout() -> int:
             constants = getattr(config, "model_dump", lambda: {})().get("constants", {})
             timeout = constants.get("tool_bounds", {}).get("default_web_timeout")
         return int(timeout or 10)  # fallback from constants
-    except Exception:
+    except (AttributeError, KeyError, ValueError, TypeError):
         return 10  # Fallback to constants value
 
 
@@ -101,15 +101,11 @@ def _safe_execute(func_name: str, func: Callable[..., Any], **kwargs: Any) -> st
                     sanitized_kwargs[key] = InputSanitizer.sanitize_url(value)
                 except ValueError as e:
                     return f"Error: Invalid URL '{value}': {e}"
-            elif key in ["query", "code", "expression", "content"] and isinstance(
-                value, str
-            ):
+            elif key in ["query", "code", "expression", "content"] and isinstance(value, str):
                 try:
                     # Allow code for these contexts
                     allow_code = key in ["code", "expression"]
-                    sanitized_kwargs[key] = InputSanitizer.sanitize_string(
-                        value, allow_code=allow_code
-                    )
+                    sanitized_kwargs[key] = InputSanitizer.sanitize_string(value, allow_code=allow_code)
                 except ValueError as e:
                     return f"Error: Invalid input '{key}': {e}"
             else:
@@ -175,9 +171,7 @@ ALLOWED_MATH_OPERATORS = {
 }
 
 
-@tool(
-    category="web", description="Search the web for information using a search engine"
-)
+@tool(category="web", description="Search the web for information using a search engine")
 def web_search(query: str, num_results: int = 5) -> str:
     """Search the web for information.
 
@@ -203,9 +197,7 @@ def web_search(query: str, num_results: int = 5) -> str:
         url = f"https://api.duckduckgo.com/?q={encoded_query}&format=json&no_html=1&skip_disambig=1"
 
         # Make request with timeout
-        req = urllib.request.Request(
-            url, headers={"User-Agent": "Mozilla/5.0 (compatible; AI-Library/1.0)"}
-        )
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; AI-Library/1.0)"})
 
         with urllib.request.urlopen(req, timeout=_get_web_timeout()) as response:
             data = json.loads(response.read().decode("utf-8"))
@@ -235,9 +227,7 @@ def web_search(query: str, num_results: int = 5) -> str:
 
         return "\n".join(results)
 
-    return _safe_execute(
-        "web_search", _web_search_impl, query=query, num_results=num_results
-    )
+    return _safe_execute("web_search", _web_search_impl, query=query, num_results=num_results)
 
 
 @tool(category="file", description="Read the contents of a file")
@@ -266,9 +256,7 @@ def read_file(file_path: str, encoding: str = "utf-8") -> str:
         file_size = path.stat().st_size
         max_file_size = _get_max_file_size()
         if file_size > max_file_size:
-            raise ValueError(
-                f"File too large ({file_size} bytes). Maximum size is {max_file_size} bytes."
-            )
+            raise ValueError(f"File too large ({file_size} bytes). Maximum size is {max_file_size} bytes.")
 
         # Read file
         with open(path, encoding=encoding) as f:
@@ -276,15 +264,11 @@ def read_file(file_path: str, encoding: str = "utf-8") -> str:
 
         return content
 
-    return _safe_execute(
-        "read_file", _read_file_impl, file_path=file_path, encoding=encoding
-    )
+    return _safe_execute("read_file", _read_file_impl, file_path=file_path, encoding=encoding)
 
 
 @tool(category="file", description="Write content to a file")
-def write_file(
-    file_path: str, content: str, encoding: str = "utf-8", create_dirs: bool = False
-) -> str:
+def write_file(file_path: str, content: str, encoding: str = "utf-8", create_dirs: bool = False) -> str:
     """Write content to a file.
 
     Args:
@@ -297,9 +281,7 @@ def write_file(
         Success message or error
     """
 
-    def _write_file_impl(
-        file_path: str, content: str, encoding: str = "utf-8", create_dirs: bool = False
-    ) -> str:
+    def _write_file_impl(file_path: str, content: str, encoding: str = "utf-8", create_dirs: bool = False) -> str:
         # Validate inputs
         if not file_path:
             raise ValueError("File path cannot be empty")
@@ -328,9 +310,7 @@ def write_file(
     )
 
 
-@tool(
-    category="code", description="Execute Python code safely in a sandboxed environment"
-)
+@tool(category="code", description="Execute Python code safely in a sandboxed environment")
 def run_python(code: str, timeout: Optional[int] = None) -> str:
     """Execute Python code safely.
 
@@ -355,9 +335,7 @@ def run_python(code: str, timeout: Optional[int] = None) -> str:
             from ..config.schema import get_config
 
             config = get_config()
-            timeout_bounds = (
-                config.model_dump().get("tools", {}).get("timeout_bounds", {})
-            )
+            timeout_bounds = config.model_dump().get("tools", {}).get("timeout_bounds", {})
             # Try tools timeout_bounds first, then constants
             min_timeout = timeout_bounds.get("min")
             max_timeout = timeout_bounds.get("max")
@@ -367,7 +345,7 @@ def run_python(code: str, timeout: Optional[int] = None) -> str:
                 tool_bounds = constants.get("tool_bounds", {})
                 min_timeout = min_timeout or tool_bounds.get("min_timeout", 1)
                 max_timeout = max_timeout or tool_bounds.get("max_timeout", 30)
-        except Exception:
+        except (AttributeError, KeyError, ValueError, TypeError, ImportError):
             # Fallback to constants values
             min_timeout = 1  # constants.tool_bounds.min_timeout
             max_timeout = 30  # constants.tool_bounds.max_timeout
@@ -383,10 +361,7 @@ def run_python(code: str, timeout: Optional[int] = None) -> str:
             # Run code in subprocess with timeout
             # Try python3 first, then python
             python_cmd = (
-                "python3"
-                if subprocess.run(["which", "python3"], capture_output=True).returncode
-                == 0
-                else "python"
+                "python3" if subprocess.run(["which", "python3"], capture_output=True).returncode == 0 else "python"
             )
 
             result = subprocess.run(
@@ -406,11 +381,7 @@ def run_python(code: str, timeout: Optional[int] = None) -> str:
             if result.returncode != 0:
                 output.append(f"Exit code: {result.returncode}")
 
-            return (
-                "\n".join(output)
-                if output
-                else "Code executed successfully (no output)"
-            )
+            return "\n".join(output) if output else "Code executed successfully (no output)"
 
         finally:
             # Clean up
@@ -420,9 +391,7 @@ def run_python(code: str, timeout: Optional[int] = None) -> str:
 
 
 @tool(category="time", description="Get the current time in a specified timezone")
-def get_current_time(
-    timezone: str = "UTC", format: str = "%Y-%m-%d %H:%M:%S %Z"
-) -> str:
+def get_current_time(timezone: str = "UTC", format: str = "%Y-%m-%d %H:%M:%S %Z") -> str:
     """Get current time in specified timezone.
 
     Args:
@@ -490,9 +459,7 @@ def http_request(
             from ..config.schema import get_config
 
             config = get_config()
-            timeout_bounds = (
-                config.model_dump().get("tools", {}).get("timeout_bounds", {})
-            )
+            timeout_bounds = config.model_dump().get("tools", {}).get("timeout_bounds", {})
             # Try tools timeout_bounds first, then constants
             min_timeout = timeout_bounds.get("min")
             max_timeout = timeout_bounds.get("max")
@@ -502,7 +469,7 @@ def http_request(
                 tool_bounds = constants.get("tool_bounds", {})
                 min_timeout = min_timeout or tool_bounds.get("min_timeout", 1)
                 max_timeout = max_timeout or tool_bounds.get("max_timeout", 30)
-        except Exception:
+        except (AttributeError, KeyError, ValueError, TypeError, ImportError):
             # Fallback to constants values
             min_timeout = 1  # constants.tool_bounds.min_timeout
             max_timeout = 30  # constants.tool_bounds.max_timeout
@@ -531,9 +498,7 @@ def http_request(
                 body_data = str(data).encode("utf-8")
 
         # Create request
-        req = urllib.request.Request(
-            url, data=body_data, headers=normalized_headers, method=method.upper()
-        )
+        req = urllib.request.Request(url, data=body_data, headers=normalized_headers, method=method.upper())
 
         # Make request
         with urllib.request.urlopen(req, timeout=timeout) as response:
@@ -768,12 +733,10 @@ def list_directory(
                     from ..config.schema import get_config
 
                     config = get_config()
-                    size_config = (
-                        config.model_dump().get("files", {}).get("size_format", {})
-                    )
+                    size_config = config.model_dump().get("files", {}).get("size_format", {})
                     kb_threshold = size_config.get("kb_threshold", 1024)
                     mb_threshold = size_config.get("mb_threshold", 1048576)
-                except Exception:
+                except (AttributeError, KeyError, ValueError, TypeError, ImportError):
                     # Fallback to constants values
                     kb_threshold = 1024  # constants.file_sizes.kb_threshold
                     mb_threshold = 1048576  # constants.file_sizes.mb_threshold

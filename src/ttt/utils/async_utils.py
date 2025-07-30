@@ -40,9 +40,7 @@ def _start_background_loop() -> None:
         asyncio.set_event_loop(loop)
 
         # Set up custom exception handler to suppress aiohttp task warnings
-        def custom_exception_handler(
-            loop: asyncio.AbstractEventLoop, context: dict
-        ) -> None:
+        def custom_exception_handler(loop: asyncio.AbstractEventLoop, context: dict) -> None:
             """Custom exception handler that suppresses specific task destruction warnings.
 
             Args:
@@ -155,9 +153,7 @@ def run_coro_in_background(coro: Awaitable[T]) -> T:
 
     # Convert Awaitable to coroutine if needed
     if asyncio.iscoroutine(coro):
-        future: concurrent.futures.Future[T] = asyncio.run_coroutine_threadsafe(
-            coro, _background_loop
-        )
+        future: concurrent.futures.Future[T] = asyncio.run_coroutine_threadsafe(coro, _background_loop)
     else:
         # If it's not a coroutine but an awaitable, we need to wrap it
         async def _wrapper() -> T:

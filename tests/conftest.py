@@ -40,15 +40,11 @@ def rate_limit_delay():
         if provider:
             provider_lower = provider.lower()
             if "openrouter" in provider_lower:
-                delay_time = float(
-                    os.getenv("OPENROUTER_RATE_DELAY", OPENROUTER_DEFAULT_DELAY)
-                )
+                delay_time = float(os.getenv("OPENROUTER_RATE_DELAY", OPENROUTER_DEFAULT_DELAY))
             elif "openai" in provider_lower or "gpt" in provider_lower:
                 delay_time = float(os.getenv("OPENAI_RATE_DELAY", OPENAI_DEFAULT_DELAY))
             elif "anthropic" in provider_lower or "claude" in provider_lower:
-                delay_time = float(
-                    os.getenv("ANTHROPIC_RATE_DELAY", ANTHROPIC_DEFAULT_DELAY)
-                )
+                delay_time = float(os.getenv("ANTHROPIC_RATE_DELAY", ANTHROPIC_DEFAULT_DELAY))
             else:
                 # Conservative default for unknown providers
                 delay_time = 1.0

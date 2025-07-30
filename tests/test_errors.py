@@ -156,9 +156,7 @@ class TestBackendExceptions:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                loop.run_until_complete(
-                    backend.ask(["What's this?", ImageInput("test.jpg")])
-                )
+                loop.run_until_complete(backend.ask(["What's this?", ImageInput("test.jpg")]))
             finally:
                 loop.close()
 
@@ -178,9 +176,7 @@ class TestBackendExceptions:
         mock_response.text = "model not found"
 
         mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-            side_effect=httpx.HTTPStatusError(
-                "Not found", request=Mock(), response=mock_response
-            )
+            side_effect=httpx.HTTPStatusError("Not found", request=Mock(), response=mock_response)
         )
 
         backend = LocalBackend()
@@ -220,9 +216,7 @@ class TestCloudBackendExceptions:
         backend = CloudBackend()
 
         # Mock the instance's litellm.acompletion method
-        backend.litellm.acompletion = AsyncMock(
-            side_effect=Exception("api_key is required")
-        )
+        backend.litellm.acompletion = AsyncMock(side_effect=Exception("api_key is required"))
 
         with pytest.raises(APIKeyError) as exc_info:
             import asyncio
@@ -244,9 +238,7 @@ class TestCloudBackendExceptions:
         backend = CloudBackend()
 
         # Mock the instance's litellm.acompletion method
-        backend.litellm.acompletion = AsyncMock(
-            side_effect=Exception("Rate limit exceeded")
-        )
+        backend.litellm.acompletion = AsyncMock(side_effect=Exception("Rate limit exceeded"))
 
         with pytest.raises(RateLimitError) as exc_info:
             import asyncio
@@ -254,9 +246,7 @@ class TestCloudBackendExceptions:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                loop.run_until_complete(
-                    backend.ask("Hello", model="claude-3-sonnet-20240229")
-                )
+                loop.run_until_complete(backend.ask("Hello", model="claude-3-sonnet-20240229"))
             finally:
                 loop.close()
 
@@ -454,9 +444,7 @@ class TestErrorRecoverySystem:
         assert "http_request" in suggestion_names
 
         # Test read_file fallback
-        suggestions = recovery.get_fallback_suggestions(
-            "read_file", {"file_path": "/test/file.txt"}
-        )
+        suggestions = recovery.get_fallback_suggestions("read_file", {"file_path": "/test/file.txt"})
         assert len(suggestions) > 0
         # Should suggest list_directory as fallback for read_file
         suggestion_names = [s.tool_name for s in suggestions]
@@ -502,9 +490,7 @@ class TestToolExecutor:
     @pytest.fixture
     def executor(self):
         """Create a test executor."""
-        config = ExecutionConfig(
-            max_retries=2, timeout_seconds=5.0, enable_fallbacks=True
-        )
+        config = ExecutionConfig(max_retries=2, timeout_seconds=5.0, enable_fallbacks=True)
         return ToolExecutor(config)
 
     def test_tool_not_found_error(self, executor):
@@ -603,9 +589,7 @@ class TestToolExecutor:
         assert stats["successful_calls"] == 2
         assert stats["failed_calls"] == 1
         assert abs(stats["success_rate"] - 2 / 3) < 0.01
-        assert (
-            abs(stats["avg_execution_time"] - 1.17) < 0.1
-        )  # Allow for floating point precision
+        assert abs(stats["avg_execution_time"] - 1.17) < 0.1  # Allow for floating point precision
 
 
 # =============================================================================
@@ -726,9 +710,7 @@ class TestPluginExceptions:
 
         # Create a plugin with syntax error
         plugin_file = tmp_path / "bad_plugin.py"
-        plugin_file.write_text(
-            "def register_plugin(registry)\n    pass"
-        )  # Missing colon
+        plugin_file.write_text("def register_plugin(registry)\n    pass")  # Missing colon
 
         registry = PluginRegistry()
 
@@ -788,9 +770,7 @@ class TestIntegration:
         executor = ToolExecutor()
 
         # Test reading non-existent file within allowed directory
-        result = await executor.execute_tool(
-            "read_file", {"file_path": "nonexistent_file.txt"}
-        )
+        result = await executor.execute_tool("read_file", {"file_path": "nonexistent_file.txt"})
 
         # Should provide helpful error (either as error or as result with error info)
         error_text = result.error or result.result or ""

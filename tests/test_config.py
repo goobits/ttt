@@ -44,9 +44,7 @@ class TestConfigModel:
 
     def test_custom_values(self):
         """Test setting custom values."""
-        config = ConfigModel(
-            default_backend="local", timeout=60, model_aliases={"custom": "my-model"}
-        )
+        config = ConfigModel(default_backend="local", timeout=60, model_aliases={"custom": "my-model"})
 
         assert config.default_backend == "local"
         assert config.timeout == 60
@@ -151,9 +149,7 @@ class TestConfigSaving:
         """Test saving configuration to file."""
         config_file = tmp_path / "saved_config.yaml"
 
-        config = ConfigModel(
-            default_backend="cloud", timeout=45, model_aliases={"saved": "gpt-4"}
-        )
+        config = ConfigModel(default_backend="cloud", timeout=45, model_aliases={"saved": "gpt-4"})
 
         save_config(config, config_file)
 
@@ -269,9 +265,7 @@ class TestModelRegistry:
     def test_list_models(self):
         """Test listing models."""
         # Add a test model
-        model = ModelInfo(
-            name="list-test", provider="test-provider", provider_name="test"
-        )
+        model = ModelInfo(name="list-test", provider="test-provider", provider_name="test")
         model_registry.add_model(model)
 
         # List all models

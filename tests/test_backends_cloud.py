@@ -112,9 +112,7 @@ class TestCloudBackendAsk:
     @pytest.mark.asyncio
     async def test_ask_success(self, cloud_backend, mock_litellm):
         """Test successful ask request."""
-        mock_response = MockLiteLLM.MockResponse(
-            "This is a test response", model="gpt-3.5-turbo"
-        )
+        mock_response = MockLiteLLM.MockResponse("This is a test response", model="gpt-3.5-turbo")
         mock_litellm.acompletion.return_value = mock_response
 
         response = await cloud_backend.ask("Test prompt", model="gpt-3.5-turbo")
@@ -154,9 +152,7 @@ class TestCloudBackendAsk:
         mock_response = MockLiteLLM.MockResponse("I see an image")
         mock_litellm.acompletion.return_value = mock_response
 
-        await cloud_backend.ask(
-            ["What's in this image?", ImageInput(b"fake_image_data_for_testing")]
-        )
+        await cloud_backend.ask(["What's in this image?", ImageInput(b"fake_image_data_for_testing")])
 
         # Check that message was formatted correctly for vision
         call_args = mock_litellm.acompletion.call_args
@@ -239,9 +235,7 @@ class TestCloudBackendStream:
         mock_litellm.acompletion.return_value = mock_stream()
 
         chunks = []
-        async for chunk in cloud_backend.astream(
-            ["Describe this", ImageInput(b"fake_image_data_for_testing")]
-        ):
+        async for chunk in cloud_backend.astream(["Describe this", ImageInput(b"fake_image_data_for_testing")]):
             chunks.append(chunk)
 
         assert "".join(chunks) == "Image description"
@@ -310,9 +304,7 @@ class TestCloudBackendStatus:
         assert "OPENAI_API_KEY" in status["providers"]["openai"]["error"]
 
     @pytest.mark.asyncio
-    async def test_status_with_test_mode(
-        self, cloud_backend, mock_litellm, monkeypatch
-    ):
+    async def test_status_with_test_mode(self, cloud_backend, mock_litellm, monkeypatch):
         """Test status with connection testing."""
         monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
@@ -335,9 +327,7 @@ class TestCloudBackendErrorHandling:
     async def test_provider_specific_errors(self, cloud_backend, mock_litellm):
         """Test provider-specific error detection."""
         # Test OpenAI quota error
-        mock_litellm.acompletion.side_effect = Exception(
-            "You exceeded your current quota"
-        )
+        mock_litellm.acompletion.side_effect = Exception("You exceeded your current quota")
 
         with pytest.raises(QuotaExceededError) as exc_info:
             await cloud_backend.ask("Test", model="gpt-4")
@@ -375,14 +365,8 @@ class TestProviderDetection:
         """Test provider detection for various models."""
         assert cloud_backend._get_provider_from_model("gpt-4") == "openai"
         assert cloud_backend._get_provider_from_model("gpt-3.5-turbo") == "openai"
-        assert (
-            cloud_backend._get_provider_from_model("claude-3-opus-20240229")
-            == "anthropic"
-        )
-        assert (
-            cloud_backend._get_provider_from_model("claude-3-sonnet-20240229")
-            == "anthropic"
-        )
+        assert cloud_backend._get_provider_from_model("claude-3-opus-20240229") == "anthropic"
+        assert cloud_backend._get_provider_from_model("claude-3-sonnet-20240229") == "anthropic"
         assert cloud_backend._get_provider_from_model("gemini-pro") == "google"
         assert cloud_backend._get_provider_from_model("gemini-1.5-pro") == "google"
         assert cloud_backend._get_provider_from_model("unknown-model") == "unknown"

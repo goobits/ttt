@@ -156,10 +156,7 @@ class PersistentChatSession:
             messages.append({"role": msg["role"], "content": msg["content"]})
 
         # For backends that don't support message format, convert to string
-        if (
-            hasattr(self.backend, "supports_messages")
-            and not self.backend.supports_messages
-        ):
+        if hasattr(self.backend, "supports_messages") and not self.backend.supports_messages:
             # Convert to conversation format
             conversation = self._messages_to_conversation(messages)
             full_prompt: Union[str, List[Union[str, ImageInput]]] = conversation
@@ -176,9 +173,7 @@ class PersistentChatSession:
                 full_prompt,
                 model=model or self.model,
                 system=self.system if len(self.history) == 1 else None,
-                messages=(
-                    messages if hasattr(self.backend, "supports_messages") else None
-                ),
+                messages=(messages if hasattr(self.backend, "supports_messages") else None),
                 tools=self.tools,
                 **params,
             )
@@ -257,10 +252,7 @@ class PersistentChatSession:
             messages.append({"role": msg["role"], "content": msg["content"]})
 
         # Prepare prompt
-        if (
-            hasattr(self.backend, "supports_messages")
-            and not self.backend.supports_messages
-        ):
+        if hasattr(self.backend, "supports_messages") and not self.backend.supports_messages:
             conversation = self._messages_to_conversation(messages)
             full_prompt: Union[str, List[Union[str, ImageInput]]] = conversation
         else:
@@ -278,9 +270,7 @@ class PersistentChatSession:
                 full_prompt,
                 model=model or self.model,
                 system=self.system if len(self.history) == 1 else None,
-                messages=(
-                    messages if hasattr(self.backend, "supports_messages") else None
-                ),
+                messages=(messages if hasattr(self.backend, "supports_messages") else None),
                 tools=self.tools,
                 **params,
             ):
@@ -383,9 +373,7 @@ class PersistentChatSession:
         return path
 
     @classmethod
-    def load(
-        cls, path: Union[str, Path], format: Optional[str] = None
-    ) -> "PersistentChatSession":
+    def load(cls, path: Union[str, Path], format: Optional[str] = None) -> "PersistentChatSession":
         """
         Load a chat session from disk.
 
@@ -426,9 +414,7 @@ class PersistentChatSession:
 
         # Create new session
         # Support session_id from top level or metadata
-        session_id = session_data.get("session_id") or session_data.get(
-            "metadata", {}
-        ).get("session_id")
+        session_id = session_data.get("session_id") or session_data.get("metadata", {}).get("session_id")
 
         # Only pass backend if it's a valid backend name
         backend_name = session_data.get("backend")
@@ -441,11 +427,7 @@ class PersistentChatSession:
             model=session_data.get("model"),
             backend=backend_name,
             session_id=session_id,
-            tools=(
-                cls._deserialize_tools(session_data.get("tools"))
-                if session_data.get("tools")
-                else None
-            ),
+            tools=(cls._deserialize_tools(session_data.get("tools")) if session_data.get("tools") else None),
             **session_data.get("kwargs", {}),
         )
 
@@ -473,9 +455,7 @@ class PersistentChatSession:
             "created_at": self.metadata["created_at"],
             "message_count": len(self.history),
             "user_messages": len([m for m in self.history if m["role"] == "user"]),
-            "assistant_messages": len(
-                [m for m in self.history if m["role"] == "assistant"]
-            ),
+            "assistant_messages": len([m for m in self.history if m["role"] == "assistant"]),
             "total_tokens_in": self.metadata["total_tokens_in"],
             "total_tokens_out": self.metadata["total_tokens_out"],
             "total_cost": self.metadata["total_cost"],
@@ -511,9 +491,7 @@ class PersistentChatSession:
         elif format == "markdown":
             lines = []
             # Add header
-            lines.append(
-                f"# Chat Session: {self.metadata.get('session_id', 'Unknown')}"
-            )
+            lines.append(f"# Chat Session: {self.metadata.get('session_id', 'Unknown')}")
             lines.append("")
 
             # Add system prompt if present
@@ -611,13 +589,9 @@ class PersistentChatSession:
                 }
             self.metadata["backend_usage"][backend_name]["count"] += 1
             if response.tokens_in:
-                self.metadata["backend_usage"][backend_name][
-                    "tokens_in"
-                ] += response.tokens_in
+                self.metadata["backend_usage"][backend_name]["tokens_in"] += response.tokens_in
             if response.tokens_out:
-                self.metadata["backend_usage"][backend_name][
-                    "tokens_out"
-                ] += response.tokens_out
+                self.metadata["backend_usage"][backend_name]["tokens_out"] += response.tokens_out
             if response.cost:
                 self.metadata["backend_usage"][backend_name]["cost"] += response.cost
 
@@ -683,9 +657,7 @@ class PersistentChatSession:
                     {
                         "type": "function_name",
                         "name": tool.__name__,
-                        "module": (
-                            tool.__module__ if hasattr(tool, "__module__") else None
-                        ),
+                        "module": (tool.__module__ if hasattr(tool, "__module__") else None),
                     }
                 )
             elif hasattr(tool, "name"):

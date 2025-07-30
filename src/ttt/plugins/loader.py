@@ -73,9 +73,7 @@ class PluginRegistry:
         self.plugins[plugin.name] = plugin
         logger.info(f"Registered plugin: {plugin.name} v{plugin.version}")
 
-    def register_backend(
-        self, name: str, backend_class: Type[BaseBackend], **metadata: Any
-    ) -> None:
+    def register_backend(self, name: str, backend_class: Type[BaseBackend], **metadata: Any) -> None:
         """
         Convenience method to register a backend class directly.
 
@@ -103,9 +101,7 @@ class PluginRegistry:
         plugin = self.plugins.get(name)
         return plugin.backend_class if plugin else None
 
-    def create_backend(
-        self, name: str, config: Optional[Dict[str, Any]] = None
-    ) -> Optional[BaseBackend]:
+    def create_backend(self, name: str, config: Optional[Dict[str, Any]] = None) -> Optional[BaseBackend]:
         """
         Create a backend instance by name.
 
@@ -121,9 +117,7 @@ class PluginRegistry:
             try:
                 return backend_class(config)
             except Exception as e:
-                raise PluginValidationError(
-                    name, f"Failed to instantiate backend: {e}"
-                ) from e
+                raise PluginValidationError(name, f"Failed to instantiate backend: {e}") from e
         return None
 
     def discover_plugins(self) -> None:
@@ -264,9 +258,7 @@ def discover_plugins() -> None:
     plugin_registry.discover_plugins()
 
 
-def register_backend(
-    name: str, backend_class: Type[BaseBackend], **metadata: Any
-) -> None:
+def register_backend(name: str, backend_class: Type[BaseBackend], **metadata: Any) -> None:
     """
     Register a custom backend.
 

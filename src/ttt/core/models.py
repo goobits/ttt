@@ -187,9 +187,7 @@ class ConfigModel(BaseModel):
 class ImageInput:
     """Represents an image input for multi-modal AI models."""
 
-    def __init__(
-        self, source: Union[str, Path, bytes], mime_type: Optional[str] = None
-    ):
+    def __init__(self, source: Union[str, Path, bytes], mime_type: Optional[str] = None):
         """
         Initialize ImageInput.
 
@@ -260,9 +258,7 @@ class ImageInput:
                     ".webp": "image/webp",
                     ".bmp": "image/bmp",
                 }
-                mime_map: Dict[str, str] = project_defaults.get("files", {}).get(
-                    "mime_types", default_mime_types
-                )
+                mime_map: Dict[str, str] = project_defaults.get("files", {}).get("mime_types", default_mime_types)
             except Exception:
                 # Fallback to hardcoded if config loading fails
                 mime_map = {

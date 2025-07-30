@@ -66,9 +66,7 @@ class TestToolDecorator:
         """Test tool decorator with complex parameter types."""
 
         @tool
-        def complex_function(
-            items: List[str], count: int = 5, enabled: bool = True, score: float = 0.5
-        ) -> dict:
+        def complex_function(items: List[str], count: int = 5, enabled: bool = True, score: float = 0.5) -> dict:
             """Function with complex types."""
             return {"items": items, "count": count}
 
@@ -179,9 +177,7 @@ class TestToolExecution:
 
         # Register tools temporarily
         register_tool(multiply, "multiply", "Multiply two numbers", "test")
-        register_tool(
-            format_result, "format_result", "Format a result with prefix", "test"
-        )
+        register_tool(format_result, "format_result", "Format a result with prefix", "test")
 
         try:
             tool_calls = [
@@ -332,15 +328,11 @@ class TestToolIntegration:
             assert len(response.tool_calls) == 2
 
             # Check tool results
-            weather_call = next(
-                call for call in response.tool_calls if call.name == "get_weather"
-            )
+            weather_call = next(call for call in response.tool_calls if call.name == "get_weather")
             assert weather_call.succeeded
             assert "Weather in NYC: 72°F, sunny" in weather_call.result
 
-            calc_call = next(
-                call for call in response.tool_calls if call.name == "test_calculate"
-            )
+            calc_call = next(call for call in response.tool_calls if call.name == "test_calculate")
             assert calc_call.succeeded
             assert calc_call.result == 40
 
@@ -362,9 +354,7 @@ class TestToolIntegration:
         # Mock the router and backend
         with patch("ttt.core.routing.router") as mock_router:
             mock_backend = Mock()
-            mock_response = AIResponse(
-                "AI response with tool usage", model="test-model", backend="cloud"
-            )
+            mock_response = AIResponse("AI response with tool usage", model="test-model", backend="cloud")
             # Add tool result to response
             tool_call = ToolCall(
                 id="test_call",
@@ -417,9 +407,7 @@ class TestToolErrorHandling:
 
         try:
             # Execute with the short timeout
-            result = await executor.execute_tool(
-                "async_slow_tool", {}, timeout=0.05
-            )  # 50ms timeout
+            result = await executor.execute_tool("async_slow_tool", {}, timeout=0.05)  # 50ms timeout
 
             # The tool should timeout
             assert result.succeeded is False
@@ -443,9 +431,7 @@ class TestToolErrorHandling:
             return f"Got: {required_param}"
 
         # Register the tool temporarily
-        register_tool(
-            strict_tool, "strict_tool", "Tool with required parameter", "test"
-        )
+        register_tool(strict_tool, "strict_tool", "Tool with required parameter", "test")
 
         try:
             result = await execute_tool("strict_tool", {"wrong_param": "value"})
@@ -492,9 +478,7 @@ class TestToolSchemas:
         """Test OpenAI-compatible schema generation."""
 
         @tool(register=False)
-        def example_tool(
-            text: str, count: int = 1, enabled: bool = True, options: List[str] = None
-        ) -> dict:
+        def example_tool(text: str, count: int = 1, enabled: bool = True, options: List[str] = None) -> dict:
             """Example tool with various parameter types.
 
             Args:
@@ -512,10 +496,7 @@ class TestToolSchemas:
 
         assert schema["type"] == "function"
         assert schema["function"]["name"] == "example_tool"
-        assert (
-            "Example tool with various parameter types"
-            in schema["function"]["description"]
-        )
+        assert "Example tool with various parameter types" in schema["function"]["description"]
 
         params = schema["function"]["parameters"]
         assert params["type"] == "object"

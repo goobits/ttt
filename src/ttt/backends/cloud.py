@@ -48,8 +48,7 @@ class CloudBackend(BaseBackend):
         except ImportError as e:
             raise BackendNotAvailableError(
                 "cloud",
-                "LiteLLM is required for cloud backend. "
-                "Install with: pip install litellm",
+                "LiteLLM is required for cloud backend. " "Install with: pip install litellm",
             ) from e
 
         # Get cloud-specific config
@@ -69,9 +68,9 @@ class CloudBackend(BaseBackend):
         )
 
         # Get default model from backend_config (handles merging)
-        self.default_model = self.backend_config.get(
-            "default_model"
-        ) or get_config_value("models.default", "gpt-3.5-turbo")
+        self.default_model = self.backend_config.get("default_model") or get_config_value(
+            "models.default", "gpt-3.5-turbo"
+        )
 
         # Get provider order preference
         self.provider_order = cloud_config.get("provider_order") or get_config_value(
@@ -131,18 +130,14 @@ class CloudBackend(BaseBackend):
                         content.append(
                             {
                                 "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:{mime_type};base64,{base64_data}"
-                                },
+                                "image_url": {"url": f"data:{mime_type};base64,{base64_data}"},
                             }
                         )
             messages.append({"role": "user", "content": content})
 
         return messages
 
-    def _handle_request_error(
-        self, e: Exception, used_model: str, request_type: str = "request"
-    ) -> None:
+    def _handle_request_error(self, e: Exception, used_model: str, request_type: str = "request") -> None:
         """
         Handle errors from API requests by converting them to appropriate exceptions.
 
@@ -158,11 +153,7 @@ class CloudBackend(BaseBackend):
         logger.error(f"Cloud {request_type} failed: {error_msg}")
 
         # Check for specific error types
-        if (
-            "api_key" in error_msg.lower()
-            or "api key" in error_msg.lower()
-            or "authentication" in error_msg.lower()
-        ):
+        if "api_key" in error_msg.lower() or "api key" in error_msg.lower() or "authentication" in error_msg.lower():
             provider = self._get_provider_from_model(used_model)
             env_vars = {
                 "openai": "OPENAI_API_KEY",
@@ -191,29 +182,19 @@ class CloudBackend(BaseBackend):
     def _configure_api_keys(self) -> None:
         """Configure API keys from environment variables."""
         # OpenAI
-        if openai_key := (
-            self.backend_config.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
-        ):
+        if openai_key := (self.backend_config.get("openai_api_key") or os.getenv("OPENAI_API_KEY")):
             os.environ["OPENAI_API_KEY"] = openai_key
 
         # Anthropic
-        if anthropic_key := (
-            self.backend_config.get("anthropic_api_key")
-            or os.getenv("ANTHROPIC_API_KEY")
-        ):
+        if anthropic_key := (self.backend_config.get("anthropic_api_key") or os.getenv("ANTHROPIC_API_KEY")):
             os.environ["ANTHROPIC_API_KEY"] = anthropic_key
 
         # Google
-        if google_key := (
-            self.backend_config.get("google_api_key") or os.getenv("GOOGLE_API_KEY")
-        ):
+        if google_key := (self.backend_config.get("google_api_key") or os.getenv("GOOGLE_API_KEY")):
             os.environ["GOOGLE_API_KEY"] = google_key
 
         # OpenRouter
-        if openrouter_key := (
-            self.backend_config.get("openrouter_api_key")
-            or os.getenv("OPENROUTER_API_KEY")
-        ):
+        if openrouter_key := (self.backend_config.get("openrouter_api_key") or os.getenv("OPENROUTER_API_KEY")):
             os.environ["OPENROUTER_API_KEY"] = openrouter_key
 
     @property
@@ -301,16 +282,13 @@ class CloudBackend(BaseBackend):
 
         # Add any additional parameters, filtering out None values
         # Also remove 'messages' from kwargs since we build it ourselves
-        filtered_kwargs = {
-            k: v for k, v in kwargs.items() if v is not None and k != "messages"
-        }
+        filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None and k != "messages"}
         params.update(filtered_kwargs)
 
         try:
             logger.debug(f"Sending request to {used_model}")
             logger.debug(
-                f"Parameters: max_tokens={params.get('max_tokens')}, "
-                f"temperature={params.get('temperature')}"
+                f"Parameters: max_tokens={params.get('max_tokens')}, " f"temperature={params.get('temperature')}"
             )
 
             # Use LiteLLM's completion function
@@ -361,11 +339,7 @@ class CloudBackend(BaseBackend):
                     if tool_call.type == "function":
                         func_call = tool_call.function
                         try:
-                            arguments = (
-                                json.loads(func_call.arguments)
-                                if func_call.arguments
-                                else {}
-                            )
+                            arguments = json.loads(func_call.arguments) if func_call.arguments else {}
                         except json.JSONDecodeError:
                             arguments = {}
 
@@ -390,12 +364,8 @@ class CloudBackend(BaseBackend):
                             if call.succeeded:
                                 results_summary.append(f"{call.name}: {call.result}")
                             else:
-                                results_summary.append(
-                                    f"{call.name}: Error - {call.error}"
-                                )
-                        response_content = "Tool execution completed:\n" + "\n".join(
-                            results_summary
-                        )
+                                results_summary.append(f"{call.name}: Error - {call.error}")
+                        response_content = "Tool execution completed:\n" + "\n".join(results_summary)
 
             if not response_content:
                 raise EmptyResponseError(used_model, self.name)
@@ -411,10 +381,7 @@ class CloudBackend(BaseBackend):
             cost = None
             if hasattr(response, "_hidden_params"):
                 try:
-                    if (
-                        isinstance(response._hidden_params, dict)
-                        and "response_cost" in response._hidden_params
-                    ):
+                    if isinstance(response._hidden_params, dict) and "response_cost" in response._hidden_params:
                         cost = response._hidden_params["response_cost"]
                 except (TypeError, AttributeError):
                     # Handle mocks or other non-dict types
@@ -502,16 +469,13 @@ class CloudBackend(BaseBackend):
 
         # Add any additional parameters, filtering out None values
         # Also remove 'messages' from kwargs since we build it ourselves
-        filtered_kwargs = {
-            k: v for k, v in kwargs.items() if v is not None and k != "messages"
-        }
+        filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None and k != "messages"}
         params.update(filtered_kwargs)
 
         try:
             logger.debug(f"Starting stream request to {used_model}")
             logger.debug(
-                f"Stream parameters: max_tokens={params.get('max_tokens')}, "
-                f"temperature={params.get('temperature')}"
+                f"Stream parameters: max_tokens={params.get('max_tokens')}, " f"temperature={params.get('temperature')}"
             )
 
             # Use LiteLLM's streaming completion
@@ -545,15 +509,11 @@ class CloudBackend(BaseBackend):
         all_model_info = model_registry.models.values()
 
         # Filter for models that are NOT from the 'local' provider
-        cloud_models = [
-            model.name for model in all_model_info if model.provider != "local"
-        ]
+        cloud_models = [model.name for model in all_model_info if model.provider != "local"]
         logger.debug(f"Found {len(cloud_models)} cloud models in registry")
         return sorted(cloud_models)
 
-    async def list_models(
-        self, detailed: bool = False
-    ) -> List[Union[str, Dict[str, Any]]]:
+    async def list_models(self, detailed: bool = False) -> List[Union[str, Dict[str, Any]]]:
         """
         List available models from the registry, optionally with details.
 
@@ -566,11 +526,7 @@ class CloudBackend(BaseBackend):
         # Get all non-local models from the registry
         from ..config.schema import model_registry
 
-        all_model_info = [
-            model
-            for model in model_registry.models.values()
-            if model.provider != "local"
-        ]
+        all_model_info = [model for model in model_registry.models.values() if model.provider != "local"]
 
         if not detailed:
             result: List[str] = sorted([model.name for model in all_model_info])
@@ -649,25 +605,17 @@ class CloudBackend(BaseBackend):
                         test_model = self.default_models.get(provider)
                         if test_model:
                             # Make a minimal test request
-                            test_response = await self.ask(
-                                "Hello", model=test_model, max_tokens=5
-                            )
+                            test_response = await self.ask("Hello", model=test_model, max_tokens=5)
                             if test_response and not test_response.failed:
                                 info["test_result"] = "success"
                             else:
                                 info["test_result"] = "failed"
-                                info["test_error"] = (
-                                    str(test_response.error)
-                                    if test_response
-                                    else "No response"
-                                )
+                                info["test_error"] = str(test_response.error) if test_response else "No response"
                     except Exception as e:
                         info["test_result"] = "failed"
                         info["test_error"] = str(e)
 
-        total_models = sum(
-            p.get("models", 0) for p in providers.values() if p.get("available", False)
-        )
+        total_models = sum(p.get("models", 0) for p in providers.values() if p.get("available", False))
 
         return {
             "backend": self.name,

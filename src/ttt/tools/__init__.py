@@ -20,7 +20,7 @@ Example usage:
 
 import asyncio
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Optional
 
 from .base import (
     ToolCall,

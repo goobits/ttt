@@ -260,9 +260,7 @@ class TestConfigCommand:
         with patch("ttt.cli.app_hooks") as mock_hooks:
             mock_hooks.on_config_list = Mock()
 
-            result = self.runner.invoke(
-                main, ["config", "list", "--show-secrets", "true"]
-            )
+            result = self.runner.invoke(main, ["config", "list", "--show-secrets", "true"])
 
             assert result.exit_code == 0
 

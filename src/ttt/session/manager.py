@@ -83,9 +83,7 @@ class ChatSessionManager:
     ) -> ChatSession:
         """Create a new chat session."""
         now = datetime.utcnow().isoformat()
-        session_id = (
-            datetime.utcnow().strftime("%Y%m%d_%H%M%S_") + str(uuid.uuid4())[:8]
-        )
+        session_id = datetime.utcnow().strftime("%Y%m%d_%H%M%S_") + str(uuid.uuid4())[:8]
 
         session = ChatSession(
             id=session_id,
@@ -140,9 +138,7 @@ class ChatSessionManager:
         with open(session_file, "w") as f:
             json.dump(session.to_dict(), f, indent=2)
 
-    def add_message(
-        self, session: ChatSession, role: str, content: str, model: Optional[str] = None
-    ) -> None:
+    def add_message(self, session: ChatSession, role: str, content: str, model: Optional[str] = None) -> None:
         """Add a message to a session and save it."""
         message = ChatMessage(
             role=role,
@@ -177,17 +173,13 @@ class ChatSessionManager:
                         "updated_at": data.get("updated_at", "Unknown"),
                         "message_count": len(messages),
                         "last_message": (
-                            last_message.get("content", "")[:50] + "..."
-                            if last_message
-                            else "Empty session"
+                            last_message.get("content", "")[:50] + "..." if last_message else "Empty session"
                         ),
                         "model": data.get("model", "default"),
                     }
                 )
             except Exception as e:
-                console.print(
-                    f"[yellow]Warning: Could not read session {session_file.name}: {e}[/yellow]"
-                )
+                console.print(f"[yellow]Warning: Could not read session {session_file.name}: {e}[/yellow]")
 
         # Sort by updated_at, newest first
         sessions.sort(key=lambda x: x["updated_at"], reverse=True)

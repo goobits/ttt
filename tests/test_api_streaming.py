@@ -192,9 +192,7 @@ class TestStreamFunction:
         with patch("ttt.core.routing.router.smart_route") as mock_route:
             mock_route.return_value = (mock_backend, "mock-model")
 
-            chunks = list(
-                stream(["Describe this", ImageInput(b"fake_image_data_for_testing")])
-            )
+            chunks = list(stream(["Describe this", ImageInput(b"fake_image_data_for_testing")]))
 
             assert isinstance(mock_backend.last_prompt, list)
             assert len(chunks) > 0
@@ -252,15 +250,9 @@ class TestChatSession:
         assert str(response) == "Mock response"
         assert len(session.history) == 2
         # Check message exists (may have timestamp and metadata)
-        assert any(
-            msg["role"] == "user" and msg["content"] == "Hello"
-            for msg in session.history
-        )
+        assert any(msg["role"] == "user" and msg["content"] == "Hello" for msg in session.history)
         # Check assistant response exists (may have metadata)
-        assert any(
-            msg["role"] == "assistant" and msg["content"] == "Mock response"
-            for msg in session.history
-        )
+        assert any(msg["role"] == "assistant" and msg["content"] == "Mock response" for msg in session.history)
 
         # First message should be passed as-is
         assert mock_backend.last_prompt == "Hello"
@@ -285,14 +277,8 @@ class TestChatSession:
         # Check history
         assert len(session.history) == 4
         # Check messages exist (may have timestamps and metadata)
-        assert any(
-            msg["role"] == "user" and msg["content"] == "How are you?"
-            for msg in session.history[2:]
-        )
-        assert any(
-            msg["role"] == "assistant" and msg["content"] == "I'm doing well"
-            for msg in session.history[2:]
-        )
+        assert any(msg["role"] == "user" and msg["content"] == "How are you?" for msg in session.history[2:])
+        assert any(msg["role"] == "assistant" and msg["content"] == "I'm doing well" for msg in session.history[2:])
 
     def test_chat_session_stream(self):
         """Test streaming in chat session."""
@@ -348,9 +334,7 @@ class TestChatContextManager:
             mock_backend = MockBackend("local")
             mock_local.return_value = mock_backend
 
-            with chat(
-                system="System prompt", model="model", backend="local"
-            ) as session:
+            with chat(system="System prompt", model="model", backend="local") as session:
                 assert session.system == "System prompt"
                 assert session.model == "model"
                 # Backend might be LocalBackend due to routing
@@ -418,9 +402,7 @@ class TestErrorHandling:
         with pytest.raises(BackendNotAvailableError) as exc_info:
             ChatSession(backend="invalid-backend")
 
-        assert "not available" in str(exc_info.value) or "not found" in str(
-            exc_info.value
-        )
+        assert "not available" in str(exc_info.value) or "not found" in str(exc_info.value)
 
     def test_stream_with_failing_backend(self):
         """Test streaming when backend fails."""
@@ -443,9 +425,7 @@ class TestErrorHandling:
                 pass  # Expected to fail
 
             # We should get at least the partial result
-            assert (
-                "Start " in chunks or len(chunks) == 3
-            )  # Either partial or full mock response
+            assert "Start " in chunks or len(chunks) == 3  # Either partial or full mock response
 
 
 class TestBackendSelection:

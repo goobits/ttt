@@ -30,9 +30,7 @@ class TestChatSessionTools:
 
         with patch("ttt.core.routing.router.smart_route") as mock_route:
             backend_instance = Mock()
-            backend_instance.ask = AsyncMock(
-                return_value=AIResponse("Response", model="test", backend="test")
-            )
+            backend_instance.ask = AsyncMock(return_value=AIResponse("Response", model="test", backend="test"))
             mock_route.return_value = (backend_instance, "test-model")
 
             session = ChatSession(tools=[test_tool])
@@ -142,9 +140,7 @@ class TestPersistentChatSessionTools:
             name = "mock_tool"
             description = "Mock tool"
 
-        session = PersistentChatSession(
-            tools=[test_function, MockToolDef(), "string_tool"]
-        )
+        session = PersistentChatSession(tools=[test_function, MockToolDef(), "string_tool"])
 
         serialized = session._serialize_tools()
 
@@ -204,9 +200,7 @@ class TestCLIToolSupport:
         from ttt.app_hooks import on_ask
 
         # Mock the API functions to prevent real calls
-        with patch("ttt.app_hooks.ttt_stream") as mock_stream, patch(
-            "ttt.app_hooks.ttt_ask"
-        ) as mock_ask:
+        with patch("ttt.app_hooks.ttt_stream") as mock_stream, patch("ttt.app_hooks.ttt_ask") as mock_ask:
 
             mock_stream.return_value = iter(["Test response"])
             mock_ask.return_value = "Test response"

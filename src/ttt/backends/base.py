@@ -25,9 +25,7 @@ class BaseBackend(ABC):
 
         # Extract backend-specific config if available
         backends_config = self.config.get("backends", {})
-        backend_specific = (
-            backends_config.get(self.name, {}) if hasattr(self, "name") else {}
-        )
+        backend_specific = backends_config.get(self.name, {}) if hasattr(self, "name") else {}
 
         # Merge configurations with backend-specific taking precedence
         self.backend_config = {**self.config, **backend_specific}
@@ -35,15 +33,9 @@ class BaseBackend(ABC):
         # Common configuration attributes
         from ..config.loader import get_config_value
 
-        self.timeout = self.backend_config.get("timeout") or get_config_value(
-            "timeout", 30
-        )
-        self.max_retries = self.backend_config.get("max_retries") or get_config_value(
-            "max_retries", 3
-        )
-        self.default_model = self.backend_config.get(
-            "default_model"
-        ) or get_config_value("models.default")
+        self.timeout = self.backend_config.get("timeout") or get_config_value("timeout", 30)
+        self.max_retries = self.backend_config.get("max_retries") or get_config_value("max_retries", 3)
+        self.default_model = self.backend_config.get("default_model") or get_config_value("models.default")
 
     @abstractmethod
     async def ask(

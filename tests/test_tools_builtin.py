@@ -264,9 +264,7 @@ class TestHttpRequest:
         mock_response.read.return_value = b'{"result": "created"}'
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
-        result = http_request(
-            "https://api.example.com/create", method="POST", data={"name": "test"}
-        )
+        result = http_request("https://api.example.com/create", method="POST", data={"name": "test"})
 
         assert '"result": "created"' in result
 
@@ -291,9 +289,7 @@ class TestHttpRequest:
     @patch("urllib.request.urlopen")
     def test_http_request_http_error(self, mock_urlopen):
         """Test HTTP error response."""
-        mock_urlopen.side_effect = urllib.error.HTTPError(
-            "https://api.example.com", 404, "Not Found", {}, None
-        )
+        mock_urlopen.side_effect = urllib.error.HTTPError("https://api.example.com", 404, "Not Found", {}, None)
 
         result = http_request("https://api.example.com/missing")
         assert "HTTP Error 404" in result

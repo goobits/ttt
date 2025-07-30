@@ -28,9 +28,7 @@ class ExecutionConfig:
         if self.max_retries is None:
             self.max_retries = get_config_value("tools.executor.max_retries", 3)
         if self.timeout_seconds is None:
-            self.timeout_seconds = get_config_value(
-                "tools.executor.timeout_seconds", 30.0
-            )
+            self.timeout_seconds = get_config_value("tools.executor.timeout_seconds", 30.0)
 
 
 class ToolExecutor:
@@ -39,9 +37,7 @@ class ToolExecutor:
     def __init__(self, config: Optional[ExecutionConfig] = None):
         self.config = config or ExecutionConfig()
         self.recovery_system = ErrorRecoverySystem(
-            RetryConfig(
-                max_attempts=self.config.max_retries, base_delay=1.0, max_delay=30.0
-            )
+            RetryConfig(max_attempts=self.config.max_retries, base_delay=1.0, max_delay=30.0)
         )
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(getattr(logging, self.config.log_level))
@@ -119,19 +115,12 @@ class ToolExecutor:
                 error=f"❌ Unexpected error: {e}\n💡 This appears to be a system error. Please try again or contact support.",
             )
 
-    async def execute_tools(
-        self, tool_calls: List[Dict[str, Any]], parallel: bool = False
-    ) -> ToolResult:
+    async def execute_tools(self, tool_calls: List[Dict[str, Any]], parallel: bool = False) -> ToolResult:
         """Execute multiple tools with optional parallel execution."""
         if parallel:
             # Execute tools in parallel
-            tasks = [
-                self.execute_tool(call["name"], call.get("arguments", {}))
-                for call in tool_calls
-            ]
-            results: List[Union[ToolCall, BaseException]] = await asyncio.gather(
-                *tasks, return_exceptions=True
-            )
+            tasks = [self.execute_tool(call["name"], call.get("arguments", {})) for call in tool_calls]
+            results: List[Union[ToolCall, BaseException]] = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Convert exceptions to error tool calls
             processed_results: List[ToolCall] = []
@@ -156,16 +145,12 @@ class ToolExecutor:
             # Execute tools sequentially
             sequential_results: List[ToolCall] = []
             for call in tool_calls:
-                result = await self.execute_tool(
-                    call["name"], call.get("arguments", {})
-                )
+                result = await self.execute_tool(call["name"], call.get("arguments", {}))
                 sequential_results.append(result)
 
                 # If a critical tool fails, consider stopping execution
                 if not result.succeeded and self._is_critical_failure(result):
-                    self.logger.warning(
-                        f"Critical tool failure, stopping execution: {result.error}"
-                    )
+                    self.logger.warning(f"Critical tool failure, stopping execution: {result.error}")
                     break
 
             return ToolResult(calls=sequential_results)
@@ -185,38 +170,28 @@ class ToolExecutor:
             else:
                 result = tool.function(**arguments)
 
-            return ToolCall(
-                id=call_id, name=tool.name, arguments=arguments, result=result
-            )
+            return ToolCall(id=call_id, name=tool.name, arguments=arguments, result=result)
 
         except Exception as e:
             error_message = str(e)
             error_pattern = self.recovery_system.classify_error(error_message)
 
-            self.logger.warning(
-                f"Tool {tool.name} failed (attempt {attempt}): {error_message}"
-            )
+            self.logger.warning(f"Tool {tool.name} failed (attempt {attempt}): {error_message}")
 
             # Check if we should retry
             if self.recovery_system.should_retry(error_pattern, attempt):
                 self.execution_stats["retried_calls"] += 1
 
                 # Calculate delay and retry
-                delay = self.recovery_system.calculate_retry_delay(
-                    attempt, error_pattern
-                )
+                delay = self.recovery_system.calculate_retry_delay(attempt, error_pattern)
                 self.logger.info(f"Retrying {tool.name} in {delay:.1f} seconds...")
 
                 await asyncio.sleep(delay)
-                return await self._execute_with_recovery(
-                    tool, arguments, call_id, attempt + 1
-                )
+                return await self._execute_with_recovery(tool, arguments, call_id, attempt + 1)
 
             # If retry failed or not allowed, try fallbacks
             elif self.config.enable_fallbacks:
-                fallback_result = await self._try_fallbacks(
-                    tool.name, arguments, error_pattern
-                )
+                fallback_result = await self._try_fallbacks(tool.name, arguments, error_pattern)
                 if fallback_result:
                     self.execution_stats["fallback_calls"] += 1
                     return fallback_result
@@ -227,17 +202,13 @@ class ToolExecutor:
                 error_pattern,
             )
 
-            return ToolCall(
-                id=call_id, name=tool.name, arguments=arguments, error=recovery_message
-            )
+            return ToolCall(id=call_id, name=tool.name, arguments=arguments, error=recovery_message)
 
     async def _try_fallbacks(
         self, failed_tool: str, original_args: Dict[str, Any], error_pattern: Any
     ) -> Optional[ToolCall]:
         """Try fallback tools when the primary tool fails."""
-        suggestions = self.recovery_system.get_fallback_suggestions(
-            failed_tool, original_args
-        )
+        suggestions = self.recovery_system.get_fallback_suggestions(failed_tool, original_args)
 
         for suggestion in suggestions:
             try:
@@ -254,7 +225,9 @@ class ToolExecutor:
                     result = fallback_tool.function(**suggestion.arguments)
 
                 # Add fallback notification to result
-                fallback_notice = f"\n\n🔧 Note: Used fallback tool '{suggestion.tool_name}' because '{failed_tool}' failed."
+                fallback_notice = (
+                    f"\n\n🔧 Note: Used fallback tool '{suggestion.tool_name}' because '{failed_tool}' failed."
+                )
                 if isinstance(result, str):
                     result = result + fallback_notice
 
@@ -271,9 +244,7 @@ class ToolExecutor:
 
         return None
 
-    def _sanitize_inputs(
-        self, tool_name: str, arguments: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _sanitize_inputs(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Sanitize tool inputs based on argument types."""
         sanitized = {}
 
@@ -285,24 +256,18 @@ class ToolExecutor:
             elif key in ["query", "code", "expression", "content"]:
                 # Allow code for code/expression contexts
                 allow_code = key in ["code", "expression"]
-                sanitized[key] = InputSanitizer.sanitize_string(
-                    value, allow_code=allow_code
-                )
+                sanitized[key] = InputSanitizer.sanitize_string(value, allow_code=allow_code)
             elif key in ["data"] and isinstance(value, str):
                 try:
                     # Validate JSON but keep as string
                     InputSanitizer.sanitize_json(value)
                     sanitized[key] = value
                 except ValueError:
-                    sanitized[key] = InputSanitizer.sanitize_string(
-                        value, allow_code=False
-                    )
+                    sanitized[key] = InputSanitizer.sanitize_string(value, allow_code=False)
             else:
                 # Basic validation for other types
                 if isinstance(value, str):
-                    sanitized[key] = InputSanitizer.sanitize_string(
-                        value, allow_code=False
-                    )
+                    sanitized[key] = InputSanitizer.sanitize_string(value, allow_code=False)
                 else:
                     sanitized[key] = value
 
@@ -315,10 +280,7 @@ class ToolExecutor:
         # Find similar tools
         similar = []
         for available in available_tools:
-            if (
-                tool_name.lower() in available.lower()
-                or available.lower() in tool_name.lower()
-            ):
+            if tool_name.lower() in available.lower() or available.lower() in tool_name.lower():
                 similar.append(available)
 
         error_msg = f"🔍 Tool '{tool_name}' not found"
@@ -405,9 +367,7 @@ class ToolExecutor:
         temp_registered = []
         for tool_name, tool_def in tool_definitions.items():
             if not get_tool(tool_name):
-                register_tool(
-                    tool_def.function, tool_name, tool_def.description, "test"
-                )
+                register_tool(tool_def.function, tool_name, tool_def.description, "test")
                 temp_registered.append(tool_name)
 
         try:
@@ -428,9 +388,7 @@ class ToolExecutor:
 global_executor = ToolExecutor()
 
 
-async def execute_tool(
-    tool_name: str, arguments: Dict[str, Any], **kwargs: Any
-) -> ToolCall:
+async def execute_tool(tool_name: str, arguments: Dict[str, Any], **kwargs: Any) -> ToolCall:
     """Execute a tool using the global executor."""
     return await global_executor.execute_tool(tool_name, arguments, **kwargs)
 

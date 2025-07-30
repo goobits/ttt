@@ -31,9 +31,7 @@ def skip_if_no_api_keys():
             is_valid_key(os.getenv("OPENROUTER_API_KEY")),
         ]
     )
-    return pytest.mark.skipif(
-        not has_keys, reason="No valid API keys available for integration testing"
-    )
+    return pytest.mark.skipif(not has_keys, reason="No valid API keys available for integration testing")
 
 
 @pytest.mark.integration
@@ -56,9 +54,7 @@ class TestRealAPIIntegration:
         else:
             model = "gpt-3.5-turbo"  # Default fallback
 
-        response = delayed_ask(
-            "What is 2+2? Reply with just the number.", model=model, backend="cloud"
-        )
+        response = delayed_ask("What is 2+2? Reply with just the number.", model=model, backend="cloud")
         # The response should contain exactly "4" - allowing for some whitespace
         response_text = str(response).strip()
         assert response_text == "4" or response_text == "4." or response_text == "Four"
@@ -79,9 +75,7 @@ class TestRealAPIIntegration:
             model = "gpt-3.5-turbo"  # Use standard model name
         else:
             model = "gpt-3.5-turbo"  # Default fallback
-        for chunk in delayed_stream(
-            "Count from 1 to 3, one number per line.", model=model
-        ):
+        for chunk in delayed_stream("Count from 1 to 3, one number per line.", model=model):
             chunks.append(chunk)
 
         full_response = "".join(chunks)
@@ -114,9 +108,7 @@ class TestRealAPIIntegration:
             response2 = session.ask("What did I say my name was?")
             # Verify the model remembered the name from context
             response2_lower = str(response2).lower()
-            assert "alice" in response2_lower and (
-                "name" in response2_lower or "you" in response2_lower
-            )
+            assert "alice" in response2_lower and ("name" in response2_lower or "you" in response2_lower)
 
     def test_model_fallback_integration(self, delayed_ask):
         """Test that fallback works with real APIs."""
@@ -129,9 +121,7 @@ class TestRealAPIIntegration:
             # If it fails, check that the error message is appropriate
             assert "LLM Provider NOT provided" in str(e) or "model" in str(e).lower()
 
-    @pytest.mark.skipif(
-        not os.getenv("OPENROUTER_API_KEY"), reason="OpenRouter key required"
-    )
+    @pytest.mark.skipif(not os.getenv("OPENROUTER_API_KEY"), reason="OpenRouter key required")
     def test_gemini_25_pro_integration(self, delayed_ask):
         """Test Gemini 2.5 Pro stable version."""
         model = "openrouter/google/gemini-2.5-pro"
@@ -152,10 +142,7 @@ class TestProviderSpecificIntegration:
     """Test specific providers with real keys."""
 
     @pytest.mark.skipif(
-        not (
-            os.getenv("OPENAI_API_KEY")
-            and "test-key" not in os.getenv("OPENAI_API_KEY", "")
-        ),
+        not (os.getenv("OPENAI_API_KEY") and "test-key" not in os.getenv("OPENAI_API_KEY", "")),
         reason="Valid OpenAI key required",
     )
     def test_openai_specific(self, delayed_ask):
@@ -164,10 +151,7 @@ class TestProviderSpecificIntegration:
         assert "OpenAI" in str(response) or "test" in str(response)
 
     @pytest.mark.skipif(
-        not (
-            os.getenv("ANTHROPIC_API_KEY")
-            and "test-key" not in os.getenv("ANTHROPIC_API_KEY", "")
-        ),
+        not (os.getenv("ANTHROPIC_API_KEY") and "test-key" not in os.getenv("ANTHROPIC_API_KEY", "")),
         reason="Valid Anthropic key required",
     )
     def test_anthropic_specific(self, delayed_ask):
@@ -175,9 +159,7 @@ class TestProviderSpecificIntegration:
         response = delayed_ask("Say 'Claude test'", model="claude-3-haiku-20240307")
         assert response.succeeded
 
-    @pytest.mark.skipif(
-        not os.getenv("OPENROUTER_API_KEY"), reason="OpenRouter key required"
-    )
+    @pytest.mark.skipif(not os.getenv("OPENROUTER_API_KEY"), reason="OpenRouter key required")
     def test_openrouter_variety(self, delayed_ask):
         """Test multiple models through OpenRouter."""
         models_to_test = [
@@ -197,9 +179,7 @@ class TestProviderSpecificIntegration:
                 continue
             except Exception as e:
                 # Log unexpected errors instead of silently ignoring
-                pytest.fail(
-                    f"Unexpected error testing {model}: {type(e).__name__}: {e}"
-                )
+                pytest.fail(f"Unexpected error testing {model}: {type(e).__name__}: {e}")
 
 
 @pytest.mark.integration
@@ -211,9 +191,7 @@ class TestErrorHandlingIntegration:
     def test_invalid_model_error(self, delayed_ask):
         """Test handling of invalid model names."""
         try:
-            response = delayed_ask(
-                "Hello", model="definitely-not-a-real-model-name-12345"
-            )
+            response = delayed_ask("Hello", model="definitely-not-a-real-model-name-12345")
             # If it succeeds, check response
             assert response is not None
         except Exception as e:

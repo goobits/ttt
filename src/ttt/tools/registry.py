@@ -74,9 +74,7 @@ class ToolRegistry:
         with self._lock:
             return list(self._categories.keys())
 
-    def resolve_tools(
-        self, tools: Union[List[str], List[Callable], List[ToolDefinition]]
-    ) -> List[ToolDefinition]:
+    def resolve_tools(self, tools: Union[List[str], List[Callable], List[ToolDefinition]]) -> List[ToolDefinition]:
         """Resolve a mixed list of tool references to ToolDefinition objects."""
         resolved = []
 

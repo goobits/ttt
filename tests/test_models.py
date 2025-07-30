@@ -64,9 +64,7 @@ class TestModelInfo:
 
     def test_basic_creation(self):
         """Test basic model creation."""
-        model = ModelInfo(
-            name="test-model", provider="test", provider_name="test-provider-model"
-        )
+        model = ModelInfo(name="test-model", provider="test", provider_name="test-provider-model")
 
         assert model.name == "test-model"
         assert model.provider == "test"
@@ -132,9 +130,7 @@ class TestConfigModel:
 
     def test_custom_values(self):
         """Test setting custom values."""
-        config = ConfigModel(
-            ollama_base_url="http://custom:8080", default_backend="local", timeout=60
-        )
+        config = ConfigModel(ollama_base_url="http://custom:8080", default_backend="local", timeout=60)
 
         assert config.ollama_base_url == "http://custom:8080"
         assert config.default_backend == "local"

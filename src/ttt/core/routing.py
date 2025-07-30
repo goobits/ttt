@@ -34,9 +34,7 @@ class Router:
         # Get cache TTL from constants
         from ..config.loader import get_config_value
 
-        self._cache_ttl = get_config_value(
-            "constants.timeouts.cache_ttl", 30
-        )  # Cache TTL in seconds
+        self._cache_ttl = get_config_value("constants.timeouts.cache_ttl", 30)  # Cache TTL in seconds
 
     def get_backend(self, backend_name: str) -> BaseBackend:
         """Get or create a backend instance."""
@@ -60,15 +58,11 @@ class Router:
                 if backend:
                     self._backends[backend_name] = backend
                 else:
-                    raise BackendNotAvailableError(
-                        backend_name, "Backend not found in registry"
-                    )
+                    raise BackendNotAvailableError(backend_name, "Backend not found in registry")
 
         return self._backends[backend_name]
 
-    def resolve_backend(
-        self, backend: Optional[Union[str, BaseBackend]] = None
-    ) -> BaseBackend:
+    def resolve_backend(self, backend: Optional[Union[str, BaseBackend]] = None) -> BaseBackend:
         """
         Resolve backend specification to actual backend instance.
 
@@ -82,9 +76,7 @@ class Router:
             return backend
 
         # Handle mock objects (for testing)
-        if hasattr(backend, "_mock_name") or str(type(backend)).startswith(
-            "<class 'unittest.mock"
-        ):
+        if hasattr(backend, "_mock_name") or str(type(backend)).startswith("<class 'unittest.mock"):
             return backend  # type: ignore[return-value]
 
         if isinstance(backend, str):
@@ -96,6 +88,28 @@ class Router:
 
         raise ValueError(f"Invalid backend specification: {backend}")
 
+    def _try_backend_safely(self, backend_name: str, success_message: str) -> Optional[BaseBackend]:
+        """
+        Safely try to get and validate a backend.
+
+        Args:
+            backend_name: Name of the backend to try
+            success_message: Message to log on success
+
+        Returns:
+            Backend instance if available, None otherwise
+        """
+        try:
+            backend = self.get_backend(backend_name)
+            if backend.is_available:
+                logger.debug(success_message)
+                return backend
+        except (BackendNotAvailableError, ImportError, ConnectionError) as e:
+            # Use warning for local backend failures, debug for others
+            log_level = logger.warning if backend_name == "local" else logger.debug
+            log_level(f"{backend_name.title()} backend not available: {e}")
+        return None
+
     def _auto_select_backend(self) -> BaseBackend:
         """
         Automatically select the best available backend.
@@ -105,48 +119,30 @@ class Router:
         """
         # Check default backend preference
         if self.config.default_backend and self.config.default_backend != "auto":
-            try:
-                backend = self.get_backend(self.config.default_backend)
-                if backend.is_available:
-                    logger.debug(
-                        f"Using configured default backend: {self.config.default_backend}"
-                    )
-                    return backend
-            except (BackendNotAvailableError, ImportError, ValueError) as e:
-                logger.debug(
-                    f"Default backend {self.config.default_backend} not available: {e}"
-                )
+            backend = self._try_backend_safely(
+                self.config.default_backend, f"Using configured default backend: {self.config.default_backend}"
+            )
+            if backend:
+                return backend
 
         # Try cloud first (always available)
-        try:
-            backend = self.get_backend("cloud")
-            if backend.is_available:
-                logger.debug("Using cloud backend")
-                return backend
-        except (BackendNotAvailableError, ImportError, ConnectionError) as e:
-            logger.debug(f"Cloud backend not available: {e}")
+        backend = self._try_backend_safely("cloud", "Using cloud backend")
+        if backend:
+            return backend
 
         # Fallback to local if available
         if HAS_LOCAL_BACKEND:
-            try:
-                backend = self.get_backend("local")
-                if backend.is_available:
-                    logger.debug("Using local backend")
-                    return backend
-            except (BackendNotAvailableError, ImportError, ConnectionError) as e:
-                logger.warning(f"Local backend failed: {e}")
+            backend = self._try_backend_safely("local", "Using local backend")
+            if backend:
+                return backend
 
         # Try other backends in fallback order
         for backend_name in self.config.fallback_order:
             if backend_name in ["cloud", "local"]:
                 continue  # Already tried above
-            try:
-                backend = self.get_backend(backend_name)
-                if backend.is_available:
-                    logger.debug(f"Auto-selected backend: {backend_name}")
-                    return backend
-            except (BackendNotAvailableError, ImportError, ConnectionError) as e:
-                logger.debug(f"Backend {backend_name} not available: {e}")
+            backend = self._try_backend_safely(backend_name, f"Auto-selected backend: {backend_name}")
+            if backend:
+                return backend
 
         # No backends available
         error_msg = "No backends available."
@@ -190,15 +186,9 @@ class Router:
                     # Use backend health check timeout from constants
                     from ..config.loader import get_config_value
 
-                    health_check_timeout = get_config_value(
-                        "constants.timeouts.backend_health_check", 3
-                    )
-                    async with httpx.AsyncClient(
-                        timeout=health_check_timeout
-                    ) as client:
-                        response = await client.get(
-                            f"{local_backend.base_url}/api/tags"
-                        )
+                    health_check_timeout = get_config_value("constants.timeouts.backend_health_check", 3)
+                    async with httpx.AsyncClient(timeout=health_check_timeout) as client:
+                        response = await client.get(f"{local_backend.base_url}/api/tags")
                         if response.status_code == 200:
                             data = response.json()
                             return [m["name"] for m in data.get("models", [])]
@@ -216,9 +206,7 @@ class Router:
             logger.debug(f"Failed to fetch local models: {e}")
             return False
 
-    def resolve_model(
-        self, model: Optional[str] = None, backend: Optional[BaseBackend] = None
-    ) -> str:
+    def resolve_model(self, model: Optional[str] = None, backend: Optional[BaseBackend] = None) -> str:
         """
         Resolve model specification to actual model name.
 
@@ -277,9 +265,7 @@ class Router:
             # If images present, must use cloud backend with vision model
             if has_images:
                 if backend is None or backend == "local":
-                    logger.info(
-                        "Images detected, switching to cloud backend with vision model"
-                    )
+                    logger.info("Images detected, switching to cloud backend with vision model")
                     backend = "cloud"
                     if model is None:
                         # Default to a vision-capable model
@@ -328,9 +314,7 @@ class Router:
                 ],
             )
 
-            is_cloud_model = any(
-                model.startswith(pattern) for pattern in cloud_model_patterns
-            )
+            is_cloud_model = any(model.startswith(pattern) for pattern in cloud_model_patterns)
 
             if is_cloud_model:
                 logger.debug(f"Detected cloud model pattern: {model}")
@@ -342,16 +326,12 @@ class Router:
             if HAS_LOCAL_BACKEND:
                 try:
                     local_backend = self.get_backend("local")
-                    if local_backend.is_available and self._is_local_model(
-                        model, local_backend
-                    ):
+                    if local_backend.is_available and self._is_local_model(model, local_backend):
                         logger.debug(f"Detected local model: {model}")
                         selected_model = self.resolve_model(model, local_backend)
                         return local_backend, selected_model
                 except (BackendNotAvailableError, ConnectionError, ValueError) as e:
-                    logger.debug(
-                        f"Failed to check local backend for model {model}: {e}"
-                    )
+                    logger.debug(f"Failed to check local backend for model {model}: {e}")
 
         # Use auto-selection to respect configured default_backend
         selected_backend = self._auto_select_backend()
@@ -416,9 +396,7 @@ class Router:
                 fallback_model = self.resolve_model(model, fallback_backend)
 
                 if method == "ask":
-                    response = await fallback_backend.ask(
-                        prompt, model=fallback_model, **kwargs
-                    )
+                    response = await fallback_backend.ask(prompt, model=fallback_model, **kwargs)
                     if not response.failed:
                         return response
 

@@ -138,9 +138,7 @@ class InputSanitizer:
     ]
 
     @classmethod
-    def sanitize_string(
-        cls, value: str, max_length: int = 10000, allow_code: bool = True
-    ) -> str:
+    def sanitize_string(cls, value: str, max_length: int = 10000, allow_code: bool = True) -> str:
         """Sanitize string input using professional bleach library."""
         if not isinstance(value, str):
             raise ValueError(f"Expected string, got {type(value)}")
@@ -200,9 +198,7 @@ class InputSanitizer:
             temp_dirs = [Path("/tmp").resolve(), Path("/var/tmp").resolve()]
 
             is_in_cwd = str(resolved_path).startswith(str(cwd))
-            is_in_temp = any(
-                str(resolved_path).startswith(str(temp_dir)) for temp_dir in temp_dirs
-            )
+            is_in_temp = any(str(resolved_path).startswith(str(temp_dir)) for temp_dir in temp_dirs)
 
             if not (is_in_cwd or is_in_temp):
                 raise ValueError(f"Path outside allowed directory: {resolved_path}")
@@ -344,9 +340,7 @@ class ErrorRecoverySystem:
             can_retry=True,
         )
 
-    def create_recovery_message(
-        self, tool_call: ToolCall, error_pattern: ErrorPattern
-    ) -> str:
+    def create_recovery_message(self, tool_call: ToolCall, error_pattern: ErrorPattern) -> str:
         """Create a helpful recovery message for the user."""
         base_message = f"❌ **{tool_call.name}** failed: {error_pattern.message}"
 
@@ -377,9 +371,7 @@ class ErrorRecoverySystem:
         else:
             return base_message
 
-    def get_fallback_suggestions(
-        self, failed_tool: str, original_args: Dict[str, Any]
-    ) -> List[FallbackSuggestion]:
+    def get_fallback_suggestions(self, failed_tool: str, original_args: Dict[str, Any]) -> List[FallbackSuggestion]:
         """Get suggested fallback tools for a failed tool."""
         suggestions = []
 
@@ -429,21 +421,15 @@ class ErrorRecoverySystem:
 
         return suggestions
 
-    def _adapt_arguments(
-        self, from_tool: str, to_tool: str, original_args: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _adapt_arguments(self, from_tool: str, to_tool: str, original_args: Dict[str, Any]) -> Dict[str, Any]:
         """Adapt arguments from one tool to another."""
         # Basic argument mapping
         arg_mappings = {
             ("web_search", "http_request"): {
-                "query": lambda q: {
-                    "url": f"https://api.duckduckgo.com/?q={q}&format=json"
-                }
+                "query": lambda q: {"url": f"https://api.duckduckgo.com/?q={q}&format=json"}
             },
             ("http_request", "web_search"): {
-                "url": lambda u: {
-                    "query": u.split("q=")[-1].split("&")[0] if "q=" in u else u
-                }
+                "url": lambda u: {"query": u.split("q=")[-1].split("&")[0] if "q=" in u else u}
             },
         }
 
@@ -468,10 +454,7 @@ class ErrorRecoverySystem:
         if not error_pattern.can_retry:
             return False
 
-        if (
-            self.retry_config.max_attempts is not None
-            and attempt >= self.retry_config.max_attempts
-        ):
+        if self.retry_config.max_attempts is not None and attempt >= self.retry_config.max_attempts:
             return False
 
         # Special cases
@@ -489,9 +472,7 @@ class ErrorRecoverySystem:
         if error_pattern.error_type == ErrorType.RATE_LIMIT_ERROR:
             from ..config.loader import get_config_value
 
-            min_rate_limit_delay = get_config_value(
-                "tools.retry.rate_limit_min_delay", 5.0
-            )
+            min_rate_limit_delay = get_config_value("tools.retry.rate_limit_min_delay", 5.0)
             base_delay = max(base_delay, min_rate_limit_delay)
 
         # Exponential backoff
@@ -525,18 +506,14 @@ class ErrorRecoverySystem:
             # Execute the tool
             result = await tool_function(**sanitized_args)
 
-            return ToolCall(
-                id=call_id, name=tool_name, arguments=sanitized_args, result=result
-            )
+            return ToolCall(id=call_id, name=tool_name, arguments=sanitized_args, result=result)
 
         except Exception as e:
             error_message = str(e)
             error_pattern = self.classify_error(error_message)
 
             # Log the error
-            self.logger.warning(
-                f"Tool {tool_name} failed (attempt {attempt}): {error_message}"
-            )
+            self.logger.warning(f"Tool {tool_name} failed (attempt {attempt}): {error_message}")
 
             # Check if we should retry
             if self.should_retry(error_pattern, attempt):
@@ -545,9 +522,7 @@ class ErrorRecoverySystem:
                 self.logger.info(f"Retrying {tool_name} in {delay:.1f} seconds...")
 
                 await asyncio.sleep(delay)
-                return await self.execute_with_recovery(
-                    tool_function, tool_name, arguments, attempt + 1
-                )
+                return await self.execute_with_recovery(tool_function, tool_name, arguments, attempt + 1)
             else:
                 # Create enhanced error message with recovery suggestions
                 recovery_message = self.create_recovery_message(
@@ -562,9 +537,7 @@ class ErrorRecoverySystem:
                     error=recovery_message,
                 )
 
-    def _sanitize_arguments(
-        self, tool_name: str, arguments: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _sanitize_arguments(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Sanitize tool arguments based on tool type."""
         sanitized = {}
 
@@ -610,8 +583,6 @@ def with_recovery(tool_function: Callable) -> Callable:
 
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
         tool_name = getattr(tool_function, "__name__", "unknown_tool")
-        return await recovery_system.execute_with_recovery(
-            tool_function, tool_name, kwargs
-        )
+        return await recovery_system.execute_with_recovery(tool_function, tool_name, kwargs)
 
     return wrapper

@@ -93,9 +93,7 @@ class ModelNotSupportedError(ModelError):
         message = f"Model '{model_name}' does not support {feature}"
         if backend:
             message += f" on backend '{backend}'"
-        super().__init__(
-            message, {"model": model_name, "feature": feature, "backend": backend}
-        )
+        super().__init__(message, {"model": model_name, "feature": feature, "backend": backend})
 
 
 # Configuration-related exceptions
@@ -147,9 +145,7 @@ class InvalidParameterError(ValidationError):
 
     def __init__(self, parameter: str, value: Any, reason: str):
         message = f"Invalid value for parameter '{parameter}': {reason}"
-        super().__init__(
-            message, {"parameter": parameter, "value": value, "reason": reason}
-        )
+        super().__init__(message, {"parameter": parameter, "value": value, "reason": reason})
 
 
 # Response-related exceptions

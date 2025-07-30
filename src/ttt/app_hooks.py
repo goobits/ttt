@@ -21,9 +21,7 @@ console = Console()
 
 
 # Import helper functions we'll need
-def setup_logging_level(
-    verbose: bool = False, debug: bool = False, json_output: bool = False
-) -> None:
+def setup_logging_level(verbose: bool = False, debug: bool = False, json_output: bool = False) -> None:
     """Setup logging level based on verbosity flags."""
     import asyncio
     import logging
@@ -109,15 +107,10 @@ def resolve_model_alias(model: str) -> str:
                     if alias in model_aliases:
                         return str(model_name)
 
-            console.print(
-                f"[yellow]Warning: Unknown model alias '@{alias}', "
-                f"using '{alias}'[/yellow]"
-            )
+            console.print(f"[yellow]Warning: Unknown model alias '@{alias}', " f"using '{alias}'[/yellow]")
             return alias
         except (KeyError, ValueError, TypeError) as e:
-            console.print(
-                f"[yellow]Warning: Could not resolve model alias: {e}[/yellow]"
-            )
+            console.print(f"[yellow]Warning: Could not resolve model alias: {e}[/yellow]")
             return alias
 
     if model and not model.startswith("openrouter/"):
@@ -132,12 +125,8 @@ def resolve_model_alias(model: str) -> str:
                 "gpt-4o-mini": "openrouter/openai/gpt-4o-mini",
                 "gpt-4": "openrouter/openai/gpt-4",
                 "gpt-3.5-turbo": "openrouter/openai/gpt-3.5-turbo",
-                "claude-3-5-sonnet-20241022": (
-                    "openrouter/anthropic/claude-3-5-sonnet-20241022"
-                ),
-                "claude-3-5-haiku-20241022": (
-                    "openrouter/anthropic/claude-3-5-haiku-20241022"
-                ),
+                "claude-3-5-sonnet-20241022": ("openrouter/anthropic/claude-3-5-sonnet-20241022"),
+                "claude-3-5-haiku-20241022": ("openrouter/anthropic/claude-3-5-haiku-20241022"),
                 "gemini-1.5-pro": "openrouter/google/gemini-1.5-pro",
                 "gemini-1.5-flash": "openrouter/google/gemini-1.5-flash",
             }
@@ -223,10 +212,7 @@ def resolve_tools(tool_specs: List[str]) -> List[Any]:
                 if found_tool:
                     tools.append(found_tool)
                 else:
-                    console.print(
-                        f"[yellow]Warning: Tool {tool_name} not found in "
-                        f"category {category}[/yellow]"
-                    )
+                    console.print(f"[yellow]Warning: Tool {tool_name} not found in " f"category {category}[/yellow]")
             else:
                 found_tool_def = get_tool(spec)
                 if found_tool_def:
@@ -429,9 +415,7 @@ def on_ask(
         sys.exit(1)
 
 
-def on_chat(
-    model: Optional[str], session: Optional[str], tools: bool, markdown: bool, **kwargs
-) -> None:
+def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown: bool, **kwargs) -> None:
     """Hook for 'chat' command.
 
     Starts an interactive chat session with an AI model. Supports session
@@ -468,12 +452,8 @@ def on_chat(
     if session:
         chat_session = session_manager.load_session(session)
         if not chat_session:
-            console.print(
-                f"[yellow]Session '{session}' not found. Creating new session.[/yellow]"
-            )
-            chat_session = session_manager.create_session(
-                session_id=session, model=model, tools=parsed_tools
-            )
+            console.print(f"[yellow]Session '{session}' not found. Creating new session.[/yellow]")
+            chat_session = session_manager.create_session(session_id=session, model=model, tools=parsed_tools)
     else:
         chat_session = session_manager.create_session(model=model, tools=parsed_tools)
 
@@ -507,9 +487,7 @@ def on_chat(
                 console.print(f"Model: {chat_session.model}")
             if chat_session.system_prompt:
                 console.print(f"System: {chat_session.system_prompt[:50]}...")
-            console.print(
-                "Type /exit to quit, /clear to clear history, /help for commands"
-            )
+            console.print("Type /exit to quit, /clear to clear history, /help for commands")
             console.print()
 
             # Show previous messages if any
@@ -606,48 +584,47 @@ def on_list(resource: Optional[str] = None, format: str = "table", verbose: bool
         if format == "json":
             from ttt.config.schema import get_model_registry
             from ttt.tools import list_tools
-            
+
             session_manager = ChatSessionManager()
             model_registry = get_model_registry()
             tools = list_tools()
-            
+
             summary = {
                 "models": {
                     "count": len(model_registry.models),
-                    "available": list(model_registry.models.keys())[:5]  # First 5 models
+                    "available": list(model_registry.models.keys())[:5],  # First 5 models
                 },
                 "sessions": {
                     "count": len(session_manager.list_sessions()),
-                    "recent": session_manager.list_sessions()[:3]  # 3 most recent
+                    "recent": session_manager.list_sessions()[:3],  # 3 most recent
                 },
-                "tools": {
-                    "count": len(tools),
-                    "available": [t.name for t in tools[:5]]  # First 5 tools
-                }
+                "tools": {"count": len(tools), "available": [t.name for t in tools[:5]]},  # First 5 tools
             }
             click.echo(json_module.dumps(summary, indent=2))
         else:
             console.print("\n[bold]TTT Resources Summary[/bold]\n")
-            
+
             # Models count
             from ttt.config.schema import get_model_registry
+
             model_registry = get_model_registry()
             console.print(f"[cyan]Models:[/cyan] {len(model_registry.models)} available")
             console.print("  Run [green]ttt list models[/green] to see all models\n")
-            
+
             # Sessions count
             session_manager = ChatSessionManager()
             sessions = session_manager.list_sessions()
             console.print(f"[cyan]Sessions:[/cyan] {len(sessions)} saved")
             console.print("  Run [green]ttt list sessions[/green] to see all sessions\n")
-            
+
             # Tools count
             from ttt.tools import list_tools
+
             tools = list_tools()
             console.print(f"[cyan]Tools:[/cyan] {len(tools)} available")
             console.print("  Run [green]ttt list tools[/green] to see all tools\n")
         return
-    
+
     if resource == "models":
         show_models_list(json_output=(format == "json"))
     elif resource == "sessions":
@@ -716,11 +693,7 @@ def on_config_list(show_secrets: bool, **kwargs) -> None:
                 return {k: mask_sensitive(v, k) for k, v in obj.items()}
             elif isinstance(obj, list):
                 return [mask_sensitive(item) for item in obj]
-            elif key and (
-                "key" in key.lower()
-                or "secret" in key.lower()
-                or "token" in key.lower()
-            ):
+            elif key and ("key" in key.lower() or "secret" in key.lower() or "token" in key.lower()):
                 return "***" if obj else None
             else:
                 return obj
@@ -731,7 +704,11 @@ def on_config_list(show_secrets: bool, **kwargs) -> None:
 
 
 def on_export(
-    session: Optional[str] = None, format: str = "markdown", output: Optional[str] = None, include_metadata: bool = False, **kwargs
+    session: Optional[str] = None,
+    format: str = "markdown",
+    output: Optional[str] = None,
+    include_metadata: bool = False,
+    **kwargs,
 ) -> None:
     """Hook for 'export' command.
 
@@ -752,7 +729,7 @@ def on_export(
         # No session specified, show available sessions
         on_list(resource="sessions", format="table", verbose=False)
         return
-    
+
     session_manager = ChatSessionManager()
 
     # Load session
@@ -764,11 +741,7 @@ def on_export(
     # Export data
     export_data = {
         "session_id": chat_session.id,
-        "created_at": (
-            chat_session.created_at.isoformat()
-            if hasattr(chat_session, "created_at")
-            else None
-        ),
+        "created_at": (chat_session.created_at.isoformat() if hasattr(chat_session, "created_at") else None),
         "messages": chat_session.messages,
     }
 
@@ -788,9 +761,7 @@ def on_export(
 
             output_text = yaml.dump(export_data, default_flow_style=False)
         except ImportError:
-            click.echo(
-                "Error: PyYAML is not installed. Use 'pip install pyyaml'", err=True
-            )
+            click.echo("Error: PyYAML is not installed. Use 'pip install pyyaml'", err=True)
             sys.exit(1)
     else:  # markdown
         output_text = f"# Chat Session: {session}\n\n"
@@ -866,15 +837,9 @@ def on_tools_list(show_disabled: bool, **kwargs) -> None:
 
     console.print("\n[bold]Available Tools:[/bold]")
     for tool in tools:
-        status = (
-            "[red]disabled[/red]"
-            if tool.name in disabled_tools
-            else "[green]enabled[/green]"
-        )
+        status = "[red]disabled[/red]" if tool.name in disabled_tools else "[green]enabled[/green]"
         if show_disabled or tool.name not in disabled_tools:
-            console.print(
-                f"  • [cyan]{tool.name}[/cyan] ({status}): {tool.description}"
-            )
+            console.print(f"  • [cyan]{tool.name}[/cyan] ({status}): {tool.description}")
 
 
 # Additional helper functions needed by hooks
@@ -899,11 +864,7 @@ def show_models_list(json_output: bool = False) -> None:
     try:
         model_registry = get_model_registry()
         model_names = model_registry.list_models()
-        models = [
-            model_registry.get_model(name)
-            for name in model_names
-            if model_registry.get_model(name)
-        ]
+        models = [model_registry.get_model(name) for name in model_names if model_registry.get_model(name)]
 
         if json_output:
             models_data = []
@@ -931,9 +892,7 @@ def show_models_list(json_output: bool = False) -> None:
             table.add_column("Context", style="blue")
 
             for model in models:
-                context_str = (
-                    f"{model.context_length:,}" if model.context_length else "N/A"
-                )
+                context_str = f"{model.context_length:,}" if model.context_length else "N/A"
                 table.add_row(
                     model.name,
                     model.provider,
@@ -1083,9 +1042,7 @@ def show_backend_status(json_output: bool = False) -> None:
         }
 
     # Add overall status
-    status_data["healthy"] = any(
-        backend.get("available", False) for backend in status_data["backends"].values()
-    )
+    status_data["healthy"] = any(backend.get("available", False) for backend in status_data["backends"].values())
 
     if json_output:
         click.echo(json_module.dumps(status_data))
@@ -1125,8 +1082,7 @@ def show_backend_status(json_output: bool = False) -> None:
             console.print("🎉 [bold green]System is ready to use![/bold green]")
         else:
             console.print(
-                "⚠️  [bold yellow]No backends available. Please configure API keys "
-                "or install Ollama.[/bold yellow]"
+                "⚠️  [bold yellow]No backends available. Please configure API keys " "or install Ollama.[/bold yellow]"
             )
 
 

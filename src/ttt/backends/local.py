@@ -46,9 +46,7 @@ class LocalBackend(BaseBackend):
             local_config.get("base_url")
             or self.backend_config.get("ollama_base_url")
             or get_config_value("backends.local.base_url")
-            or get_config_value(
-                "constants.urls.ollama_default", "http://localhost:11434"
-            )
+            or get_config_value("constants.urls.ollama_default", "http://localhost:11434")
         )
 
         self.default_model = local_config.get("default_model") or get_config_value(
@@ -68,9 +66,7 @@ class LocalBackend(BaseBackend):
             async def check() -> bool:
                 from ..config.loader import get_config_value
 
-                availability_timeout = get_config_value(
-                    "constants.timeouts.availability_check", 5
-                )
+                availability_timeout = get_config_value("constants.timeouts.availability_check", 5)
                 async with httpx.AsyncClient(timeout=availability_timeout) as client:
                     response = await client.get(f"{self.base_url}/api/tags")
                     return response.status_code == 200
@@ -146,9 +142,7 @@ class LocalBackend(BaseBackend):
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 logger.debug(f"Sending request to Ollama: {used_model}")
 
-                response = await client.post(
-                    f"{self.base_url}/api/generate", json=payload
-                )
+                response = await client.post(f"{self.base_url}/api/generate", json=payload)
                 response.raise_for_status()
 
                 data = response.json()
@@ -256,9 +250,7 @@ class LocalBackend(BaseBackend):
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 logger.debug(f"Starting stream request to Ollama: {used_model}")
 
-                async with client.stream(
-                    "POST", f"{self.base_url}/api/generate", json=payload
-                ) as response:
+                async with client.stream("POST", f"{self.base_url}/api/generate", json=payload) as response:
                     response.raise_for_status()
 
                     async for line in response.aiter_lines():
@@ -276,9 +268,7 @@ class LocalBackend(BaseBackend):
 
                             except json.JSONDecodeError as e:
                                 logger.warning(f"Failed to parse JSON line: {line}")
-                                raise ResponseParsingError(
-                                    f"Invalid JSON in stream: {line[:100]}", line
-                                ) from e
+                                raise ResponseParsingError(f"Invalid JSON in stream: {line[:100]}", line) from e
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404 and "model" in e.response.text.lower():

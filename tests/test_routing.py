@@ -28,9 +28,7 @@ class MockBackend(BaseBackend):
         return self._available
 
     async def ask(self, prompt, **kwargs):
-        return AIResponse(
-            "Mock response", model=kwargs.get("model", "mock"), backend=self.name
-        )
+        return AIResponse("Mock response", model=kwargs.get("model", "mock"), backend=self.name)
 
     async def astream(self, prompt, **kwargs):
         yield "Mock response"
@@ -84,9 +82,7 @@ class TestRouter:
         """Test getting invalid backend raises error."""
         router = Router()
 
-        with pytest.raises(
-            BackendNotAvailableError, match="Backend not found in registry"
-        ):
+        with pytest.raises(BackendNotAvailableError, match="Backend not found in registry"):
             router.get_backend("non-existent")
 
     def test_resolve_backend_instance(self):
@@ -153,9 +149,7 @@ class TestSmartRouting:
         """Test routing with explicit backend."""
         router = Router()
 
-        backend, model = router.smart_route(
-            "Test prompt", backend="local", model="llama2"
-        )
+        backend, model = router.smart_route("Test prompt", backend="local", model="llama2")
 
         assert backend.name == "local"
         assert model == "llama2"
@@ -165,9 +159,7 @@ class TestSmartRouting:
         router = Router()
 
         # Add a local model to registry
-        model_registry.add_model(
-            ModelInfo(name="test-local-model", provider="local", provider_name="test")
-        )
+        model_registry.add_model(ModelInfo(name="test-local-model", provider="local", provider_name="test"))
 
         backend, model = router.smart_route("Test prompt", model="test-local-model")
 

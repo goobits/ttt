@@ -230,9 +230,7 @@ def extract_parameter_info(func: Callable) -> List[ToolParameter]:
         in_params = False
         for line in lines:
             line = line.strip()
-            if line.lower().startswith("args:") or line.lower().startswith(
-                "parameters:"
-            ):
+            if line.lower().startswith("args:") or line.lower().startswith("parameters:"):
                 in_params = True
                 continue
             if in_params and line.startswith("returns:"):
@@ -275,9 +273,7 @@ def extract_parameter_info(func: Callable) -> List[ToolParameter]:
                 type=param_type,
                 description=description,
                 required=required,
-                default=(
-                    param.default if param.default != inspect.Parameter.empty else None
-                ),
+                default=(param.default if param.default != inspect.Parameter.empty else None),
             )
         )
 

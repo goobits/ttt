@@ -130,8 +130,7 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
     """
     # Load .env file if it exists, searching in project directories
     env_paths = [
-        Path(__file__).parent.parent
-        / ".env",  # Relative to ttt package (installed location)
+        Path(__file__).parent.parent / ".env",  # Relative to ttt package (installed location)
         Path.cwd() / ".env",  # Current working directory
     ]
 
@@ -240,11 +239,7 @@ def load_config(config_file: Optional[Union[str, Path]] = None) -> ConfigModel:
         """Deep merge two dictionaries."""
         result = base.copy()
         for key, value in override.items():
-            if (
-                key in result
-                and isinstance(result[key], dict)
-                and isinstance(value, dict)
-            ):
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
                 result[key] = deep_merge(result[key], value)
             else:
                 result[key] = value
@@ -324,9 +319,7 @@ def find_config_file() -> Optional[Path]:
     return None
 
 
-def save_config(
-    config: ConfigModel, config_file: Optional[Union[str, Path]] = None
-) -> None:
+def save_config(config: ConfigModel, config_file: Optional[Union[str, Path]] = None) -> None:
     """
     Save configuration to file.
 
@@ -339,9 +332,7 @@ def save_config(
     else:
         # Get default save path from project config
         project_defaults = load_project_defaults()
-        default_save_path = project_defaults.get("paths", {}).get(
-            "default_config_save", "~/.config/ttt/config.yaml"
-        )
+        default_save_path = project_defaults.get("paths", {}).get("default_config_save", "~/.config/ttt/config.yaml")
 
         # Expand home directory
         if default_save_path.startswith("~/"):
@@ -474,9 +465,7 @@ class ModelRegistry:
                 import os
 
                 if os.environ.get("TTT_JSON_MODE", "").lower() != "true":
-                    logger.warning(
-                        f"Failed to load model {model_name} from config: {e}"
-                    )
+                    logger.warning(f"Failed to load model {model_name} from config: {e}")
 
         # If no models loaded from config, use minimal hardcoded defaults
         if not self.models:

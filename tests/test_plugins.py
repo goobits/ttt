@@ -21,9 +21,7 @@ class MockTestBackend(BaseBackend):
         return True
 
     async def ask(self, prompt: str, **kwargs) -> AIResponse:
-        return AIResponse(
-            f"Test response to: {prompt}", model="test-model", backend=self.name
-        )
+        return AIResponse(f"Test response to: {prompt}", model="test-model", backend=self.name)
 
     async def astream(self, prompt: str, **kwargs) -> AsyncIterator[str]:
         for word in f"Test response to: {prompt}".split():
@@ -59,9 +57,7 @@ class TestPluginRegistry:
         """Test the register_backend shortcut method."""
         registry = PluginRegistry()
 
-        registry.register_backend(
-            "test-backend", MockTestBackend, version="2.0.0", description="Test backend"
-        )
+        registry.register_backend("test-backend", MockTestBackend, version="2.0.0", description="Test backend")
 
         assert "test-backend" in registry.plugins
         assert registry.plugins["test-backend"].version == "2.0.0"
@@ -104,9 +100,7 @@ class TestPluginRegistry:
         """Test listing all plugins."""
         registry = PluginRegistry()
 
-        registry.register_backend(
-            "test1", MockTestBackend, version="1.0.0", author="Test Author"
-        )
+        registry.register_backend("test1", MockTestBackend, version="1.0.0", author="Test Author")
 
         plugins = registry.list_plugins()
 
