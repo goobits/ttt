@@ -196,8 +196,17 @@ def get_version():
     
     try:
         # Try to get version from pyproject.toml FIRST (most authoritative)
-        toml_path = Path(__file__).parent.parent / "pyproject.toml"
-        if toml_path.exists():
+        # Look in multiple possible locations
+        possible_paths = [
+            Path(__file__).parent.parent / "pyproject.toml",  # For flat structure
+            Path(__file__).parent.parent.parent / "pyproject.toml",  # For src/ structure
+        ]
+        toml_path = None
+        for path in possible_paths:
+            if path.exists():
+                toml_path = path
+                break
+        if toml_path:
             content = toml_path.read_text()
             match = re.search(r'version\s*=\s*["\']([^"\']+)["\']', content)
             if match:
@@ -217,7 +226,7 @@ def get_version():
         pass
         
     # Final fallback
-    return "1.0.3"
+    return "1.0.0"
 
 
 def show_help_json(ctx, param, value):
@@ -227,7 +236,7 @@ def show_help_json(ctx, param, value):
     # The triple quotes are important to correctly handle the multi-line JSON string
     click.echo('''{
   "name": "GOOBITS TTT CLI",
-  "version": "1.0.3",
+  "version": null,
   "display_version": true,
   "tagline": "Talk to Transformer",
   "description": "AI-powered conversations, straight from your command line",
@@ -911,7 +920,6 @@ def main(ctx, help_json=False, help_all=False):
     [#B3B8C0]📚 For detailed help on a command, run: [color(2)]ttt [COMMAND][/color(2)] [#ff79c6]--help[/#ff79c6][/#B3B8C0]
     
     """
-
     
     if help_all:
         # Print main help
@@ -940,6 +948,9 @@ def main(ctx, help_json=False, help_all=False):
     
 
     pass
+
+# Replace the version placeholder with dynamic version in the main command docstring
+
 
 
 # Set command groups after main function is defined

@@ -70,7 +70,6 @@ messages:
 # CLI fields for cli.py generation
 cli:
   name: "GOOBITS TTT CLI"
-  version: "1.0.3"
   display_version: true
   tagline: "Talk to Transformer"
   description: "AI-powered conversations, straight from your command line"
