@@ -12,6 +12,8 @@ pip_packages:
   - black
   - pytest
   - flake8
+npm_packages:
+  - browsertap
 terminal:
   emoji: 🤖
   username: ttt-dev
