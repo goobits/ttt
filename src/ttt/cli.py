@@ -84,13 +84,13 @@ except Exception:
 # Built-in commands
 
 def builtin_upgrade_command(check_only=False, pre=False, version=None, dry_run=False):
-    """Built-in upgrade function for TTT - Terminal Tools for Thoughts - uses enhanced setup.sh script."""
+    """Built-in upgrade function for TTT - Text to Text - uses enhanced setup.sh script."""
     import subprocess
     import sys
     from pathlib import Path
 
     if check_only:
-        print(f"Checking for updates to TTT - Terminal Tools for Thoughts...")
+        print(f"Checking for updates to TTT - Text to Text...")
         print("Update check not yet implemented. Run without --check to upgrade.")
         return
 
@@ -114,7 +114,7 @@ def builtin_upgrade_command(check_only=False, pre=False, version=None, dry_run=F
     
     if setup_script is None:
         # Fallback to basic upgrade if setup.sh not found
-        print(f"Enhanced setup script not found. Using basic upgrade for TTT - Terminal Tools for Thoughts...")
+        print(f"Enhanced setup script not found. Using basic upgrade for TTT - Text to Text...")
         import shutil
         
         package_name = "goobits-ttt"
@@ -131,7 +131,7 @@ def builtin_upgrade_command(check_only=False, pre=False, version=None, dry_run=F
         
         result = subprocess.run(cmd)
         if result.returncode == 0:
-            print(f"✅ TTT - Terminal Tools for Thoughts upgraded successfully!")
+            print(f"✅ TTT - Text to Text upgraded successfully!")
             print(f"Run 'ttt --version' to verify the new version.")
         else:
             print(f"❌ Upgrade failed with exit code {result.returncode}")
@@ -989,7 +989,7 @@ click.rich_click.COMMAND_GROUPS = {
 @click.option('--pre', is_flag=True, help='Include pre-release versions')
 @click.option('--dry-run', is_flag=True, help='Show what would be done without doing it')
 def upgrade(check, version, pre, dry_run):
-    """Upgrade TTT - Terminal Tools for Thoughts to the latest version."""
+    """Upgrade TTT - Text to Text to the latest version."""
     builtin_upgrade_command(check_only=check, version=version, pre=pre, dry_run=dry_run)
 
 

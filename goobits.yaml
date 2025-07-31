@@ -4,7 +4,7 @@
 # Setup fields for setup.sh
 package_name: "goobits-ttt"
 command_name: "ttt"
-display_name: "TTT - Terminal Tools for Thoughts"
+display_name: "TTT - Text to Text"
 description: "A powerful AI assistant for your terminal"
 
 # CLI generation configuration
