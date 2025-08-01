@@ -14,8 +14,17 @@ logger = get_logger(__name__)
 # Cache for project config
 _project_config_cache: Optional[Dict[str, Any]] = None
 
-# Check if we should suppress warnings (JSON mode)
+# Check if we should suppress warnings (JSON mode or pipe mode)
 _suppress_warnings = os.environ.get("TTT_JSON_MODE", "").lower() == "true"
+
+
+def _is_pipe_mode() -> bool:
+    """Check if stdin is coming from a pipe (not a tty)."""
+    try:
+        return not sys.stdin.isatty()
+    except Exception:
+        # If we can't determine, assume not in pipe mode
+        return False
 
 
 def set_suppress_warnings(suppress: bool) -> None:
@@ -52,17 +61,18 @@ def get_project_config() -> Dict[str, Any]:
                     logger.debug(f"Loaded project config from {config_path}")
                     return _project_config_cache
             except Exception as e:
-                if os.environ.get("TTT_JSON_MODE", "").lower() != "true":
+                if os.environ.get("TTT_JSON_MODE", "").lower() != "true" and not _is_pipe_mode():
                     logger.warning(f"Failed to load project config from {config_path}: {e}")
 
     # Return empty dict if no config found
     # Check suppress warnings both from variable and environment
     json_mode = os.environ.get("TTT_JSON_MODE", "").lower() == "true"
+    pipe_mode = _is_pipe_mode()
 
-    # Debug: Always suppress this warning in any JSON-related context
+    # Debug: Always suppress this warning in any JSON-related context or pipe mode
     # The warning will be included in the JSON response instead
-    if "--json" in getattr(sys, "argv", []) or json_mode or _suppress_warnings:
-        # Suppress the warning - it will be included in JSON response
+    if "--json" in getattr(sys, "argv", []) or json_mode or _suppress_warnings or pipe_mode:
+        # Suppress the warning - it will be included in JSON response or is not relevant in pipe mode
         pass
     else:
         logger.warning("Project config.yaml not found")
