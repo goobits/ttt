@@ -7,7 +7,7 @@ errors such as invalid model aliases, failed model connections, or provider issu
 
 import difflib
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from ttt.config.manager import ConfigManager
 from ttt.config.schema import get_model_registry

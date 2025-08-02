@@ -5,7 +5,7 @@ import sys
 import importlib.util
 from pathlib import Path
 import rich_click as click
-from rich_click import RichGroup, RichCommand
+from rich_click import RichGroup
 
 # Set up rich-click configuration globally
 click.rich_click.USE_RICH_MARKUP = True  
@@ -90,7 +90,7 @@ def builtin_upgrade_command(check_only=False, pre=False, version=None, dry_run=F
     from pathlib import Path
 
     if check_only:
-        print(f"Checking for updates to TTT - Text to Text...")
+        print("Checking for updates to TTT - Text to Text...")
         print("Update check not yet implemented. Run without --check to upgrade.")
         return
 
@@ -114,7 +114,7 @@ def builtin_upgrade_command(check_only=False, pre=False, version=None, dry_run=F
     
     if setup_script is None:
         # Fallback to basic upgrade if setup.sh not found
-        print(f"Enhanced setup script not found. Using basic upgrade for TTT - Text to Text...")
+        print("Enhanced setup script not found. Using basic upgrade for TTT - Text to Text...")
         import shutil
         
         package_name = "goobits-ttt"
@@ -131,8 +131,8 @@ def builtin_upgrade_command(check_only=False, pre=False, version=None, dry_run=F
         
         result = subprocess.run(cmd)
         if result.returncode == 0:
-            print(f"✅ TTT - Text to Text upgraded successfully!")
-            print(f"Run 'ttt --version' to verify the new version.")
+            print("✅ TTT - Text to Text upgraded successfully!")
+            print("Run 'ttt --version' to verify the new version.")
         else:
             print(f"❌ Upgrade failed with exit code {result.returncode}")
             sys.exit(1)
@@ -847,7 +847,7 @@ class DefaultGroup(RichGroup):
                 # Use S_ISFIFO to check if it's a pipe, or S_ISREG to check if it's a regular file
                 import stat
                 has_stdin = stat.S_ISFIFO(stdin_stat.st_mode) or stat.S_ISREG(stdin_stat.st_mode)
-            except Exception as e:
+            except Exception:
                 # Fallback to isatty check
                 has_stdin = not sys.stdin.isatty()
             
@@ -1053,7 +1053,7 @@ def ask(ctx, prompt, model, temperature, max_tokens, tools, session, system, str
     # Check for built-in commands first
     
     # Standard command - use the existing hook pattern
-    hook_name = f"on_ask"
+    hook_name = "on_ask"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
@@ -1117,7 +1117,7 @@ def ask(ctx, prompt, model, temperature, max_tokens, tools, session, system, str
         return result
     else:
         # Default placeholder behavior
-        click.echo(f"Executing ask command...")
+        click.echo("Executing ask command...")
         
         
         click.echo(f"  prompt: {prompt}")
@@ -1180,7 +1180,7 @@ def chat(ctx, model, session, tools, markdown):
     # Check for built-in commands first
     
     # Standard command - use the existing hook pattern
-    hook_name = f"on_chat"
+    hook_name = "on_chat"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
@@ -1220,7 +1220,7 @@ def chat(ctx, model, session, tools, markdown):
         return result
     else:
         # Default placeholder behavior
-        click.echo(f"Executing chat command...")
+        click.echo("Executing chat command...")
         
         
         
@@ -1267,7 +1267,7 @@ def list(ctx, resource, format, verbose):
     # Check for built-in commands first
     
     # Standard command - use the existing hook pattern
-    hook_name = f"on_list"
+    hook_name = "on_list"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
@@ -1301,7 +1301,7 @@ def list(ctx, resource, format, verbose):
         return result
     else:
         # Default placeholder behavior
-        click.echo(f"Executing list command...")
+        click.echo("Executing list command...")
         
         
         click.echo(f"  resource: {resource}")
@@ -1335,7 +1335,7 @@ def status(ctx, json):
     # Check for built-in commands first
     
     # Standard command - use the existing hook pattern
-    hook_name = f"on_status"
+    hook_name = "on_status"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
@@ -1360,7 +1360,7 @@ def status(ctx, json):
         return result
     else:
         # Default placeholder behavior
-        click.echo(f"Executing status command...")
+        click.echo("Executing status command...")
         
         
         
@@ -1388,7 +1388,7 @@ def models(ctx, json):
     # Check for built-in commands first
     
     # Standard command - use the existing hook pattern
-    hook_name = f"on_models"
+    hook_name = "on_models"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
@@ -1413,7 +1413,7 @@ def models(ctx, json):
         return result
     else:
         # Default placeholder behavior
-        click.echo(f"Executing models command...")
+        click.echo("Executing models command...")
         
         
         
@@ -1446,7 +1446,7 @@ def info(ctx, model, json):
     # Check for built-in commands first
     
     # Standard command - use the existing hook pattern
-    hook_name = f"on_info"
+    hook_name = "on_info"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
@@ -1475,7 +1475,7 @@ def info(ctx, model, json):
         return result
     else:
         # Default placeholder behavior
-        click.echo(f"Executing info command...")
+        click.echo("Executing info command...")
         
         
         click.echo(f"  model: {model}")
@@ -1524,7 +1524,7 @@ def export(ctx, session, format, output, include_metadata):
     # Check for built-in commands first
     
     # Standard command - use the existing hook pattern
-    hook_name = f"on_export"
+    hook_name = "on_export"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
@@ -1563,7 +1563,7 @@ def export(ctx, session, format, output, include_metadata):
         return result
     else:
         # Default placeholder behavior
-        click.echo(f"Executing export command...")
+        click.echo("Executing export command...")
         
         
         click.echo(f"  session: {session}")
@@ -1601,7 +1601,7 @@ def config():
 def get(ctx, key):
     """Get a configuration value"""
     # Check if hook function exists
-    hook_name = f"on_config_get"
+    hook_name = "on_config_get"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
@@ -1623,7 +1623,7 @@ def get(ctx, key):
         return result
     else:
         # Default placeholder behavior
-        click.echo(f"Executing get command...")
+        click.echo("Executing get command...")
         
         
         click.echo(f"  key: {key}")
@@ -1646,7 +1646,7 @@ def get(ctx, key):
 def set(ctx, key, value):
     """Set a configuration value"""
     # Check if hook function exists
-    hook_name = f"on_config_set"
+    hook_name = "on_config_set"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
@@ -1670,7 +1670,7 @@ def set(ctx, key, value):
         return result
     else:
         # Default placeholder behavior
-        click.echo(f"Executing set command...")
+        click.echo("Executing set command...")
         
         
         click.echo(f"  key: {key}")
@@ -1680,7 +1680,7 @@ def set(ctx, key, value):
         
         
 
-@config.command()
+@config.command(name='list')
 @click.pass_context
 
 
@@ -1690,10 +1690,10 @@ def set(ctx, key, value):
     help="Include API keys in output"
 )
 
-def list(ctx, show_secrets):
+def config_list(ctx, show_secrets):
     """List all configuration"""
     # Check if hook function exists
-    hook_name = f"on_config_list"
+    hook_name = "on_config_list"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
@@ -1715,7 +1715,7 @@ def list(ctx, show_secrets):
         return result
     else:
         # Default placeholder behavior
-        click.echo(f"Executing list command...")
+        click.echo("Executing list command...")
         
         
         
@@ -1744,7 +1744,7 @@ def tools():
 def enable(ctx, tool_name):
     """Enable a tool"""
     # Check if hook function exists
-    hook_name = f"on_tools_enable"
+    hook_name = "on_tools_enable"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
@@ -1766,7 +1766,7 @@ def enable(ctx, tool_name):
         return result
     else:
         # Default placeholder behavior
-        click.echo(f"Executing enable command...")
+        click.echo("Executing enable command...")
         
         
         click.echo(f"  tool_name: {tool_name}")
@@ -1785,7 +1785,7 @@ def enable(ctx, tool_name):
 def disable(ctx, tool_name):
     """Disable a tool"""
     # Check if hook function exists
-    hook_name = f"on_tools_disable"
+    hook_name = "on_tools_disable"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
@@ -1807,7 +1807,7 @@ def disable(ctx, tool_name):
         return result
     else:
         # Default placeholder behavior
-        click.echo(f"Executing disable command...")
+        click.echo("Executing disable command...")
         
         
         click.echo(f"  tool_name: {tool_name}")
@@ -1815,7 +1815,7 @@ def disable(ctx, tool_name):
         
         
 
-@tools.command()
+@tools.command(name='list')
 @click.pass_context
 
 
@@ -1825,10 +1825,10 @@ def disable(ctx, tool_name):
     help="Include disabled tools"
 )
 
-def list(ctx, show_disabled):
+def tools_list(ctx, show_disabled):
     """List all tools"""
     # Check if hook function exists
-    hook_name = f"on_tools_list"
+    hook_name = "on_tools_list"
     if app_hooks and hasattr(app_hooks, hook_name):
         # Call the hook with all parameters
         hook_func = getattr(app_hooks, hook_name)
@@ -1850,7 +1850,7 @@ def list(ctx, show_disabled):
         return result
     else:
         # Default placeholder behavior
-        click.echo(f"Executing list command...")
+        click.echo("Executing list command...")
         
         
         

@@ -160,7 +160,7 @@ def resolve_model_alias(model: str) -> str:
                 for available_alias in sorted_aliases[:5]:
                     console.print(f"  @{available_alias}")
             
-            console.print(f"\nTip: Use [green]ttt models[/green] to see all available models")
+            console.print("\nTip: Use [green]ttt models[/green] to see all available models")
             
             # Exit with error instead of proceeding
             import sys
@@ -271,7 +271,7 @@ def resolve_tools(tool_specs: List[str]) -> List[Any]:
                     tools.append(found_tool)
                 else:
                     if is_verbose_mode():
-                        console.print(f"[yellow]Warning: Tool {tool_name} not found in " f"category {category}[/yellow]")
+                        console.print(f"[yellow]Warning: Tool {tool_name} not found in category {category}[/yellow]")
             else:
                 found_tool_def = get_tool(spec)
                 if found_tool_def:
@@ -1299,7 +1299,7 @@ def show_backend_status(json_output: bool = False) -> None:
             console.print("🎉 [bold green]System is ready to use![/bold green]")
         else:
             console.print(
-                "⚠️  [bold yellow]No backends available. Please configure API keys " "or install Ollama.[/bold yellow]"
+                "⚠️  [bold yellow]No backends available. Please configure API keys or install Ollama.[/bold yellow]"
             )
 
 

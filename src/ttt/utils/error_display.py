@@ -4,7 +4,7 @@ This module provides templates for converting technical errors into actionable
 user messages with emoji indicators and concise suggestions.
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 
 
 def format_model_overload_error(model: Optional[str] = None) -> str:

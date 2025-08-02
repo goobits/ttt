@@ -208,9 +208,9 @@ class CloudBackend(BaseBackend):
                 from ..config.schema import get_model_registry
                 registry = get_model_registry()
                 available_models = list(registry.models.keys())
-                suggestions = get_model_suggestions(used_model, available_models)
+                get_model_suggestions(used_model, available_models)
             except Exception:
-                suggestions = ["@fast", "@best", "@cheap"]
+                pass
             
             # Create enhanced ModelNotFoundError with suggestions
             raise ModelNotFoundError(used_model, self.name) from e
