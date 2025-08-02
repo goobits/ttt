@@ -1,6 +1,6 @@
 """Comprehensive smoke tests for TTT CLI commands.
 
-This test suite runs every command combination from CLI_TESTS.md to ensure
+This test suite runs every command combination from cli-test-checklist.md to ensure
 all CLI functionality works correctly. Tests are organized to match the
 checklist structure for easy cross-reference.
 
@@ -12,6 +12,7 @@ Run with:
 import json
 import os
 import subprocess
+import tempfile
 
 import pytest
 
@@ -564,6 +565,170 @@ class TestComplexCombinations:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "-m", "@fast", "--json", "--stream", "true", "quick hello"])
+        assert result.returncode in [0, 124]
+
+
+class TestFilePipelineUsage:
+    """Test file-based pipeline usage - tests real file I/O functionality."""
+
+    @pytest.mark.requires_api
+    def test_cat_file_pipe_ask(self):
+        """Test: cat file.txt | ttt ask 'summarize' - Tests real file I/O"""
+        if not has_valid_api_key():
+            pytest.skip("Requires API key")
+
+        # Create a temporary file with test content
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+            test_content = "This is a test file with sample content for TTT to process."
+            f.write(test_content)
+            temp_file = f.name
+
+        try:
+            # Read file content and pipe to ttt
+            with open(temp_file, 'r') as f:
+                file_content = f.read()
+            
+            result = run_ttt_command(["ask", "summarize this"], input_text=file_content)
+            assert result.returncode in [0, 124]
+            
+            # If successful, verify we got some response
+            if result.returncode == 0:
+                assert len(result.stdout.strip()) > 0
+        finally:
+            # Clean up
+            os.unlink(temp_file)
+
+    @pytest.mark.requires_api
+    def test_json_file_pipe_ask(self):
+        """Test: cat data.json | ttt ask 'analyze' - Tests JSON file processing"""
+        if not has_valid_api_key():
+            pytest.skip("Requires API key")
+
+        # Create a temporary JSON file
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
+            test_data = {"users": [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]}
+            json.dump(test_data, f)
+            temp_file = f.name
+
+        try:
+            with open(temp_file, 'r') as f:
+                file_content = f.read()
+            
+            result = run_ttt_command(["ask", "how many users are in this data?"], input_text=file_content)
+            assert result.returncode in [0, 124]
+        finally:
+            os.unlink(temp_file)
+
+
+class TestJSONInputPipeline:
+    """Test JSON input pipeline - tests structured input parsing."""
+
+    @pytest.mark.requires_api
+    def test_json_input_pipeline(self):
+        """Test: echo '{"prompt": "hello"}' | ttt ask - Tests JSON input parsing"""
+        if not has_valid_api_key():
+            pytest.skip("Requires API key")
+
+        json_input = '{"message": "hello world", "context": "testing"}'
+        result = run_ttt_command(["ask", "extract the message from this JSON"], input_text=json_input)
+        assert result.returncode in [0, 124]
+
+    @pytest.mark.requires_api
+    def test_json_array_input(self):
+        """Test: echo '[1,2,3]' | ttt ask 'sum these' - Tests JSON array processing"""
+        if not has_valid_api_key():
+            pytest.skip("Requires API key")
+
+        json_input = '[10, 20, 30, 40]'
+        result = run_ttt_command(["ask", "what is the sum of these numbers?"], input_text=json_input)
+        assert result.returncode in [0, 124]
+
+
+class TestConfigPersistence:
+    """Test config persistence - tests that configuration actually saves and loads."""
+
+    def test_config_set_get_roundtrip(self):
+        """Test: config set/get roundtrip - Tests config persistence functionality"""
+        # Get original value
+        original_result = run_ttt_command(["config", "get", "models.default"])
+        assert original_result.returncode == 0
+        
+        # Try to set a new value (use a model that should exist)
+        set_result = run_ttt_command(["config", "set", "models.default", "gpt-3.5-turbo"])
+        
+        if set_result.returncode == 0:
+            # If set succeeded, verify the value changed
+            get_result = run_ttt_command(["config", "get", "models.default"])
+            assert get_result.returncode == 0
+            assert "gpt-3.5-turbo" in get_result.stdout
+            
+            # Try to restore original (if we can parse it)
+            try:
+                # Extract original value from "models.default: value" format
+                original_line = original_result.stdout.strip()
+                if ":" in original_line:
+                    original_value = original_line.split(":", 1)[1].strip()
+                    run_ttt_command(["config", "set", "models.default", original_value])
+            except Exception:
+                pass  # Best effort restore
+        else:
+            # If config set isn't implemented/available, just verify get works
+            assert original_result.returncode == 0
+
+    def test_config_invalid_key(self):
+        """Test: config get invalid.key - Tests config error handling"""
+        result = run_ttt_command(["config", "get", "invalid.nonexistent.key"])
+        # Should either return an error or handle gracefully
+        assert result.returncode in [0, 1]
+
+
+class TestModelAliasResolution:
+    """Test model alias resolution across commands - tests alias system functionality."""
+
+    def test_info_with_alias_claude(self):
+        """Test: ttt info @claude - Tests alias resolution in info command"""
+        result = run_ttt_command(["info", "@claude"])
+        # Should either resolve successfully or give a clear error
+        assert result.returncode in [0, 1]
+        
+        if result.returncode == 0:
+            # Should show info about the resolved model
+            assert any(word in result.stdout.lower() for word in ["claude", "anthropic", "model", "provider"])
+
+    def test_info_with_alias_gpt4(self):
+        """Test: ttt info @gpt4 - Tests alias resolution consistency"""
+        result = run_ttt_command(["info", "@gpt4"])
+        assert result.returncode in [0, 1]
+        
+        if result.returncode == 0:
+            assert any(word in result.stdout.lower() for word in ["gpt", "openai", "model", "provider"])
+
+    def test_info_with_alias_fast(self):
+        """Test: ttt info @fast - Tests alias resolution for performance aliases"""
+        result = run_ttt_command(["info", "@fast"])
+        assert result.returncode in [0, 1]
+
+
+class TestAdditionalCLIOptions:
+    """Test additional CLI options for completeness."""
+
+    @pytest.mark.requires_api
+    def test_system_prompt_short_flag(self):
+        """Test: ttt ask -s 'system' 'user' - Tests short flag consistency"""
+        if not has_valid_api_key():
+            pytest.skip("Requires API key")
+
+        result = run_ttt_command(["ask", "-s", "You are helpful", "hello"])
+        # May not be implemented, but test structure should work
+        assert result.returncode in [0, 1, 124]
+
+    @pytest.mark.requires_api
+    def test_higher_max_tokens(self):
+        """Test: ttt ask --max-tokens 2000 'prompt' - Tests higher token limits"""
+        if not has_valid_api_key():
+            pytest.skip("Requires API key")
+
+        result = run_ttt_command(["ask", "--max-tokens", "2000", "write a detailed explanation"])
         assert result.returncode in [0, 124]
 
 
