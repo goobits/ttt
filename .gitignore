@@ -70,12 +70,16 @@ test-results/
 .dmypy.json
 dmypy.json
 
-# Temporary files
+# Ruff cache
+.ruff_cache/
+
+# Temporary files and unified temp directory
 *.tmp
 *.temp
 .tmp/
 temp/
 tmp/
+.temp/
 
 # AI/LLM data
 data/
