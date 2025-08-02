@@ -47,35 +47,41 @@ def get_project_config() -> Dict[str, Any]:
     if _project_config_cache is not None:
         return _project_config_cache
 
-    # Try to find the project config.yaml, prioritizing user configs
-    config_paths = [
-        Path.cwd() / "config.yaml",  # Current working directory (highest priority)
-        Path(__file__).parent / "defaults.yaml",  # Bundled defaults (fallback)
-    ]
+    # Try to load project config.yaml from current directory (optional)
+    project_config_path = Path.cwd() / "config.yaml"
+    if project_config_path.exists():
+        try:
+            with open(project_config_path) as f:
+                _project_config_cache = yaml.safe_load(f)
+                logger.debug(f"Loaded project config from {project_config_path}")
+                return _project_config_cache
+        except Exception as e:
+            if os.environ.get("TTT_JSON_MODE", "").lower() != "true" and not _is_pipe_mode():
+                logger.warning(f"Failed to load project config from {project_config_path}: {e}")
 
-    for config_path in config_paths:
-        if config_path.exists():
-            try:
-                with open(config_path) as f:
-                    _project_config_cache = yaml.safe_load(f)
-                    logger.debug(f"Loaded project config from {config_path}")
-                    return _project_config_cache
-            except Exception as e:
-                if os.environ.get("TTT_JSON_MODE", "").lower() != "true" and not _is_pipe_mode():
-                    logger.warning(f"Failed to load project config from {config_path}: {e}")
+    # Fall back to bundled defaults (should always exist)
+    defaults_path = Path(__file__).parent / "defaults.yaml"
+    if defaults_path.exists():
+        try:
+            with open(defaults_path) as f:
+                _project_config_cache = yaml.safe_load(f)
+                logger.debug(f"Loaded project config from {defaults_path}")
+                return _project_config_cache
+        except Exception as e:
+            if os.environ.get("TTT_JSON_MODE", "").lower() != "true" and not _is_pipe_mode():
+                logger.warning(f"Failed to load bundled defaults from {defaults_path}: {e}")
 
-    # If we get here, no config files were found (this should never happen since defaults.yaml should always exist)
+    # If we get here, even defaults.yaml is missing (should never happen)
     # Check suppress warnings both from variable and environment
     json_mode = os.environ.get("TTT_JSON_MODE", "").lower() == "true"
     pipe_mode = _is_pipe_mode()
 
-    # Debug: Always suppress this warning in any JSON-related context or pipe mode
-    # The warning will be included in the JSON response instead
+    # Only warn if even the bundled defaults are missing (serious issue)
     if "--json" in getattr(sys, "argv", []) or json_mode or _suppress_warnings or pipe_mode:
         # Suppress the warning - it will be included in JSON response or is not relevant in pipe mode
         pass
     else:
-        logger.warning("Project config.yaml not found and defaults.yaml is missing")
+        logger.warning("Bundled defaults.yaml is missing - this indicates a broken installation")
 
     _project_config_cache = {}
     return _project_config_cache

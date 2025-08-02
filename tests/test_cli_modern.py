@@ -187,12 +187,15 @@ class TestListCommand:
 
             assert result.exit_code == 0
 
-    def test_list_requires_resource(self):
-        """Test that list command requires a resource argument."""
+    def test_list_shows_summary_without_args(self):
+        """Test that list command shows a summary when called without arguments."""
         result = self.runner.invoke(main, ["list"])
 
-        assert result.exit_code == 2  # Click validation error
-        assert "Missing argument" in result.output
+        assert result.exit_code == 0
+        assert "TTT Resources Summary" in result.output
+        assert "Models:" in result.output
+        assert "Sessions:" in result.output
+        assert "Tools:" in result.output
 
     def test_list_invalid_resource(self):
         """Test validation for resource argument."""
@@ -370,12 +373,13 @@ class TestInfoCommand:
 
             assert result.exit_code == 0
 
-    def test_info_requires_model(self):
-        """Test that info command requires a model argument."""
+    def test_info_shows_models_without_args(self):
+        """Test that info command shows available models when called without arguments."""
         result = self.runner.invoke(main, ["info"])
 
-        assert result.exit_code == 2  # Click validation error
-        assert "Missing argument" in result.output
+        assert result.exit_code == 0
+        assert "Available Models" in result.output
+        assert "claude-3-haiku" in result.output
 
 
 class TestExportCommand:
@@ -415,12 +419,12 @@ class TestExportCommand:
 
             assert result.exit_code == 0
 
-    def test_export_requires_session(self):
-        """Test that export command requires a session argument."""
+    def test_export_shows_sessions_without_args(self):
+        """Test that export command shows available sessions when called without arguments."""
         result = self.runner.invoke(main, ["export"])
 
-        assert result.exit_code == 2  # Click validation error
-        assert "Missing argument" in result.output
+        assert result.exit_code == 0
+        assert "Chat Sessions" in result.output
 
 
 class TestCLIErrorHandling:
