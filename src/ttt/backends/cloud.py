@@ -397,7 +397,7 @@ class CloudBackend(BaseBackend):
                     tool_result = await execute_tools(tool_calls_data, parallel=True)
 
                     # Update content with tool results if content is empty
-                    if not content:
+                    if not response_content:
                         # Generate a response based on tool results
                         results_summary = []
                         for call in tool_result.calls:

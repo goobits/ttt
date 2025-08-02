@@ -351,11 +351,10 @@ class TestToolIntegration:
             """Simple test tool."""
             return f"Tool received: {message}"
 
-        # Mock the router and backend
-        with patch("ttt.core.routing.router") as mock_router:
+        # Mock the router where it's actually used in ttt.core.api
+        with patch("ttt.core.api.router") as mock_router:
             mock_backend = Mock()
-            mock_response = AIResponse("AI response with tool usage", model="test-model", backend="cloud")
-            # Add tool result to response
+            # Create AIResponse with tool_result in the constructor
             tool_call = ToolCall(
                 id="test_call",
                 name="simple_tool",
@@ -363,7 +362,12 @@ class TestToolIntegration:
                 result="Tool received: test",
             )
             tool_result = ToolResult(calls=[tool_call])
-            mock_response.tool_result = tool_result
+            mock_response = AIResponse(
+                "AI response with tool usage",
+                model="test-model",
+                backend="cloud",
+                tool_result=tool_result
+            )
 
             mock_backend.ask = AsyncMock(return_value=mock_response)
             mock_router.smart_route.return_value = (mock_backend, "test-model")
