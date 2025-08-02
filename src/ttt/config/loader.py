@@ -47,10 +47,10 @@ def get_project_config() -> Dict[str, Any]:
     if _project_config_cache is not None:
         return _project_config_cache
 
-    # Try to find the project config.yaml
+    # Try to find the project config.yaml, prioritizing user configs
     config_paths = [
-        Path(__file__).parent / "defaults.yaml",  # Config defaults
-        Path.cwd() / "config.yaml",  # Current working directory
+        Path.cwd() / "config.yaml",  # Current working directory (highest priority)
+        Path(__file__).parent / "defaults.yaml",  # Bundled defaults (fallback)
     ]
 
     for config_path in config_paths:
@@ -64,7 +64,7 @@ def get_project_config() -> Dict[str, Any]:
                 if os.environ.get("TTT_JSON_MODE", "").lower() != "true" and not _is_pipe_mode():
                     logger.warning(f"Failed to load project config from {config_path}: {e}")
 
-    # Return empty dict if no config found
+    # If we get here, no config files were found (this should never happen since defaults.yaml should always exist)
     # Check suppress warnings both from variable and environment
     json_mode = os.environ.get("TTT_JSON_MODE", "").lower() == "true"
     pipe_mode = _is_pipe_mode()
@@ -75,7 +75,7 @@ def get_project_config() -> Dict[str, Any]:
         # Suppress the warning - it will be included in JSON response or is not relevant in pipe mode
         pass
     else:
-        logger.warning("Project config.yaml not found")
+        logger.warning("Project config.yaml not found and defaults.yaml is missing")
 
     _project_config_cache = {}
     return _project_config_cache

@@ -125,6 +125,16 @@ models:
       capabilities: ["code", "text"]
       context_length: 4096
 
+    # Cerebras models
+    qwen-3-235b-a22b:
+      provider: "cerebras"
+      provider_name: "cerebras/qwen-3-235b-a22b"
+      aliases: ["cerebras", "qwen"]
+      speed: "fast"
+      quality: "high"
+      capabilities: ["text", "reasoning", "code"]
+      context_length: 40000
+
 # Backend configuration
 backends:
   default: "cloud"
