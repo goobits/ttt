@@ -867,17 +867,12 @@ class DefaultGroup(RichGroup):
 
 
 @click.group(cls=DefaultGroup, default='ask', context_settings={"help_option_names": ["-h", "--help"], "max_content_width": 120})
-
 @click.version_option(version=get_version(), prog_name="GOOBITS TTT CLI")
 @click.pass_context
-
 @click.option('--help-json', is_flag=True, callback=show_help_json, is_eager=True, help='Output CLI structure as JSON.', hidden=True)
-
-
 @click.option('--help-all', is_flag=True, is_eager=True, help='Show help for all commands.', hidden=True)
-
-
-def main(ctx, help_json=False, help_all=False):
+@click.option('--debug', is_flag=True, help='Show full error traces and debug information')
+def main(ctx, help_json=False, help_all=False, debug=False):
     """🤖 [bold color(6)]GOOBITS TTT CLI v1.0.3[/bold color(6)] - Talk to Transformer
 
     
@@ -945,7 +940,8 @@ def main(ctx, help_json=False, help_all=False):
     
     
     # Store global options in context for use by commands
-    
+    ctx.ensure_object(dict)
+    ctx.obj['debug'] = debug
 
     pass
 
@@ -1111,7 +1107,8 @@ def ask(ctx, prompt, model, temperature, max_tokens, tools, session, system, str
         
         
         # Add global options from context
-        
+        if ctx and ctx.obj:
+            kwargs['debug'] = ctx.obj.get('debug', False)
         
         result = hook_func(**kwargs)
         return result
@@ -1214,7 +1211,8 @@ def chat(ctx, model, session, tools, markdown):
         
         
         # Add global options from context
-        
+        if ctx and ctx.obj:
+            kwargs['debug'] = ctx.obj.get('debug', False)
         
         result = hook_func(**kwargs)
         return result
@@ -1245,6 +1243,7 @@ def chat(ctx, model, session, tools, markdown):
 @click.argument(
     "RESOURCE",
     required=False,
+    default=None,
     type=click.Choice(['models', 'sessions', 'tools'])
 )
 
@@ -1295,7 +1294,8 @@ def list(ctx, resource, format, verbose):
         
         
         # Add global options from context
-        
+        if ctx and ctx.obj:
+            kwargs['debug'] = ctx.obj.get('debug', False)
         
         result = hook_func(**kwargs)
         return result
@@ -1354,7 +1354,8 @@ def status(ctx, json):
         
         
         # Add global options from context
-        
+        if ctx and ctx.obj:
+            kwargs['debug'] = ctx.obj.get('debug', False)
         
         result = hook_func(**kwargs)
         return result
@@ -1407,7 +1408,8 @@ def models(ctx, json):
         
         
         # Add global options from context
-        
+        if ctx and ctx.obj:
+            kwargs['debug'] = ctx.obj.get('debug', False)
         
         result = hook_func(**kwargs)
         return result
@@ -1431,7 +1433,8 @@ def models(ctx, json):
 
 @click.argument(
     "MODEL",
-    required=False
+    required=False,
+    default=None
 )
 
 
@@ -1469,7 +1472,8 @@ def info(ctx, model, json):
         
         
         # Add global options from context
-        
+        if ctx and ctx.obj:
+            kwargs['debug'] = ctx.obj.get('debug', False)
         
         result = hook_func(**kwargs)
         return result
@@ -1497,7 +1501,8 @@ def info(ctx, model, json):
 
 @click.argument(
     "SESSION",
-    required=False
+    required=False,
+    default=None
 )
 
 
@@ -1557,7 +1562,8 @@ def export(ctx, session, format, output, include_metadata):
         
         
         # Add global options from context
-        
+        if ctx and ctx.obj:
+            kwargs['debug'] = ctx.obj.get('debug', False)
         
         result = hook_func(**kwargs)
         return result
@@ -1617,7 +1623,8 @@ def get(ctx, key):
         
         
         # Add global options from context
-        
+        if ctx and ctx.obj:
+            kwargs['debug'] = ctx.obj.get('debug', False)
         
         result = hook_func(**kwargs)
         return result
@@ -1664,7 +1671,8 @@ def set(ctx, key, value):
         
         
         # Add global options from context
-        
+        if ctx and ctx.obj:
+            kwargs['debug'] = ctx.obj.get('debug', False)
         
         result = hook_func(**kwargs)
         return result
@@ -1709,7 +1717,8 @@ def config_list(ctx, show_secrets):
         
         
         # Add global options from context
-        
+        if ctx and ctx.obj:
+            kwargs['debug'] = ctx.obj.get('debug', False)
         
         result = hook_func(**kwargs)
         return result
@@ -1760,7 +1769,8 @@ def enable(ctx, tool_name):
         
         
         # Add global options from context
-        
+        if ctx and ctx.obj:
+            kwargs['debug'] = ctx.obj.get('debug', False)
         
         result = hook_func(**kwargs)
         return result
@@ -1801,7 +1811,8 @@ def disable(ctx, tool_name):
         
         
         # Add global options from context
-        
+        if ctx and ctx.obj:
+            kwargs['debug'] = ctx.obj.get('debug', False)
         
         result = hook_func(**kwargs)
         return result
@@ -1844,7 +1855,8 @@ def tools_list(ctx, show_disabled):
         
         
         # Add global options from context
-        
+        if ctx and ctx.obj:
+            kwargs['debug'] = ctx.obj.get('debug', False)
         
         result = hook_func(**kwargs)
         return result

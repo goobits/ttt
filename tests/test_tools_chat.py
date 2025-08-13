@@ -217,6 +217,7 @@ class TestCLIToolSupport:
                 with patch("sys.stdin.isatty", return_value=True):
                     # Call with tools=True
                     on_ask(
+                        command_name="ask",
                         prompt=("test",),
                         model=None,
                         temperature=0.7,
@@ -239,6 +240,7 @@ class TestCLIToolSupport:
                 # Call with tools=False
                 with patch("sys.stdin.isatty", return_value=True):
                     on_ask(
+                        command_name="ask",
                         prompt=("test",),
                         model=None,
                         temperature=0.7,

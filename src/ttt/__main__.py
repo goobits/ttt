@@ -16,6 +16,11 @@ if __name__ == "__main__":
             "models",
             "config",
             "ask",
+            "info",
+            "export",
+            "list",
+            "tools",
+            "upgrade",
         ]:
             # Insert 'ask' command to make it work as direct prompt
             sys.argv.insert(1, "ask")

@@ -317,6 +317,7 @@ def apply_coding_optimization(kwargs: Dict[str, Any]) -> None:
 
 
 def on_ask(
+    command_name: str,
     prompt: Tuple[str, ...],
     model: Optional[str],
     temperature: float,
@@ -489,7 +490,7 @@ def on_ask(
             click.echo(json_module.dumps(error_output, indent=2), err=True)
         else:
             # Format error messages with smart suggestions
-            debug_mode = kwargs.get("debug") or os.getenv("TTT_DEBUG")
+            debug_mode = kwargs.get("debug", False) or os.getenv("TTT_DEBUG", "").lower() == "true"
             
             if isinstance(e, APIKeyError):
                 click.echo(f"❌ API key error: {e.message}", err=True)
@@ -523,6 +524,12 @@ def on_ask(
                     click.echo("\n[dim]Troubleshooting steps:[/dim]", err=True)
                     for i, step in enumerate(steps[:3], 1):
                         click.echo(f"   {i}. {step}", err=True)
+                
+                # Show full traceback in debug mode
+                debug_mode_local = kwargs.get("debug", False) or os.getenv("TTT_DEBUG", "").lower() == "true"
+                if debug_mode_local:
+                    import traceback
+                    traceback.print_exc()
                         
             elif isinstance(e, BackendTimeoutError):
                 click.echo(f"⏱️  Request timed out after {e.details.get('timeout', 'unknown')}s", err=True)
@@ -588,7 +595,7 @@ def on_ask(
         sys.exit(1)
 
 
-def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown: bool, **kwargs) -> None:
+def on_chat(command_name: str, model: Optional[str], session: Optional[str], tools: bool, markdown: bool, **kwargs) -> None:
     """Hook for 'chat' command.
 
     Starts an interactive chat session with an AI model. Supports session
@@ -774,6 +781,16 @@ def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown:
                         console.print(f"[red]❌ Quota exceeded: {e.message}[/red]")
                     else:
                         console.print(f"[red]Error: {str(e)}[/red]")
+                    
+                    # Show full traceback in debug mode
+                    debug_mode = kwargs.get("debug", False) or os.getenv("TTT_DEBUG", "").lower() == "true"
+                    if debug_mode:
+                        import traceback
+                        traceback.print_exc()
+                    
+                    # Exit with error code for non-interactive errors
+                    import sys
+                    sys.exit(1)
 
     except (EOFError, KeyboardInterrupt):
         # Normal exit, don't show error
@@ -784,7 +801,7 @@ def on_chat(model: Optional[str], session: Optional[str], tools: bool, markdown:
             console.print(f"[red]Error starting chat session: {e}[/red]")
 
 
-def on_list(resource: Optional[str] = None, format: str = "table", verbose: bool = False, **kwargs) -> None:
+def on_list(command_name: str, resource: Optional[str] = None, format: str = "table", verbose: bool = False, **kwargs) -> None:
     """Hook for 'list' command.
 
     Lists various TTT resources like models, sessions, or tools in either
@@ -864,7 +881,7 @@ def on_list(resource: Optional[str] = None, format: str = "table", verbose: bool
                 console.print(f"  • [cyan]{tool.name}[/cyan]: {tool.description}")
 
 
-def on_config_get(key: str, **kwargs) -> None:
+def on_config_get(command_name: str, key: str, **kwargs) -> None:
     """Hook for 'config get' subcommand.
 
     Retrieves and displays a specific configuration value using dot notation.
@@ -876,7 +893,7 @@ def on_config_get(key: str, **kwargs) -> None:
     config_manager.show_value(key)
 
 
-def on_config_set(key: str, value: str, **kwargs) -> None:
+def on_config_set(command_name: str, key: str, value: str, **kwargs) -> None:
     """Hook for 'config set' subcommand.
 
     Sets a configuration value using dot notation. Creates nested
@@ -890,7 +907,7 @@ def on_config_set(key: str, value: str, **kwargs) -> None:
     config_manager.set_value(key, value)
 
 
-def on_config_list(show_secrets: bool, **kwargs) -> None:
+def on_config_list(command_name: str, show_secrets: bool, **kwargs) -> None:
     """Hook for 'config list' subcommand.
 
     Displays the complete merged configuration from all sources.
@@ -921,6 +938,7 @@ def on_config_list(show_secrets: bool, **kwargs) -> None:
 
 
 def on_export(
+    command_name: str,
     session: Optional[str] = None,
     format: str = "markdown",
     output: Optional[str] = None,
@@ -944,7 +962,7 @@ def on_export(
     """
     if session is None:
         # No session specified, show available sessions
-        on_list(resource="sessions", format="table", verbose=False)
+        on_list(command_name="list", resource="sessions", format="table", verbose=False)
         return
 
     session_manager = ChatSessionManager()
@@ -996,7 +1014,7 @@ def on_export(
         click.echo(output_text)
 
 
-def on_tools_enable(tool_name: str, **kwargs) -> None:
+def on_tools_enable(command_name: str, tool_name: str, **kwargs) -> None:
     """Hook for 'tools enable' subcommand.
 
     Removes a tool from the disabled list, making it available for use.
@@ -1016,7 +1034,7 @@ def on_tools_enable(tool_name: str, **kwargs) -> None:
         click.echo(f"Tool '{tool_name}' is already enabled")
 
 
-def on_tools_disable(tool_name: str, **kwargs) -> None:
+def on_tools_disable(command_name: str, tool_name: str, **kwargs) -> None:
     """Hook for 'tools disable' subcommand.
 
     Adds a tool to the disabled list, preventing it from being used.
@@ -1036,7 +1054,7 @@ def on_tools_disable(tool_name: str, **kwargs) -> None:
         click.echo(f"Tool '{tool_name}' is already disabled")
 
 
-def on_tools_list(show_disabled: bool, **kwargs) -> None:
+def on_tools_list(command_name: str, show_disabled: bool, **kwargs) -> None:
     """Hook for 'tools list' subcommand.
 
     Lists all available tools with their status (enabled/disabled).
@@ -1304,7 +1322,7 @@ def show_backend_status(json_output: bool = False) -> None:
 
 
 # Add hook functions for missing commands that need to be added to CLI
-def on_status(json: bool, **kwargs) -> None:
+def on_status(command_name: str, json: bool, **kwargs) -> None:
     """Hook for 'status' command.
 
     Shows the overall status of TTT backends and connectivity.
@@ -1315,7 +1333,7 @@ def on_status(json: bool, **kwargs) -> None:
     show_backend_status(json_output=json)
 
 
-def on_models(json: bool, **kwargs) -> None:
+def on_models(command_name: str, json: bool, **kwargs) -> None:
     """Hook for 'models' command.
 
     Lists all available AI models with their details.
@@ -1326,7 +1344,7 @@ def on_models(json: bool, **kwargs) -> None:
     show_models_list(json_output=json)
 
 
-def on_info(model: Optional[str] = None, json: bool = False, **kwargs) -> None:
+def on_info(command_name: str, model: Optional[str] = None, json: bool = False, **kwargs) -> None:
     """Hook for 'info' command.
 
     Shows detailed information about a specific AI model.
@@ -1338,6 +1356,6 @@ def on_info(model: Optional[str] = None, json: bool = False, **kwargs) -> None:
     """
     if model is None:
         # No model specified, show available models
-        on_models(json=json)
+        on_models(command_name="models", json=json)
     else:
         show_model_info(model, json_output=json)

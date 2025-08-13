@@ -8,8 +8,10 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 
-# Add the parent directory to Python path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add the parent directory and src directory to Python path for imports
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root / "src"))
+sys.path.insert(0, str(project_root))
 
 # Load environment variables from .env file
 env_path = Path(__file__).parent.parent / ".env"

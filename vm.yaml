@@ -13,11 +13,13 @@ pip_packages:
   - pytest
   - flake8
 npm_packages:
-  - browsertap
 terminal:
   emoji: 🤖
   username: ttt-dev
   show_git_branch: true
   theme: dracula
+aliases:
+  claudeyolo: claude --dangerously-skip-permissions
+  geminiyolo: GEMINI_API_KEY=${GEMINI_API_KEY:-} gemini
 claude_sync: true
 gemini_sync: true
