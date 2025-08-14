@@ -16,68 +16,16 @@ from ttt import (
     stream,
     stream_async,
 )
-from ttt.backends import BaseBackend
 from ttt.session.chat import PersistentChatSession as ChatSession
+from tests.utils import MockBackend
 
 
-class MockBackend(BaseBackend):
-    """Mock backend for testing."""
-
-    def __init__(self, name="mock", response_text="Mock response"):
-        self.name_value = name
-        self.response_text = response_text
-        self.last_prompt = None
-        self.last_kwargs = None
-        self._is_available = True
-        self._supports_streaming = True
-
-    @property
-    def name(self) -> str:
-        return self.name_value
-
-    @property
-    def is_available(self) -> bool:
-        return self._is_available
-
-    @property
-    def supports_streaming(self) -> bool:
-        return self._supports_streaming
-
-    async def ask(self, prompt, **kwargs) -> AIResponse:
-        self.last_prompt = prompt
-        self.last_kwargs = kwargs
-        return AIResponse(
-            content=self.response_text,
-            model=kwargs.get("model", "mock-model"),
-            backend=self.name,
-            time_taken=0.1,
-            tokens_in=10,
-            tokens_out=20,
-        )
-
-    async def astream(self, prompt, **kwargs) -> AsyncIterator[str]:
-        self.last_prompt = prompt
-        self.last_kwargs = kwargs
-        chunks = self.response_text.split()
-        for chunk in chunks:
-            yield chunk + " "
-
-    async def list_models(self, **kwargs):
-        return ["mock-model-1", "mock-model-2"]
-
-    async def status(self, **kwargs):
-        return {"available": True, "name": self.name}
-
-    @property
-    def models(self):
-        """Return list of available models."""
-        return ["mock-model-1", "mock-model-2"]
 
 
 @pytest.fixture
 def mock_backend():
     """Provide a mock backend."""
-    return MockBackend()
+    return MockBackend(response_text="Mock response")
 
 
 @pytest.fixture
@@ -91,7 +39,7 @@ def mock_router(mock_backend):
 class TestAskFunction:
     """Test the ask function."""
 
-    def test_ask_basic(self):
+    def test_ask_routes_to_backend_and_returns_response_with_metadata(self):
         """Test basic ask functionality."""
         mock_backend = MockBackend()
         with patch("ttt.core.routing.router.smart_route") as mock_route:
@@ -152,7 +100,7 @@ class TestAskFunction:
 class TestStreamFunction:
     """Test the stream function."""
 
-    def test_stream_basic(self):
+    def test_stream_routes_to_backend_and_yields_response_chunks(self):
         """Test basic streaming functionality."""
         mock_backend = MockBackend()
         mock_backend.response_text = "Hello world test"
@@ -201,7 +149,7 @@ class TestStreamFunction:
 class TestChatSession:
     """Test ChatSession class."""
 
-    def test_chat_session_initialization_default(self):
+    def test_chat_session_initialization_resolves_backend_and_model_defaults(self):
         """Test ChatSession initialization with defaults."""
         with patch("ttt.core.routing.router") as mock_router:
             mock_backend = MockBackend()
@@ -314,31 +262,8 @@ class TestChatSession:
         assert mock_backend.last_kwargs["system"] == "You are a pirate"
 
 
-class TestChatContextManager:
-    """Test chat context manager."""
-
-    def test_chat_context_basic(self):
-        """Test basic chat context manager."""
-        with patch("ttt.core.routing.router.smart_route") as mock_route:
-            mock_backend = MockBackend()
-            mock_route.return_value = (mock_backend, "mock-model")
-
-            with chat() as session:
-                assert isinstance(session, ChatSession)
-                response = session.ask("Test")
-                assert str(response) == "Mock response"
-
-    def test_chat_context_with_params(self):
-        """Test chat context manager with parameters."""
-        with patch("ttt.backends.local.LocalBackend") as mock_local:
-            mock_backend = MockBackend("local")
-            mock_local.return_value = mock_backend
-
-            with chat(system="System prompt", model="model", backend="local") as session:
-                assert session.system == "System prompt"
-                assert session.model == "model"
-                # Backend might be LocalBackend due to routing
-                assert session.backend is not None
+# TestChatContextManager removed to eliminate duplication
+# Comprehensive chat context manager tests are in test_chat.py
 
 
 class TestAsyncFunctions:

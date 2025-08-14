@@ -76,7 +76,7 @@ def cloud_backend(mock_litellm):
 class TestCloudBackendInitialization:
     """Test CloudBackend initialization."""
 
-    def test_init_success(self, mock_litellm):
+    def test_init_creates_backend_with_litellm_dependency_available(self, mock_litellm):
         """Test successful initialization with litellm available."""
         import importlib
 
@@ -110,7 +110,7 @@ class TestCloudBackendAsk:
     """Test CloudBackend ask method."""
 
     @pytest.mark.asyncio
-    async def test_ask_success(self, cloud_backend, mock_litellm):
+    async def test_ask_returns_response_with_model_and_token_metadata(self, cloud_backend, mock_litellm):
         """Test successful ask request."""
         mock_response = MockLiteLLM.MockResponse("This is a test response", model="gpt-3.5-turbo")
         mock_litellm.acompletion.return_value = mock_response
@@ -199,7 +199,7 @@ class TestCloudBackendStream:
     """Test CloudBackend streaming."""
 
     @pytest.mark.asyncio
-    async def test_stream_success(self, cloud_backend, mock_litellm):
+    async def test_stream_yields_incremental_content_chunks(self, cloud_backend, mock_litellm):
         """Test successful streaming."""
 
         # Create async generator for streaming

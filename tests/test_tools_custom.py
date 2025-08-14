@@ -21,7 +21,7 @@ from ttt.tools.registry import ToolRegistry, resolve_tools
 class TestToolDecorator:
     """Test the @tool decorator functionality."""
 
-    def test_tool_decorator_basic(self):
+    def test_tool_decorator_extracts_function_signature_and_metadata(self):
         """Test basic tool decorator usage."""
 
         @tool
@@ -97,7 +97,7 @@ class TestToolExecution:
     """Test tool execution functionality."""
 
     @pytest.mark.asyncio
-    async def test_execute_single_async_success(self):
+    async def test_execute_single_async_calls_tool_and_returns_result(self):
         """Test successful single tool execution."""
         from ttt.tools.registry import register_tool, unregister_tool
 

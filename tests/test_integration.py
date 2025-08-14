@@ -18,12 +18,13 @@ import pytest
 from ttt import APIKeyError, ModelNotFoundError, RateLimitError
 
 
+def is_valid_key(key):
+    """Check if an API key is valid (not a test key and has reasonable length)."""
+    return key and "test-key" not in key and len(key) > 10
+
+
 def skip_if_no_api_keys():
     """Skip test if no valid API keys are available."""
-
-    def is_valid_key(key):
-        return key and "test-key" not in key and len(key) > 10
-
     has_keys = any(
         [
             is_valid_key(os.getenv("OPENAI_API_KEY")),
@@ -43,9 +44,6 @@ class TestRealAPIIntegration:
         """Test basic ask functionality with real API."""
 
         # Prefer OpenRouter if available, then valid OpenAI key
-        def is_valid_key(key):
-            return key and "test-key" not in key and len(key) > 10
-
         if is_valid_key(os.getenv("OPENROUTER_API_KEY")):
             # Use Gemini 2.5 Flash (stable production model)
             model = "openrouter/google/gemini-2.5-flash"
@@ -66,9 +64,6 @@ class TestRealAPIIntegration:
         """Test streaming with real API."""
         chunks = []
 
-        def is_valid_key(key):
-            return key and "test-key" not in key and len(key) > 10
-
         if is_valid_key(os.getenv("OPENROUTER_API_KEY")):
             model = "openrouter/google/gemini-2.5-flash"
         elif is_valid_key(os.getenv("OPENAI_API_KEY")):
@@ -87,9 +82,6 @@ class TestRealAPIIntegration:
 
     def test_chat_session_integration(self, delayed_chat):
         """Test persistent chat session."""
-
-        def is_valid_key(key):
-            return key and "test-key" not in key and len(key) > 10
 
         if is_valid_key(os.getenv("OPENROUTER_API_KEY")):
             model = "openrouter/google/gemini-2.5-pro"
@@ -204,9 +196,6 @@ class TestErrorHandlingIntegration:
         responses = []
 
         # Use OpenRouter model if available
-        def is_valid_key(key):
-            return key and "test-key" not in key and len(key) > 10
-
         if is_valid_key(os.getenv("OPENROUTER_API_KEY")):
             model = "openrouter/google/gemini-2.5-flash"
         else:
@@ -232,9 +221,6 @@ class TestPerformanceBenchmarks:
         import time
 
         results = {}
-
-        def is_valid_key(key):
-            return key and "test-key" not in key and len(key) > 10
 
         # Test with OpenRouter models if available
         if is_valid_key(os.getenv("OPENROUTER_API_KEY")):
@@ -272,12 +258,9 @@ class TestPerformanceBenchmarks:
 class TestUsageExamples:
     """Real usage examples that can be used in documentation."""
 
-    def test_code_generation_example(self, delayed_ask):
+    def test_code_generation_produces_valid_python_function_with_docstring(self, delayed_ask):
         """Example of using AI for code generation."""
         prompt = "Write a Python function that calculates factorial. Include docstring."
-
-        def is_valid_key(key):
-            return key and "test-key" not in key and len(key) > 10
 
         if is_valid_key(os.getenv("OPENROUTER_API_KEY")):
             model = "openrouter/google/gemini-2.5-flash"
@@ -289,12 +272,9 @@ class TestUsageExamples:
         assert "def" in str(response)
         assert "factorial" in str(response).lower()
 
-    def test_data_analysis_example(self, delayed_ask):
+    def test_data_analysis_explains_statistical_concepts_clearly(self, delayed_ask):
         """Example of using AI for data analysis questions."""
         prompt = "Explain the difference between mean and median in statistics."
-
-        def is_valid_key(key):
-            return key and "test-key" not in key and len(key) > 10
 
         if is_valid_key(os.getenv("OPENROUTER_API_KEY")):
             model = "openrouter/google/gemini-2.5-flash"

@@ -11,10 +11,12 @@ Run with:
 
 import json
 import os
-import subprocess
 import tempfile
 
 import pytest
+from click.testing import CliRunner
+
+from ttt.cli import main
 
 
 def has_valid_api_key():
@@ -33,28 +35,10 @@ def has_valid_api_key():
 
 
 def run_ttt_command(args, input_text=None, timeout=10):
-    """Run a TTT command and return result."""
-    # Ensure we use the right PATH to find ttt
-    env = os.environ.copy()
-    env["PATH"] = f"{os.path.expanduser('~/.local/bin')}:{env.get('PATH', '')}"
-
-    try:
-        result = subprocess.run(
-            ["ttt"] + args,
-            input=input_text,
-            text=True,
-            capture_output=True,
-            timeout=timeout,
-            env=env,
-        )
-        return result
-    except subprocess.TimeoutExpired:
-        return subprocess.CompletedProcess(
-            args=["ttt"] + args,
-            returncode=124,  # Timeout return code
-            stdout="",
-            stderr="Command timed out",
-        )
+    """Run a TTT command using CliRunner for faster execution."""
+    runner = CliRunner()
+    result = runner.invoke(main, args, input=input_text)
+    return result
 
 
 class TestBasicCommands:
@@ -67,7 +51,7 @@ class TestBasicCommands:
 
         result = run_ttt_command(["hello world"])
         # Should either work or timeout (both acceptable for API calls)
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
     def test_ttt_ask_prompt(self):
         """Test: ttt ask 'prompt' - Tested 2025-07-24"""
@@ -75,44 +59,44 @@ class TestBasicCommands:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "hello world"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
     def test_ttt_info_model(self):
         """Test: ttt info <model> - Tested 2025-07-24"""
         result = run_ttt_command(["info", "gpt-4"])
-        assert result.returncode == 0
-        assert "gpt-4" in result.stdout
-        assert "Provider:" in result.stdout
+        assert result.exit_code == 0
+        assert "gpt-4" in result.output
+        assert "Provider:" in result.output
 
-    def test_ttt_chat_help(self):
+    def test_ttt_chat_help_displays_interactive_chat_instructions(self):
         """Test: ttt chat - Tested 2025-07-24 (help only)"""
         result = run_ttt_command(["chat", "--help"])
-        assert result.returncode == 0
-        assert "Chat interactively" in result.stdout
+        assert result.exit_code == 0
+        assert "Chat interactively" in result.output
 
     def test_ttt_status(self):
         """Test: ttt status - Tested 2025-07-24"""
         result = run_ttt_command(["status"])
-        assert result.returncode == 0
-        assert "TTT System Status" in result.stdout
+        assert result.exit_code == 0
+        assert "TTT System Status" in result.output
 
     def test_ttt_models(self):
         """Test: ttt models - Tested 2025-07-24"""
         result = run_ttt_command(["models"])
-        assert result.returncode == 0
-        assert "Available Models" in result.stdout
+        assert result.exit_code == 0
+        assert "Available Models" in result.output
 
     def test_ttt_config(self):
         """Test: ttt config - Tested 2025-07-24"""
         result = run_ttt_command(["config", "--help"])
-        assert result.returncode == 0
-        assert "Customize your setup" in result.stdout
+        assert result.exit_code == 0
+        assert "Customize your setup" in result.output
 
     def test_ttt_version(self):
         """Test: ttt --version - Tested 2025-07-24"""
         result = run_ttt_command(["--version"])
-        assert result.returncode == 0
-        assert "version" in result.stdout.lower()
+        assert result.exit_code == 0
+        assert "version" in result.output.lower()
 
 
 class TestModelSelectionOptions:
@@ -125,7 +109,7 @@ class TestModelSelectionOptions:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "--model", "gpt-4", "hello"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
     @pytest.mark.requires_api
     def test_ask_model_short_flag(self):
@@ -135,7 +119,7 @@ class TestModelSelectionOptions:
 
         result = run_ttt_command(["ask", "-m", "@claude", "hello"])
         # Accept success (0), timeout (124), or model unavailable error (1)
-        assert result.returncode in [0, 1, 124]
+        assert result.exit_code in [0, 1, 124]
 
     @pytest.mark.requires_api
     def test_ask_full_model_path(self):
@@ -144,19 +128,19 @@ class TestModelSelectionOptions:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "--model", "openrouter/google/gemini-flash-1.5", "hello"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
 
 class TestSystemPromptOptions:
     """Test system prompt options."""
 
-    def test_ask_system_help(self):
+    def test_ask_system_help_shows_system_prompt_option_usage(self):
         """Test: ttt ask --system help availability - Tested 2025-07-24"""
         result = run_ttt_command(["ask", "--help"])
-        assert result.returncode == 0
+        assert result.exit_code == 0
         # Should show both session and system options
-        assert "--session" in result.stdout
-        assert "--system" in result.stdout
+        assert "--session" in result.output
+        assert "--system" in result.output
 
     def test_ask_system_prompt(self):
         """Test: ttt ask --system 'system prompt' 'user prompt' - Tested 2025-07-24"""
@@ -164,17 +148,17 @@ class TestSystemPromptOptions:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "--system", "You are helpful", "hello"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
 
 class TestTemperatureControl:
     """Test temperature control options."""
 
-    def test_ask_temperature_help(self):
+    def test_ask_temperature_help_shows_randomness_control_option(self):
         """Test: Temperature option availability - Tested 2025-07-24"""
         result = run_ttt_command(["ask", "--help"])
-        assert result.returncode == 0
-        assert "--temperature" in result.stdout
+        assert result.exit_code == 0
+        assert "--temperature" in result.output
 
     @pytest.mark.requires_api
     def test_ask_temperature_long(self):
@@ -183,7 +167,7 @@ class TestTemperatureControl:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "--temperature", "0.7", "hello"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
     @pytest.mark.requires_api
     def test_ask_temperature_short(self):
@@ -192,17 +176,17 @@ class TestTemperatureControl:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "-t", "0.1", "hello"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
 
 class TestTokenLimits:
     """Test token limit options."""
 
-    def test_ask_max_tokens_help(self):
+    def test_ask_max_tokens_help_shows_response_length_limit_option(self):
         """Test: Max tokens option availability - Tested 2025-07-24"""
         result = run_ttt_command(["ask", "--help"])
-        assert result.returncode == 0
-        assert "--max-tokens" in result.stdout
+        assert result.exit_code == 0
+        assert "--max-tokens" in result.output
 
     @pytest.mark.requires_api
     def test_ask_max_tokens(self):
@@ -211,42 +195,42 @@ class TestTokenLimits:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "--max-tokens", "100", "hello"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
 
 class TestToolsOptions:
     """Test tools options."""
 
-    def test_ask_tools_help(self):
+    def test_ask_tools_help_shows_tool_usage_option_availability(self):
         """Test: Tools option availability - Tested 2025-07-24"""
         result = run_ttt_command(["ask", "--help"])
-        assert result.returncode == 0
-        assert "--tools" in result.stdout
+        assert result.exit_code == 0
+        assert "--tools" in result.output
 
     @pytest.mark.requires_api
-    def test_ask_tools_basic(self):
+    def test_ask_tools_basic_executes_with_tools_enabled(self):
         """Test: ttt ask --tools 'prompt' - Tested 2025-07-24"""
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "--tools", "true", "hello"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
 
 class TestOutputModes:
     """Test output modes."""
 
-    def test_ask_stream_help(self):
+    def test_ask_stream_help_shows_streaming_output_option(self):
         """Test: Stream option availability - Tested 2025-07-24"""
         result = run_ttt_command(["ask", "--help"])
-        assert result.returncode == 0
-        assert "--stream" in result.stdout
+        assert result.exit_code == 0
+        assert "--stream" in result.output
 
-    def test_ask_json_help(self):
+    def test_ask_json_help_shows_structured_output_option(self):
         """Test: JSON option availability - Tested 2025-07-24"""
         result = run_ttt_command(["ask", "--help"])
-        assert result.returncode == 0
-        assert "--json" in result.stdout
+        assert result.exit_code == 0
+        assert "--json" in result.output
 
     @pytest.mark.requires_api
     def test_ask_stream(self):
@@ -255,7 +239,7 @@ class TestOutputModes:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "--stream", "true", "hello"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
     @pytest.mark.requires_api
     def test_ask_json(self):
@@ -264,75 +248,75 @@ class TestOutputModes:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "--json", "hello"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
 
 class TestChatCommands:
     """Test chat command options."""
 
-    def test_chat_basic_help(self):
+    def test_chat_basic_help_shows_interactive_chat_mode_instructions(self):
         """Test: ttt chat - Tested 2025-07-24"""
         result = run_ttt_command(["chat", "--help"])
-        assert result.returncode == 0
-        assert "Chat interactively" in result.stdout
+        assert result.exit_code == 0
+        assert "Chat interactively" in result.output
 
     def test_chat_model_option(self):
         """Test: ttt chat --model option availability - Tested 2025-07-24"""
         result = run_ttt_command(["chat", "--help"])
-        assert result.returncode == 0
-        assert "--model" in result.stdout
+        assert result.exit_code == 0
+        assert "--model" in result.output
 
     def test_chat_session_option(self):
         """Test: ttt chat --session option availability - Tested 2025-07-24"""
         result = run_ttt_command(["chat", "--help"])
-        assert result.returncode == 0
-        assert "--session" in result.stdout
+        assert result.exit_code == 0
+        assert "--session" in result.output
 
     def test_chat_tools_option(self):
         """Test: ttt chat --tools option availability - Tested 2025-07-24"""
         result = run_ttt_command(["chat", "--help"])
-        assert result.returncode == 0
-        assert "--tools" in result.stdout
+        assert result.exit_code == 0
+        assert "--tools" in result.output
 
     def test_chat_markdown_option(self):
         """Test: ttt chat --markdown option availability - Tested 2025-07-24"""
         result = run_ttt_command(["chat", "--help"])
-        assert result.returncode == 0
-        assert "--markdown" in result.stdout
+        assert result.exit_code == 0
+        assert "--markdown" in result.output
 
 
 class TestConfigCommands:
     """Test config commands."""
 
-    def test_config_help(self):
+    def test_config_help_shows_get_set_list_subcommands(self):
         """Test: ttt config - Tested 2025-07-24"""
         result = run_ttt_command(["config", "--help"])
-        assert result.returncode == 0
-        assert "get" in result.stdout
-        assert "set" in result.stdout
-        assert "list" in result.stdout
+        assert result.exit_code == 0
+        assert "get" in result.output
+        assert "set" in result.output
+        assert "list" in result.output
 
     def test_config_list(self):
         """Test: ttt config list - Tested 2025-07-24"""
         result = run_ttt_command(["config", "list"])
-        assert result.returncode == 0
+        assert result.exit_code == 0
         # Should output JSON configuration
         try:
-            json.loads(result.stdout)
+            json.loads(result.output)
         except json.JSONDecodeError:
             pytest.fail("Config list should output valid JSON")
 
-    def test_config_get_models_default(self):
+    def test_config_get_models_default_displays_current_default_model(self):
         """Test: ttt config get models.default - Tested 2025-07-24"""
         result = run_ttt_command(["config", "get", "models.default"])
-        assert result.returncode == 0
-        assert "models.default:" in result.stdout
+        assert result.exit_code == 0
+        assert "models.default:" in result.output
 
     def test_config_get_models_aliases(self):
         """Test: ttt config get models.aliases - Tested 2025-07-24"""
         result = run_ttt_command(["config", "get", "models.aliases"])
-        assert result.returncode == 0
-        assert "models.aliases:" in result.stdout
+        assert result.exit_code == 0
+        assert "models.aliases:" in result.output
 
 
 class TestJSONOutputCombinations:
@@ -341,10 +325,10 @@ class TestJSONOutputCombinations:
     def test_status_json(self):
         """Test: ttt status --json - Tested 2025-07-24"""
         result = run_ttt_command(["status", "--json"])
-        assert result.returncode == 0
+        assert result.exit_code == 0
         # Should output valid JSON
         try:
-            data = json.loads(result.stdout)
+            data = json.loads(result.output)
             assert "backends" in data
         except json.JSONDecodeError:
             pytest.fail("Status --json should output valid JSON")
@@ -352,10 +336,10 @@ class TestJSONOutputCombinations:
     def test_models_json(self):
         """Test: ttt models --json - Tested 2025-07-24"""
         result = run_ttt_command(["models", "--json"])
-        assert result.returncode == 0
+        assert result.exit_code == 0
         # Should output valid JSON array
         try:
-            data = json.loads(result.stdout)
+            data = json.loads(result.output)
             assert isinstance(data, list)
         except json.JSONDecodeError:
             pytest.fail("Models --json should output valid JSON")
@@ -363,10 +347,10 @@ class TestJSONOutputCombinations:
     def test_info_json(self):
         """Test: ttt info <model> --json - Tested 2025-07-24"""
         result = run_ttt_command(["info", "gpt-4", "--json"])
-        assert result.returncode == 0
+        assert result.exit_code == 0
         # Should output valid JSON
         try:
-            data = json.loads(result.stdout)
+            data = json.loads(result.output)
             assert "name" in data or "model" in data
         except json.JSONDecodeError:
             pytest.fail("Info --json should output valid JSON")
@@ -382,7 +366,7 @@ class TestPipelineUsage:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "transform this"], input_text="hello world")
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
     @pytest.mark.requires_api
     def test_echo_pipe_ask_specific(self):
@@ -391,7 +375,7 @@ class TestPipelineUsage:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "make this uppercase"], input_text="hello world")
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
 
 class TestModelAliases:
@@ -405,7 +389,7 @@ class TestModelAliases:
 
         result = run_ttt_command(["ask", "-m", "@claude", "hello"])
         # Accept success (0), timeout (124), or model unavailable error (1)
-        assert result.returncode in [0, 1, 124]
+        assert result.exit_code in [0, 1, 124]
 
     @pytest.mark.requires_api
     def test_ask_alias_gpt4(self):
@@ -414,7 +398,7 @@ class TestModelAliases:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "-m", "@gpt4", "hello"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
     @pytest.mark.requires_api
     def test_ask_alias_fast(self):
@@ -423,7 +407,7 @@ class TestModelAliases:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "-m", "@fast", "hello"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
     @pytest.mark.requires_api
     def test_ask_alias_best(self):
@@ -432,7 +416,7 @@ class TestModelAliases:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "-m", "@best", "hello"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
     @pytest.mark.requires_api
     def test_ask_alias_coding(self):
@@ -442,14 +426,14 @@ class TestModelAliases:
 
         result = run_ttt_command(["ask", "-m", "@coding", "hello"])
         # Accept success (0), timeout (124), or model unavailable error (1)
-        assert result.returncode in [0, 1, 124]
+        assert result.exit_code in [0, 1, 124]
 
     @pytest.mark.requires_api
     def test_ask_alias_local(self):
         """Test: ttt ask -m @local 'prompt' - Tested 2025-07-24"""
         # Local models might not be available, but structure should work
         result = run_ttt_command(["ask", "-m", "@local", "hello"])
-        assert result.returncode in [0, 1, 124]  # May fail if Ollama not running
+        assert result.exit_code in [0, 1, 124]  # May fail if Ollama not running
 
     def test_direct_alias_claude(self):
         """Test: ttt @claude 'prompt' - Direct alias usage"""
@@ -458,7 +442,7 @@ class TestModelAliases:
 
         result = run_ttt_command(["@claude", "hello"])
         # Accept success (0), timeout (124), or model unavailable error (1)
-        assert result.returncode in [0, 1, 124]
+        assert result.exit_code in [0, 1, 124]
 
 
 class TestComplexCombinations:
@@ -484,7 +468,7 @@ class TestComplexCombinations:
             ]
         )
         # Accept success (0), timeout (124), or model unavailable error (1)
-        assert result.returncode in [0, 1, 124]
+        assert result.exit_code in [0, 1, 124]
 
     @pytest.mark.requires_api
     def test_complex_gpt4_max_tokens(self):
@@ -503,7 +487,7 @@ class TestComplexCombinations:
                 "analyze this briefly",
             ]
         )
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
     @pytest.mark.requires_api
     def test_complex_stream_json(self):
@@ -512,7 +496,7 @@ class TestComplexCombinations:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "-m", "@gpt4", "--stream", "true", "--json", "explain sorting"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
     @pytest.mark.requires_api
     def test_complex_pipeline_tools_json(self):
@@ -533,7 +517,7 @@ class TestComplexCombinations:
             input_text="sample data for analysis",
         )
         # Accept success (0), timeout (124), or model unavailable error (1)
-        assert result.returncode in [0, 1, 124]
+        assert result.exit_code in [0, 1, 124]
 
     @pytest.mark.requires_api
     def test_complex_all_options(self):
@@ -556,7 +540,7 @@ class TestComplexCombinations:
             ]
         )
         # Accept success (0), timeout (124), or model unavailable error (1)
-        assert result.returncode in [0, 1, 124]
+        assert result.exit_code in [0, 1, 124]
 
     @pytest.mark.requires_api
     def test_complex_fast_json_stream(self):
@@ -565,7 +549,7 @@ class TestComplexCombinations:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "-m", "@fast", "--json", "--stream", "true", "quick hello"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
 
 class TestFilePipelineUsage:
@@ -589,11 +573,11 @@ class TestFilePipelineUsage:
                 file_content = f.read()
             
             result = run_ttt_command(["ask", "summarize this"], input_text=file_content)
-            assert result.returncode in [0, 124]
+            assert result.exit_code in [0, 124]
             
             # If successful, verify we got some response
-            if result.returncode == 0:
-                assert len(result.stdout.strip()) > 0
+            if result.exit_code == 0:
+                assert len(result.output.strip()) > 0
         finally:
             # Clean up
             os.unlink(temp_file)
@@ -615,7 +599,7 @@ class TestFilePipelineUsage:
                 file_content = f.read()
             
             result = run_ttt_command(["ask", "how many users are in this data?"], input_text=file_content)
-            assert result.returncode in [0, 124]
+            assert result.exit_code in [0, 124]
         finally:
             os.unlink(temp_file)
 
@@ -631,7 +615,7 @@ class TestJSONInputPipeline:
 
         json_input = '{"message": "hello world", "context": "testing"}'
         result = run_ttt_command(["ask", "extract the message from this JSON"], input_text=json_input)
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
     @pytest.mark.requires_api
     def test_json_array_input(self):
@@ -641,7 +625,7 @@ class TestJSONInputPipeline:
 
         json_input = '[10, 20, 30, 40]'
         result = run_ttt_command(["ask", "what is the sum of these numbers?"], input_text=json_input)
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
 
 class TestConfigPersistence:
@@ -651,21 +635,21 @@ class TestConfigPersistence:
         """Test: config set/get roundtrip - Tests config persistence functionality"""
         # Get original value
         original_result = run_ttt_command(["config", "get", "models.default"])
-        assert original_result.returncode == 0
+        assert original_result.exit_code == 0
         
         # Try to set a new value (use a model that should exist)
         set_result = run_ttt_command(["config", "set", "models.default", "gpt-3.5-turbo"])
         
-        if set_result.returncode == 0:
+        if set_result.exit_code == 0:
             # If set succeeded, verify the value changed
             get_result = run_ttt_command(["config", "get", "models.default"])
-            assert get_result.returncode == 0
-            assert "gpt-3.5-turbo" in get_result.stdout
+            assert get_result.exit_code == 0
+            assert "gpt-3.5-turbo" in get_result.output
             
             # Try to restore original (if we can parse it)
             try:
                 # Extract original value from "models.default: value" format
-                original_line = original_result.stdout.strip()
+                original_line = original_result.output.strip()
                 if ":" in original_line:
                     original_value = original_line.split(":", 1)[1].strip()
                     run_ttt_command(["config", "set", "models.default", original_value])
@@ -673,13 +657,13 @@ class TestConfigPersistence:
                 pass  # Best effort restore
         else:
             # If config set isn't implemented/available, just verify get works
-            assert original_result.returncode == 0
+            assert original_result.exit_code == 0
 
     def test_config_invalid_key(self):
         """Test: config get invalid.key - Tests config error handling"""
         result = run_ttt_command(["config", "get", "invalid.nonexistent.key"])
         # Should either return an error or handle gracefully
-        assert result.returncode in [0, 1]
+        assert result.exit_code in [0, 1]
 
 
 class TestModelAliasResolution:
@@ -689,24 +673,24 @@ class TestModelAliasResolution:
         """Test: ttt info @claude - Tests alias resolution in info command"""
         result = run_ttt_command(["info", "@claude"])
         # Should either resolve successfully or give a clear error
-        assert result.returncode in [0, 1]
+        assert result.exit_code in [0, 1]
         
-        if result.returncode == 0:
+        if result.exit_code == 0:
             # Should show info about the resolved model
-            assert any(word in result.stdout.lower() for word in ["claude", "anthropic", "model", "provider"])
+            assert any(word in result.output.lower() for word in ["claude", "anthropic", "model", "provider"])
 
     def test_info_with_alias_gpt4(self):
         """Test: ttt info @gpt4 - Tests alias resolution consistency"""
         result = run_ttt_command(["info", "@gpt4"])
-        assert result.returncode in [0, 1]
+        assert result.exit_code in [0, 1]
         
-        if result.returncode == 0:
-            assert any(word in result.stdout.lower() for word in ["gpt", "openai", "model", "provider"])
+        if result.exit_code == 0:
+            assert any(word in result.output.lower() for word in ["gpt", "openai", "model", "provider"])
 
     def test_info_with_alias_fast(self):
         """Test: ttt info @fast - Tests alias resolution for performance aliases"""
         result = run_ttt_command(["info", "@fast"])
-        assert result.returncode in [0, 1]
+        assert result.exit_code in [0, 1]
 
 
 class TestAdditionalCLIOptions:
@@ -720,7 +704,7 @@ class TestAdditionalCLIOptions:
 
         result = run_ttt_command(["ask", "-s", "You are helpful", "hello"])
         # May not be implemented, but test structure should work
-        assert result.returncode in [0, 1, 124]
+        assert result.exit_code in [0, 1, 124]
 
     @pytest.mark.requires_api
     def test_higher_max_tokens(self):
@@ -729,7 +713,7 @@ class TestAdditionalCLIOptions:
             pytest.skip("Requires API key")
 
         result = run_ttt_command(["ask", "--max-tokens", "2000", "write a detailed explanation"])
-        assert result.returncode in [0, 124]
+        assert result.exit_code in [0, 124]
 
 
 if __name__ == "__main__":

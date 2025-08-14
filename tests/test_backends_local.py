@@ -33,7 +33,7 @@ class TestLocalBackend:
         assert local_backend.timeout == 30
 
     @pytest.mark.asyncio
-    async def test_ask_success(self, local_backend):
+    async def test_ask_returns_response_from_ollama_api(self, local_backend):
         """Test successful ask request."""
         mock_response_data = {
             "response": "Test response",
@@ -113,7 +113,7 @@ class TestLocalBackend:
             assert exc_info.value.details["backend"] == "local"
 
     @pytest.mark.asyncio
-    async def test_astream_success(self, local_backend):
+    async def test_astream_yields_chunks_from_ollama_streaming(self, local_backend):
         """Test successful streaming request."""
         mock_lines = [
             '{"response": "Hello", "done": false}',
@@ -143,7 +143,7 @@ class TestLocalBackend:
             assert chunks == ["Hello", " world", "!"]
 
     @pytest.mark.asyncio
-    async def test_models_success(self, local_backend):
+    async def test_models_lists_available_ollama_models(self, local_backend):
         """Test successful models listing."""
         mock_response_data = {"models": [{"name": "llama2"}, {"name": "codellama"}, {"name": "mistral"}]}
 

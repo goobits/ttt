@@ -724,7 +724,7 @@ def list_directory(
             # Format item
             relative = item.relative_to(dir_path)
             if item.is_dir():
-                results.append(f"[DIR]  {relative}/")
+                results.append(f"[DIR] {relative}/")
             else:
                 size = item.stat().st_size
 

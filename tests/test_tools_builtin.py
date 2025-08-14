@@ -23,7 +23,7 @@ class TestWebSearch:
     """Test web_search tool."""
 
     @patch("urllib.request.urlopen")
-    def test_web_search_success(self, mock_urlopen):
+    def test_web_search_returns_formatted_answer_and_topics(self, mock_urlopen):
         """Test successful web search."""
         # Mock response
         mock_response = Mock()
@@ -75,7 +75,7 @@ class TestWebSearch:
 class TestFileOperations:
     """Test file operation tools."""
 
-    def test_read_file_success(self, tmp_path):
+    def test_read_file_returns_complete_file_contents(self, tmp_path):
         """Test successful file reading."""
         # Create test file
         test_file = tmp_path / "test.txt"
@@ -107,7 +107,7 @@ class TestFileOperations:
         # File should either read successfully or report size limit
         assert "Error" not in result or "too large" in result.lower()
 
-    def test_write_file_success(self, tmp_path):
+    def test_write_file_creates_file_with_exact_content(self, tmp_path):
         """Test successful file writing."""
         test_file = tmp_path / "output.txt"
         content = "Test content"
@@ -135,7 +135,7 @@ class TestFileOperations:
         result = write_file(str(test_file), "content")
         assert "Parent directory does not exist" in result
 
-    def test_list_directory_success(self, tmp_path):
+    def test_list_directory_shows_files_and_subdirectories_with_types(self, tmp_path):
         """Test listing directory contents."""
         # Create test structure
         (tmp_path / "file1.txt").write_text("content1")
@@ -147,7 +147,7 @@ class TestFileOperations:
 
         assert "[FILE] file1.txt" in result
         assert "[FILE] file2.py" in result
-        assert "[DIR]  subdir/" in result
+        assert "[DIR] subdir/" in result
         assert "file3.txt" not in result  # Not recursive by default
 
     def test_list_directory_pattern(self, tmp_path):
@@ -177,7 +177,7 @@ class TestFileOperations:
 class TestCodeExecution:
     """Test code execution tool."""
 
-    def test_run_python_success(self):
+    def test_run_python_executes_code_and_captures_output(self):
         """Test successful Python code execution."""
         code = "print('Hello, World!')\nprint(2 + 2)"
         result = run_python(code)
@@ -208,7 +208,7 @@ class TestCodeExecution:
 class TestTimeOperations:
     """Test time-related tools."""
 
-    def test_get_current_time_default(self):
+    def test_get_current_time_returns_utc_formatted_timestamp(self):
         """Test getting current time with defaults."""
         result = get_current_time()
 

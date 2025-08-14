@@ -38,7 +38,7 @@ class TestAIResponse:
         assert response.failed
         assert not response.succeeded
 
-    def test_timestamp_default(self):
+    def test_timestamp_automatically_set_on_response_creation(self):
         """Test that timestamp is set by default."""
         response = AIResponse("test")
         assert isinstance(response.timestamp, datetime)

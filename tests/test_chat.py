@@ -17,69 +17,16 @@ from ttt import (
     SessionSaveError,
     chat,
 )
-from ttt.backends import BaseBackend
 from ttt.session.chat import PersistentChatSession, _estimate_tokens
+from tests.utils import MockBackend
 
 
-class MockBackend(BaseBackend):
-    """Mock backend for testing."""
-
-    def __init__(self, name="mock"):
-        self.name_value = name
-        self._is_available = True
-        self.responses = ["Response 1", "Response 2", "Response 3"]
-        self.response_index = 0
-
-    @property
-    def name(self):
-        return self.name_value
-
-    @property
-    def is_available(self):
-        return self._is_available
-
-    @property
-    def models(self):
-        return ["mock-model-1", "mock-model-2"]
-
-    async def status(self):
-        return {"available": self._is_available, "name": self.name_value}
-
-    async def ask(self, prompt, **kwargs):
-        response = self.responses[self.response_index % len(self.responses)]
-        self.response_index += 1
-
-        # Handle both string and list prompts
-        if isinstance(prompt, list):
-            # Extract text content from list
-            text_parts = [item for item in prompt if isinstance(item, str)]
-            prompt_text = " ".join(text_parts)
-        else:
-            prompt_text = prompt
-
-        return AIResponse(
-            content=response,
-            model=kwargs.get("model", "mock-model"),
-            backend=self.name,
-            time_taken=0.1,
-            tokens_in=len(prompt_text.split()) * 2,
-            tokens_out=len(response.split()) * 2,
-            cost=0.001,
-        )
-
-    async def astream(self, prompt, **kwargs):
-        """Stream a response."""
-        response = self.responses[self.response_index % len(self.responses)]
-        self.response_index += 1
-
-        for chunk in response.split():
-            yield chunk + " "
 
 
 @pytest.fixture
 def mock_backend():
     """Provide a mock backend."""
-    return MockBackend()
+    return MockBackend(responses=["Response 1", "Response 2", "Response 3"])
 
 
 @pytest.fixture

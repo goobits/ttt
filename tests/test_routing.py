@@ -5,39 +5,12 @@ from unittest.mock import patch
 import pytest
 
 from ttt import AIResponse, BackendNotAvailableError, ModelInfo
-from ttt.backends import BaseBackend
 from ttt.config import model_registry
 from ttt.core.routing import Router
 from ttt.plugins import plugin_registry
+from tests.utils import MockBackend
 
 
-class MockBackend(BaseBackend):
-    """Mock backend for testing."""
-
-    def __init__(self, config=None):
-        super().__init__(config)
-        self._name = config.get("name", "mock") if config else "mock"
-        self._available = True
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def is_available(self):
-        return self._available
-
-    async def ask(self, prompt, **kwargs):
-        return AIResponse("Mock response", model=kwargs.get("model", "mock"), backend=self.name)
-
-    async def astream(self, prompt, **kwargs):
-        yield "Mock response"
-
-    async def models(self):
-        return ["mock-model"]
-
-    async def status(self):
-        return {"backend": self.name, "available": True}
 
 
 class TestRouter:
@@ -176,7 +149,7 @@ class TestRouterFallback:
     """Test router fallback functionality."""
 
     @pytest.mark.asyncio
-    async def test_route_with_fallback_success(self):
+    async def test_route_with_fallback_uses_primary_backend_when_available(self):
         """Test successful routing without fallback."""
         router = Router()
 
