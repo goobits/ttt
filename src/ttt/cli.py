@@ -51,31 +51,31 @@ click.rich_click.STYLE_COMMANDS_TABLE_COLUMN_WIDTH_RATIO = (1, 3)  # Command:Des
 # Command groups will be set after main function is defined
 
 
-# Hooks system - try to import app_hooks module
-app_hooks = None
+# Hooks system - try to import cli_handlers module
+cli_handlers = None
 
-# Using configured hooks path: src/ttt/app_hooks.py
+# Using configured hooks path: src/ttt/cli_handlers.py
 try:
-    # First try as a module import (e.g., "ttt.app_hooks")
-    module_path = "src/ttt/app_hooks.py".replace(".py", "").replace("/", ".")
+    # First try as a module import (e.g., "ttt.cli_handlers")
+    module_path = "src/ttt/cli_handlers.py".replace(".py", "").replace("/", ".")
     if module_path.startswith("src."):
         module_path = module_path[4:]  # Remove 'src.' prefix
     
     try:
-        app_hooks = importlib.import_module(module_path)
+        cli_handlers = importlib.import_module(module_path)
     except ImportError:
         # If module import fails, try relative import
         try:
-            from . import app_hooks
+            from . import cli_handlers
         except ImportError:
             # If relative import fails, try file-based import as last resort
             script_dir = Path(__file__).parent.parent.parent
-            hooks_file = script_dir / "src/ttt/app_hooks.py"
+            hooks_file = script_dir / "src/ttt/cli_handlers.py"
             
             if hooks_file.exists():
-                spec = importlib.util.spec_from_file_location("app_hooks", hooks_file)
-                app_hooks = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(app_hooks)
+                spec = importlib.util.spec_from_file_location("cli_handlers", hooks_file)
+                cli_handlers = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(cli_handlers)
 except Exception:
     # No hooks module found, use default behavior
     pass
@@ -1050,9 +1050,9 @@ def ask(ctx, prompt, model, temperature, max_tokens, tools, session, system, str
     
     # Standard command - use the existing hook pattern
     hook_name = "on_ask"
-    if app_hooks and hasattr(app_hooks, hook_name):
+    if cli_handlers and hasattr(cli_handlers, hook_name):
         # Call the hook with all parameters
-        hook_func = getattr(app_hooks, hook_name)
+        hook_func = getattr(cli_handlers, hook_name)
         
         # Prepare arguments including global options
         kwargs = {}
@@ -1178,9 +1178,9 @@ def chat(ctx, model, session, tools, markdown):
     
     # Standard command - use the existing hook pattern
     hook_name = "on_chat"
-    if app_hooks and hasattr(app_hooks, hook_name):
+    if cli_handlers and hasattr(cli_handlers, hook_name):
         # Call the hook with all parameters
-        hook_func = getattr(app_hooks, hook_name)
+        hook_func = getattr(cli_handlers, hook_name)
         
         # Prepare arguments including global options
         kwargs = {}
@@ -1267,9 +1267,9 @@ def list(ctx, resource, format, verbose):
     
     # Standard command - use the existing hook pattern
     hook_name = "on_list"
-    if app_hooks and hasattr(app_hooks, hook_name):
+    if cli_handlers and hasattr(cli_handlers, hook_name):
         # Call the hook with all parameters
-        hook_func = getattr(app_hooks, hook_name)
+        hook_func = getattr(cli_handlers, hook_name)
         
         # Prepare arguments including global options
         kwargs = {}
@@ -1336,9 +1336,9 @@ def status(ctx, json):
     
     # Standard command - use the existing hook pattern
     hook_name = "on_status"
-    if app_hooks and hasattr(app_hooks, hook_name):
+    if cli_handlers and hasattr(cli_handlers, hook_name):
         # Call the hook with all parameters
-        hook_func = getattr(app_hooks, hook_name)
+        hook_func = getattr(cli_handlers, hook_name)
         
         # Prepare arguments including global options
         kwargs = {}
@@ -1390,9 +1390,9 @@ def models(ctx, json):
     
     # Standard command - use the existing hook pattern
     hook_name = "on_models"
-    if app_hooks and hasattr(app_hooks, hook_name):
+    if cli_handlers and hasattr(cli_handlers, hook_name):
         # Call the hook with all parameters
-        hook_func = getattr(app_hooks, hook_name)
+        hook_func = getattr(cli_handlers, hook_name)
         
         # Prepare arguments including global options
         kwargs = {}
@@ -1450,9 +1450,9 @@ def info(ctx, model, json):
     
     # Standard command - use the existing hook pattern
     hook_name = "on_info"
-    if app_hooks and hasattr(app_hooks, hook_name):
+    if cli_handlers and hasattr(cli_handlers, hook_name):
         # Call the hook with all parameters
-        hook_func = getattr(app_hooks, hook_name)
+        hook_func = getattr(cli_handlers, hook_name)
         
         # Prepare arguments including global options
         kwargs = {}
@@ -1530,9 +1530,9 @@ def export(ctx, session, format, output, include_metadata):
     
     # Standard command - use the existing hook pattern
     hook_name = "on_export"
-    if app_hooks and hasattr(app_hooks, hook_name):
+    if cli_handlers and hasattr(cli_handlers, hook_name):
         # Call the hook with all parameters
-        hook_func = getattr(app_hooks, hook_name)
+        hook_func = getattr(cli_handlers, hook_name)
         
         # Prepare arguments including global options
         kwargs = {}
@@ -1608,9 +1608,9 @@ def get(ctx, key):
     """Get a configuration value"""
     # Check if hook function exists
     hook_name = "on_config_get"
-    if app_hooks and hasattr(app_hooks, hook_name):
+    if cli_handlers and hasattr(cli_handlers, hook_name):
         # Call the hook with all parameters
-        hook_func = getattr(app_hooks, hook_name)
+        hook_func = getattr(cli_handlers, hook_name)
         
         # Prepare arguments including global options
         kwargs = {}
@@ -1654,9 +1654,9 @@ def set(ctx, key, value):
     """Set a configuration value"""
     # Check if hook function exists
     hook_name = "on_config_set"
-    if app_hooks and hasattr(app_hooks, hook_name):
+    if cli_handlers and hasattr(cli_handlers, hook_name):
         # Call the hook with all parameters
-        hook_func = getattr(app_hooks, hook_name)
+        hook_func = getattr(cli_handlers, hook_name)
         
         # Prepare arguments including global options
         kwargs = {}
@@ -1702,9 +1702,9 @@ def config_list(ctx, show_secrets):
     """List all configuration"""
     # Check if hook function exists
     hook_name = "on_config_list"
-    if app_hooks and hasattr(app_hooks, hook_name):
+    if cli_handlers and hasattr(cli_handlers, hook_name):
         # Call the hook with all parameters
-        hook_func = getattr(app_hooks, hook_name)
+        hook_func = getattr(cli_handlers, hook_name)
         
         # Prepare arguments including global options
         kwargs = {}
@@ -1754,9 +1754,9 @@ def enable(ctx, tool_name):
     """Enable a tool"""
     # Check if hook function exists
     hook_name = "on_tools_enable"
-    if app_hooks and hasattr(app_hooks, hook_name):
+    if cli_handlers and hasattr(cli_handlers, hook_name):
         # Call the hook with all parameters
-        hook_func = getattr(app_hooks, hook_name)
+        hook_func = getattr(cli_handlers, hook_name)
         
         # Prepare arguments including global options
         kwargs = {}
@@ -1796,9 +1796,9 @@ def disable(ctx, tool_name):
     """Disable a tool"""
     # Check if hook function exists
     hook_name = "on_tools_disable"
-    if app_hooks and hasattr(app_hooks, hook_name):
+    if cli_handlers and hasattr(cli_handlers, hook_name):
         # Call the hook with all parameters
-        hook_func = getattr(app_hooks, hook_name)
+        hook_func = getattr(cli_handlers, hook_name)
         
         # Prepare arguments including global options
         kwargs = {}
@@ -1840,9 +1840,9 @@ def tools_list(ctx, show_disabled):
     """List all tools"""
     # Check if hook function exists
     hook_name = "on_tools_list"
-    if app_hooks and hasattr(app_hooks, hook_name):
+    if cli_handlers and hasattr(cli_handlers, hook_name):
         # Call the hook with all parameters
-        hook_func = getattr(app_hooks, hook_name)
+        hook_func = getattr(cli_handlers, hook_name)
         
         # Prepare arguments including global options
         kwargs = {}

@@ -83,7 +83,7 @@ class TestCLIStructure:
         # Version output should contain a version number pattern
         assert any(char.isdigit() for char in result.output)
 
-    def test_no_command_shows_help(self):
+    def test_no_command_displays_help_text_and_exits_gracefully(self):
         """Test that invoking with no command shows help and exits gracefully."""
         result = self.runner.invoke(main, [])
         # When no command is given, Click shows help and exits with code 0 or 2
@@ -100,6 +100,7 @@ class TestAskCommand(IntegrationTestBase):
         result = self.runner.invoke(main, ["ask", "--help"])
         assert result.exit_code == 0
 
+    @pytest.mark.integration
     def test_ask_basic_prompt(self):
         """Test basic ask functionality with real hooks."""
         # This is a real integration test - it will make actual API calls
@@ -117,6 +118,7 @@ class TestAskCommand(IntegrationTestBase):
             # If failed due to API issues, that's expected in test environment
             assert "error" in result.output.lower() or "Error" in result.output
 
+    @pytest.mark.integration
     def test_ask_with_options(self):
         """Test ask with various options."""
         # Real integration test with options
@@ -155,7 +157,7 @@ class TestChatCommand(IntegrationTestBase):
         result = self.runner.invoke(main, ["chat", "--help"])
         assert result.exit_code == 0
 
-    def test_chat_basic(self):
+    def test_chat_command_accepts_help_and_validates_options(self):
         """Test basic chat functionality."""
         # Chat command is interactive, so we can only test help and argument validation
         # Real chat functionality would hang waiting for user input
@@ -219,7 +221,7 @@ class TestListCommand(IntegrationTestBase):
 class TestConfigCommand(IntegrationTestBase):
     """Test the config command functionality."""
 
-    def test_config_help(self):
+    def test_config_command_shows_setup_customization_help(self):
         """Test config command help."""
         result = self.runner.invoke(main, ["config", "--help"])
 
@@ -289,7 +291,7 @@ class TestConfigCommand(IntegrationTestBase):
 class TestToolsCommand(IntegrationTestBase):
     """Test the tools command functionality."""
 
-    def test_tools_help(self):
+    def test_tools_command_shows_management_and_extensions_help(self):
         """Test tools command help."""
         result = self.runner.invoke(main, ["tools", "--help"])
 
@@ -362,7 +364,7 @@ class TestToolsCommand(IntegrationTestBase):
 class TestStatusCommand(IntegrationTestBase):
     """Test the status command functionality."""
 
-    def test_status_basic(self):
+    def test_status_command_reports_backend_and_api_key_availability(self):
         """Test basic status command."""
         # Mock the backend components used by status check
         with patch("ttt.backends.local.LocalBackend") as mock_local, \
@@ -410,7 +412,7 @@ class TestStatusCommand(IntegrationTestBase):
 class TestModelsCommand(IntegrationTestBase):
     """Test the models command functionality."""
 
-    def test_models_basic(self):
+    def test_models_command_lists_available_models_from_registry(self):
         """Test basic models command."""
         # Mock the model registry used by models command
         with patch("ttt.config.schema.get_model_registry") as mock_registry:
@@ -465,7 +467,7 @@ class TestModelsCommand(IntegrationTestBase):
 class TestInfoCommand(IntegrationTestBase):
     """Test the info command functionality."""
 
-    def test_info_basic(self):
+    def test_info_command_displays_detailed_model_information(self):
         """Test basic info command."""
         # Mock the model registry used by info command
         with patch("ttt.config.schema.get_model_registry") as mock_registry:
@@ -535,7 +537,7 @@ class TestInfoCommand(IntegrationTestBase):
 class TestExportCommand(IntegrationTestBase):
     """Test the export command functionality."""
 
-    def test_export_basic(self):
+    def test_export_command_loads_and_outputs_session_data(self):
         """Test basic export command."""
         # Mock the session manager methods used by export command
         with patch("ttt.session.manager.ChatSessionManager.load_session") as mock_load:
@@ -681,7 +683,7 @@ class TestDebugFlag(IntegrationTestBase):
     """Test the --debug flag functionality.
     
     Note: The --debug flag is implemented in cli.py at line 874 and passed through 
-    to hooks in app_hooks.py. Due to some pytest environment issues, these tests 
+    to hooks in cli_handlers.py. Due to some pytest environment issues, these tests 
     focus on the core functionality that can be reliably tested.
     """
 
@@ -768,7 +770,7 @@ class TestDebugFlag(IntegrationTestBase):
     def test_debug_functionality_in_hooks(self):
         """Test that debug functionality exists in the hooks file."""
         # Read the hooks file and verify debug functionality is implemented
-        hooks_file = Path(__file__).parent.parent / "src" / "ttt" / "app_hooks.py"
+        hooks_file = Path(__file__).parent.parent / "src" / "ttt" / "cli_handlers.py"
         assert hooks_file.exists(), "Hooks file should exist"
         
         hooks_content = hooks_file.read_text()
@@ -792,6 +794,7 @@ class TestCLIParameterPassing(IntegrationTestBase):
     - Validating complex parameter scenarios with proper mocking
     """
     
+    @pytest.mark.integration
     def test_ask_command_parameter_passing(self):
         """Test ask command passes all parameters correctly with proper types."""
         # Integration test approach: validate that CLI parameters are correctly
@@ -1029,6 +1032,7 @@ class TestCLIParameterPassing(IntegrationTestBase):
         result = self.runner.invoke(main, ["list", "models"])
         assert result.exit_code == 0, f"Command failed without debug: {result.output}"
 
+    @pytest.mark.integration
     def test_click_type_conversions(self):
         """Test that Click type conversions work correctly for complex parameters."""
         # Test CLI with various parameter types to ensure Click handles conversions
@@ -1077,6 +1081,7 @@ class TestCLIParameterPassing(IntegrationTestBase):
         
         assert result.exit_code == 0, f"Config list (no secrets) failed with output: {result.output}"
 
+    @pytest.mark.integration
     def test_chat_command_parameter_passing(self):
         """Test chat command passes all parameters correctly."""
         # Chat command is interactive, so we mainly test that it handles parameters correctly
@@ -1095,6 +1100,65 @@ class TestCLIParameterPassing(IntegrationTestBase):
         
         # The main validation is that it doesn't crash on parameter parsing
         # Chat functionality itself would need user interaction to test fully
+
+    def test_ask_command_parameter_passing_unit(self):
+        """Test ask command parameter conversion without making API calls (unit test)."""
+        # Mock the ask function to avoid real API calls
+        with patch("ttt.cli_handlers.on_ask") as mock_ask:
+            # Configure mock to return a simple success response
+            mock_ask.return_value = None
+            
+            result = self.runner.invoke(main, [
+                "ask", "test prompt",
+                "--model", "gpt-4",
+                "--temperature", "0.7",
+                "--max-tokens", "100", 
+                "--tools", "true",
+                "--session", "test-session",
+                "--system", "You are helpful",
+                "--stream", "false"
+            ])
+            
+            # Verify command executed without API errors
+            assert result.exit_code == 0, f"Command failed: {result.output}"
+            
+            # Verify the hook was called with correct parameters
+            mock_ask.assert_called_once()
+            call_args = mock_ask.call_args
+            
+            # Verify parameters were passed correctly
+            kwargs = call_args[1]
+            assert kwargs["prompt"] == ("test prompt",)  # Prompt as tuple
+            assert kwargs["model"] == "gpt-4"
+            assert kwargs["temperature"] == 0.7
+            assert kwargs["max_tokens"] == 100
+            assert kwargs["session"] == "test-session"
+            assert kwargs["system"] == "You are helpful"
+
+    def test_click_type_conversions_unit(self):
+        """Test Click type conversions without making API calls (unit test)."""
+        with patch("ttt.cli_handlers.on_ask") as mock_ask:
+            mock_ask.return_value = None
+            
+            result = self.runner.invoke(main, [
+                "ask", "test type conversions",
+                "--temperature", "0.123",  # String to float
+                "--max-tokens", "2048",    # String to int  
+                "--tools", "true",         # String to bool
+                "--stream", "false"        # String to bool
+            ])
+            
+            # Command should succeed - validates Click type conversion
+            assert result.exit_code == 0, f"Type conversion failed: {result.output}"
+            
+            # Verify parameters were converted to correct types
+            mock_ask.assert_called_once()
+            kwargs = mock_ask.call_args[1]
+            assert kwargs["prompt"] == ("test type conversions",)  # Prompt as tuple
+            assert kwargs["temperature"] == 0.123  # Float
+            assert kwargs["max_tokens"] == 2048    # Int
+            assert kwargs["tools"] is True         # Bool
+            assert kwargs["stream"] is False       # Bool
 
 
 if __name__ == "__main__":

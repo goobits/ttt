@@ -21,7 +21,7 @@ The testing suite uses pytest with comprehensive coverage across all components:
 #### 3. CLI Testing (`test_cli_modern.py`)
 - **Click Framework**: Modern Click-based CLI with rich-click styling
 - **Command Testing**: All commands (ask, chat, list, config, tools, status, models, info, export)
-- **Hook System**: Integration with app_hooks.py for command execution
+- **Hook System**: Integration with cli_handlers.py for command execution
 - **Help & Validation**: Help text, option parsing, error handling
 
 #### 4. Tool System (`test_tools_*.py`)
@@ -180,7 +180,7 @@ def test_ask_command():
     """Test the modern Click-based CLI."""
     runner = CliRunner()
 
-    with patch("ttt.app_hooks.on_ask") as mock_hook:
+    with patch("ttt.cli_handlers.on_ask") as mock_hook:
         result = runner.invoke(main, ["ask", "What is Python?"])
 
         assert result.exit_code == 0

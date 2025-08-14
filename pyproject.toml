@@ -19,7 +19,7 @@ text = "MIT"
 
 [project.optional-dependencies]
 local = [ "httpx>=0.24.0",]
-dev = [ "pytest>=7.0", "pytest-asyncio", "pytest-cov", "black", "ruff", "mypy", "build", "twine",]
+dev = [ "pytest>=7.0", "pytest-asyncio", "pytest-cov", "pytest-timeout", "black", "ruff", "mypy", "build", "twine",]
 
 [project.scripts]
 ttt = "ttt.cli:cli_entry"
@@ -53,6 +53,14 @@ markers = [
     "examples: example tests"
 ]
 cache_dir = ".temp/pytest"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = [
+    "--strict-markers",
+    "--disable-warnings",
+    "-ra",
+    "--timeout=300"
+]
 
 [tool.coverage.run]
 data_file = ".temp/coverage"

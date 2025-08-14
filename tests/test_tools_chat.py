@@ -197,10 +197,10 @@ class TestCLIToolSupport:
         assert "Enable tool usage" in result.output
 
         # Test 2: Verify we can call the hook function directly with tools parameter
-        from ttt.app_hooks import on_ask
+        from ttt.cli_handlers import on_ask
 
         # Mock the API functions to prevent real calls
-        with patch("ttt.app_hooks.ttt_stream") as mock_stream, patch("ttt.app_hooks.ttt_ask") as mock_ask:
+        with patch("ttt.cli_handlers.ttt_stream") as mock_stream, patch("ttt.cli_handlers.ttt_ask") as mock_ask:
 
             mock_stream.return_value = iter(["Test response"])
             mock_ask.return_value = "Test response"
@@ -262,7 +262,7 @@ class TestCLIToolSupport:
 
     def test_resolve_tools_from_registry(self):
         """Test resolving tools from registry."""
-        from ttt.app_hooks import resolve_tools
+        from ttt.cli_handlers import resolve_tools
         from ttt.tools.registry import clear_registry, register_tool
 
         # Register a test tool
@@ -282,7 +282,7 @@ class TestCLIToolSupport:
 
     def test_resolve_tools_from_module(self):
         """Test resolving tools from module imports."""
-        from ttt.app_hooks import resolve_tools
+        from ttt.cli_handlers import resolve_tools
         from ttt.tools import register_tool, tool, unregister_tool
 
         # Register a test tool in a test category
@@ -305,7 +305,7 @@ class TestCLIToolSupport:
 
     def test_resolve_tools_handles_errors(self):
         """Test tool resolution handles errors gracefully."""
-        from ttt.app_hooks import resolve_tools
+        from ttt.cli_handlers import resolve_tools
 
         # Non-existent module
         tools = resolve_tools(["nonexistent:function"])
