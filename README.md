@@ -25,12 +25,12 @@ export OPENROUTER_API_KEY=sk-or-your-key-here
 
 # Start using
 ttt "What is Python?"
-ttt "Explain this code" --code
+echo "print('Hello world')" | ttt "Explain this code"
 echo "Hello world" | ttt
 
 # Use tools
-ttt "What time is it in Tokyo?" --tools get_current_time
-ttt "Search for Python tutorials" --tools web_search
+ttt "What time is it in Tokyo?" --tools "get_current_time"
+ttt "Search for Python tutorials" --tools "web_search"
 ```
 
 ## 📚 Python Library
@@ -77,11 +77,11 @@ response = ask("What's the weather in NYC?", tools=[get_weather])
 
 ```bash
 # View settings
-ttt config
+ttt config list
 
 # Set configuration
 ttt config set models.default gpt-4
-ttt config set openai_key sk-...
+ttt config set api.openai_key sk-...
 
 # Use model aliases
 ttt -m @fast "Quick question"    # gpt-3.5-turbo
@@ -115,8 +115,8 @@ ttt -m @claude "Explain this"     # claude-3-sonnet
 ./test.sh integration     # Integration tests (requires API keys)
 
 # Code quality
-ruff src/ttt/ tests/
-black src/ttt/ tests/
+ruff format src/ttt/ tests/
+ruff check src/ttt/ tests/
 mypy src/ttt/
 ```
 
