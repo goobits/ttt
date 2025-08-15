@@ -6,8 +6,8 @@ from ttt.cli import main
 from tests.cli.conftest import IntegrationTestBase
 
 
-class TestToolsCommand(IntegrationTestBase):
-    """Test the tools command functionality."""
+class TestCLIToolsCommand(IntegrationTestBase):
+    """Test the core CLI tools command functionality."""
 
     def test_tools_command_shows_management_and_extensions_help(self):
         """Test tools command help."""

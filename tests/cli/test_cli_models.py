@@ -74,8 +74,8 @@ class TestListCommand(IntegrationTestBase):
         assert result.exit_code == 0, f"List sessions failed with output: {result.output}"
 
 
-class TestStatusCommand(IntegrationTestBase):
-    """Test the status command functionality."""
+class TestCLIStatusCommand(IntegrationTestBase):
+    """Test the CLI-specific status command functionality."""
 
     def test_status_command_reports_backend_and_api_key_availability(self):
         """Test basic status command."""

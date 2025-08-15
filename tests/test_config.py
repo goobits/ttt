@@ -6,8 +6,8 @@ from ttt import ConfigModel, ModelInfo
 from ttt.config import configure, get_config, load_config, model_registry, save_config
 
 
-class TestConfigModel:
-    """Test the ConfigModel class."""
+class TestConfigManagement:
+    """Test the configuration loading and management functionality."""
 
     def test_default_values(self):
         """Test default configuration values from loaded config."""

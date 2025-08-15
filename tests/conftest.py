@@ -300,6 +300,101 @@ def delayed_chat(rate_limit_delay):
     return _delayed_chat
 
 
+# Smart mocking for integration tests
+def _should_use_real_api(config=None, env_override=None):
+    """Determine if integration tests should use real API calls.
+    
+    Returns True if:
+    - --real-api flag is used
+    - REAL_API_TESTS=1 environment variable is set
+    - env_override is explicitly True
+    """
+    # Check environment override first
+    if env_override is not None:
+        return env_override
+    
+    # Check command line flag
+    if config and config.getoption("--real-api", default=False):
+        return True
+    
+    # Check environment variable
+    if os.getenv("REAL_API_TESTS") == "1":
+        return True
+    
+    return False
+
+
+@pytest.fixture(autouse=True)
+def smart_integration_mocking(request, monkeypatch):
+    """Automatically mock HTTP calls for integration tests unless real APIs are requested.
+    
+    This fixture:
+    - Detects integration tests
+    - Mocks litellm.acompletion by default
+    - Allows real API calls when --real-api flag or REAL_API_TESTS=1 is used
+    - Preserves all business logic and error handling
+    """
+    # Only apply to integration tests
+    markers = list(request.node.iter_markers(name="integration"))
+    if not markers:
+        yield None
+        return
+    
+    # Check if we should use real APIs
+    use_real_api = _should_use_real_api(request.config)
+    
+    if use_real_api:
+        # Don't mock anything - use real APIs
+        yield None
+        return
+    
+    # Import mocking utilities
+    from tests.utils.http_mocks import get_http_mocker, reset_http_mocker
+    from unittest.mock import patch, AsyncMock
+    
+    # Reset mocker state for clean test
+    reset_http_mocker()
+    mocker = get_http_mocker()
+    
+    # Mock litellm module directly where it's imported
+    async def mock_acompletion(*args, **kwargs):
+        return await mocker.mock_acompletion(*args, **kwargs)
+    
+    # Patch litellm module itself
+    with patch('litellm.acompletion', new=AsyncMock(side_effect=mock_acompletion)) as mock_litellm:
+        yield mock_litellm
+
+
+@pytest.fixture
+def mock_rate_limit_error():
+    """Fixture to simulate rate limit errors in integration tests."""
+    from tests.utils.http_mocks import ErrorHTTPMocker
+    from unittest.mock import patch, AsyncMock
+    
+    error_mocker = ErrorHTTPMocker("rate_limit")
+    
+    async def mock_acompletion(*args, **kwargs):
+        return await error_mocker.mock_acompletion(*args, **kwargs)
+    
+    with patch('litellm.acompletion', new=AsyncMock(side_effect=mock_acompletion)) as mock_litellm:
+        yield mock_litellm
+
+
+@pytest.fixture  
+def mock_auth_error():
+    """Fixture to simulate authentication errors in integration tests."""
+    from tests.utils.http_mocks import ErrorHTTPMocker
+    from unittest.mock import patch, AsyncMock
+    
+    error_mocker = ErrorHTTPMocker("auth")
+    
+    async def mock_acompletion(*args, **kwargs):
+        return await error_mocker.mock_acompletion(*args, **kwargs)
+    
+    with patch('litellm.acompletion', new=AsyncMock(side_effect=mock_acompletion)) as mock_litellm:
+        yield mock_litellm
+
+
 # Hook for customizing test collection
 def pytest_collection_modifyitems(config, items):
     """Add markers and customize test collection."""

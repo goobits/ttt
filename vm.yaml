@@ -12,6 +12,7 @@ pip_packages:
   - black
   - pytest
   - flake8
+  - claudeflow
 npm_packages:
 terminal:
   emoji: 🤖
@@ -23,3 +24,10 @@ aliases:
   geminiyolo: GEMINI_API_KEY=${GEMINI_API_KEY:-} gemini
 claude_sync: true
 gemini_sync: true
+package_linking:
+  npm: true
+  pip: true
+  cargo: true
+# Ports 3100-3109 reserved for ttt
+ports:
+  www_dev: 3100
