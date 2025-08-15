@@ -48,7 +48,8 @@ def _get_max_file_size() -> int:
         size = config.tools_config.get("max_file_size")
         if size is None:
             # Try to get from constants section
-            constants = getattr(config, "model_dump", lambda: {})().get("constants", {})
+            empty_dict: Callable[[], Dict[str, Any]] = lambda: {}
+            constants = getattr(config, "model_dump", empty_dict)().get("constants", {})
             size = constants.get("file_sizes", {}).get("max_file_size")
         return int(size or 10485760)  # 10MB fallback from constants
     except (AttributeError, KeyError, ValueError, TypeError):
@@ -63,7 +64,8 @@ def _get_code_timeout() -> int:
         timeout = config.tools_config.get("code_execution_timeout")
         if timeout is None:
             # Try to get from constants section
-            constants = getattr(config, "model_dump", lambda: {})().get("constants", {})
+            empty_dict: Callable[[], Dict[str, Any]] = lambda: {}
+            constants = getattr(config, "model_dump", empty_dict)().get("constants", {})
             timeout = constants.get("tool_bounds", {}).get("default_code_timeout")
         return int(timeout or 30)  # fallback from constants
     except (AttributeError, KeyError, ValueError, TypeError):
@@ -78,7 +80,8 @@ def _get_web_timeout() -> int:
         timeout = config.tools_config.get("web_request_timeout")
         if timeout is None:
             # Try to get from constants section
-            constants = getattr(config, "model_dump", lambda: {})().get("constants", {})
+            empty_dict: Callable[[], Dict[str, Any]] = lambda: {}
+            constants = getattr(config, "model_dump", empty_dict)().get("constants", {})
             timeout = constants.get("tool_bounds", {}).get("default_web_timeout")
         return int(timeout or 10)  # fallback from constants
     except (AttributeError, KeyError, ValueError, TypeError):

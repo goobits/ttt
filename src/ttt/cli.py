@@ -74,8 +74,9 @@ try:
             
             if hooks_file.exists():
                 spec = importlib.util.spec_from_file_location("cli_handlers", hooks_file)
-                cli_handlers = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(cli_handlers)
+                if spec is not None and spec.loader is not None:
+                    cli_handlers = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(cli_handlers)
 except Exception:
     # No hooks module found, use default behavior
     pass

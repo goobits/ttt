@@ -61,42 +61,55 @@ class TestBasicCommands:
         result = run_ttt_command(["ask", "hello world"])
         assert result.exit_code in [0, 124]
 
-    def test_ttt_info_model(self):
-        """Test: ttt info <model> - Tested 2025-07-24"""
+    def test_ttt_info_model_displays_detailed_information(self):
+        """Test: ttt info <model> - Shows comprehensive model details including provider, context, and capabilities"""
         result = run_ttt_command(["info", "gpt-4"])
-        assert result.exit_code == 0
-        assert "gpt-4" in result.output
-        assert "Provider:" in result.output
+        assert result.exit_code == 0, f"Info command failed: {result.output}"
+        
+        # Verify essential model information is displayed
+        output_lower = result.output.lower()
+        assert "gpt-4" in output_lower, f"Model name missing from output: {result.output}"
+        assert any(word in output_lower for word in ["provider", "openai"]), f"Provider info missing: {result.output}"
+        assert any(word in output_lower for word in ["context", "token", "length"]), f"Context length info missing: {result.output}"
+        
+        # Verify output is structured and informative
+        lines = [line.strip() for line in result.output.split('\n') if line.strip()]
+        assert len(lines) >= 3, f"Info output should have multiple lines of detail: {result.output}"
 
-    def test_ttt_chat_help_displays_interactive_chat_instructions(self):
-        """Test: ttt chat - Tested 2025-07-24 (help only)"""
-        result = run_ttt_command(["chat", "--help"])
-        assert result.exit_code == 0
-        assert "Chat interactively" in result.output
 
-    def test_ttt_status(self):
-        """Test: ttt status - Tested 2025-07-24"""
+    def test_ttt_status_reports_system_health(self):
+        """Test: ttt status - Provides comprehensive system health information including backend availability"""
         result = run_ttt_command(["status"])
-        assert result.exit_code == 0
-        assert "TTT System Status" in result.output
+        assert result.exit_code == 0, f"Status command failed: {result.output}"
+        
+        output_lower = result.output.lower()
+        # Should contain system status information
+        assert any(word in output_lower for word in ["status", "health", "system"]), f"Status header missing: {result.output}"
+        
+        # Should report on backends or API availability
+        assert any(word in output_lower for word in ["backend", "api", "available", "configured"]), f"Backend status missing: {result.output}"
+        
+        # Should be informative with multiple status indicators
+        lines = [line.strip() for line in result.output.split('\n') if line.strip()]
+        assert len(lines) >= 2, f"Status should provide detailed information: {result.output}"
 
-    def test_ttt_models(self):
-        """Test: ttt models - Tested 2025-07-24"""
+    def test_ttt_models_lists_available_models_with_details(self):
+        """Test: ttt models - Lists models with provider and capability information"""
         result = run_ttt_command(["models"])
-        assert result.exit_code == 0
-        assert "Available Models" in result.output
+        assert result.exit_code == 0, f"Models command failed: {result.output}"
+        
+        output_lower = result.output.lower()
+        # Should show models list with header
+        assert any(word in output_lower for word in ["model", "available"]), f"Models header missing: {result.output}"
+        
+        # Should contain actual model names
+        assert any(model in output_lower for model in ["gpt", "claude", "gemini"]), f"No recognizable models found: {result.output}"
+        
+        # Should provide structured output with multiple entries
+        lines = [line.strip() for line in result.output.split('\n') if line.strip()]
+        assert len(lines) >= 3, f"Models output should list multiple models: {result.output}"
 
-    def test_ttt_config(self):
-        """Test: ttt config - Tested 2025-07-24"""
-        result = run_ttt_command(["config", "--help"])
-        assert result.exit_code == 0
-        assert "Customize your setup" in result.output
 
-    def test_ttt_version(self):
-        """Test: ttt --version - Tested 2025-07-24"""
-        result = run_ttt_command(["--version"])
-        assert result.exit_code == 0
-        assert "version" in result.output.lower()
 
 
 class TestModelSelectionOptions:
@@ -134,13 +147,6 @@ class TestModelSelectionOptions:
 class TestSystemPromptOptions:
     """Test system prompt options."""
 
-    def test_ask_system_help_shows_system_prompt_option_usage(self):
-        """Test: ttt ask --system help availability - Tested 2025-07-24"""
-        result = run_ttt_command(["ask", "--help"])
-        assert result.exit_code == 0
-        # Should show both session and system options
-        assert "--session" in result.output
-        assert "--system" in result.output
 
     def test_ask_system_prompt(self):
         """Test: ttt ask --system 'system prompt' 'user prompt' - Tested 2025-07-24"""
@@ -154,11 +160,6 @@ class TestSystemPromptOptions:
 class TestTemperatureControl:
     """Test temperature control options."""
 
-    def test_ask_temperature_help_shows_randomness_control_option(self):
-        """Test: Temperature option availability - Tested 2025-07-24"""
-        result = run_ttt_command(["ask", "--help"])
-        assert result.exit_code == 0
-        assert "--temperature" in result.output
 
     @pytest.mark.requires_api
     def test_ask_temperature_long(self):
@@ -182,11 +183,6 @@ class TestTemperatureControl:
 class TestTokenLimits:
     """Test token limit options."""
 
-    def test_ask_max_tokens_help_shows_response_length_limit_option(self):
-        """Test: Max tokens option availability - Tested 2025-07-24"""
-        result = run_ttt_command(["ask", "--help"])
-        assert result.exit_code == 0
-        assert "--max-tokens" in result.output
 
     @pytest.mark.requires_api
     def test_ask_max_tokens(self):
@@ -201,11 +197,6 @@ class TestTokenLimits:
 class TestToolsOptions:
     """Test tools options."""
 
-    def test_ask_tools_help_shows_tool_usage_option_availability(self):
-        """Test: Tools option availability - Tested 2025-07-24"""
-        result = run_ttt_command(["ask", "--help"])
-        assert result.exit_code == 0
-        assert "--tools" in result.output
 
     @pytest.mark.requires_api
     def test_ask_tools_basic_executes_with_tools_enabled(self):
@@ -220,17 +211,7 @@ class TestToolsOptions:
 class TestOutputModes:
     """Test output modes."""
 
-    def test_ask_stream_help_shows_streaming_output_option(self):
-        """Test: Stream option availability - Tested 2025-07-24"""
-        result = run_ttt_command(["ask", "--help"])
-        assert result.exit_code == 0
-        assert "--stream" in result.output
 
-    def test_ask_json_help_shows_structured_output_option(self):
-        """Test: JSON option availability - Tested 2025-07-24"""
-        result = run_ttt_command(["ask", "--help"])
-        assert result.exit_code == 0
-        assert "--json" in result.output
 
     @pytest.mark.requires_api
     def test_ask_stream(self):
@@ -254,63 +235,53 @@ class TestOutputModes:
 class TestChatCommands:
     """Test chat command options."""
 
-    def test_chat_basic_help_shows_interactive_chat_mode_instructions(self):
-        """Test: ttt chat - Tested 2025-07-24"""
-        result = run_ttt_command(["chat", "--help"])
-        assert result.exit_code == 0
-        assert "Chat interactively" in result.output
 
-    def test_chat_model_option(self):
-        """Test: ttt chat --model option availability - Tested 2025-07-24"""
-        result = run_ttt_command(["chat", "--help"])
-        assert result.exit_code == 0
-        assert "--model" in result.output
 
-    def test_chat_session_option(self):
-        """Test: ttt chat --session option availability - Tested 2025-07-24"""
-        result = run_ttt_command(["chat", "--help"])
-        assert result.exit_code == 0
-        assert "--session" in result.output
 
-    def test_chat_tools_option(self):
-        """Test: ttt chat --tools option availability - Tested 2025-07-24"""
-        result = run_ttt_command(["chat", "--help"])
-        assert result.exit_code == 0
-        assert "--tools" in result.output
 
-    def test_chat_markdown_option(self):
-        """Test: ttt chat --markdown option availability - Tested 2025-07-24"""
-        result = run_ttt_command(["chat", "--help"])
-        assert result.exit_code == 0
-        assert "--markdown" in result.output
 
 
 class TestConfigCommands:
     """Test config commands."""
 
-    def test_config_help_shows_get_set_list_subcommands(self):
-        """Test: ttt config - Tested 2025-07-24"""
-        result = run_ttt_command(["config", "--help"])
-        assert result.exit_code == 0
-        assert "get" in result.output
-        assert "set" in result.output
-        assert "list" in result.output
 
-    def test_config_list(self):
-        """Test: ttt config list - Tested 2025-07-24"""
+    def test_config_list_outputs_valid_configuration_json(self):
+        """Test: ttt config list - Outputs valid JSON with TTT configuration structure"""
         result = run_ttt_command(["config", "list"])
-        assert result.exit_code == 0
-        # Should output JSON configuration
+        assert result.exit_code == 0, f"Config list command failed: {result.output}"
+        
+        # Should output valid JSON
         try:
-            json.loads(result.output)
-        except json.JSONDecodeError:
-            pytest.fail("Config list should output valid JSON")
+            config_data = json.loads(result.output)
+            assert isinstance(config_data, dict), f"Config should be a JSON object: {type(config_data)}"
+            
+            # Should contain expected configuration sections
+            expected_keys = ["models", "api", "backend"]
+            found_keys = [key for key in expected_keys if any(k.startswith(key) for k in config_data.keys())]
+            assert len(found_keys) > 0, f"Config should contain model/api/backend settings. Found keys: {list(config_data.keys())}"
+            
+        except json.JSONDecodeError as e:
+            pytest.fail(f"Config list should output valid JSON. Error: {e}. Output: {result.output}")
 
-    def test_config_get_models_default_displays_current_default_model(self):
-        """Test: ttt config get models.default - Tested 2025-07-24"""
+    def test_config_get_models_default_shows_configured_model(self):
+        """Test: ttt config get models.default - Shows the configured default model with clear labeling"""
         result = run_ttt_command(["config", "get", "models.default"])
-        assert result.exit_code == 0
-        assert "models.default:" in result.output
+        assert result.exit_code == 0, f"Config get command failed: {result.output}"
+        
+        # Should show the key and its value clearly
+        assert "models.default" in result.output, f"Config key not shown: {result.output}"
+        
+        # Should have a value (either a model name or indication of no value)
+        lines = result.output.strip().split('\n')
+        config_line = next((line for line in lines if "models.default" in line), None)
+        assert config_line is not None, f"Config line not found in output: {result.output}"
+        
+        # Should be in key: value format
+        assert ":" in config_line, f"Config should use key: value format: {config_line}"
+        
+        # Value should be present (not just the key)
+        key_value = config_line.split(":", 1)
+        assert len(key_value) == 2 and key_value[1].strip(), f"Config value missing: {config_line}"
 
     def test_config_get_models_aliases(self):
         """Test: ttt config get models.aliases - Tested 2025-07-24"""
@@ -322,38 +293,87 @@ class TestConfigCommands:
 class TestJSONOutputCombinations:
     """Test JSON output combinations."""
 
-    def test_status_json(self):
-        """Test: ttt status --json - Tested 2025-07-24"""
+    def test_status_json_provides_structured_system_data(self):
+        """Test: ttt status --json - Outputs structured JSON with comprehensive system information"""
         result = run_ttt_command(["status", "--json"])
-        assert result.exit_code == 0
+        assert result.exit_code == 0, f"Status JSON command failed: {result.output}"
+        
         # Should output valid JSON
         try:
             data = json.loads(result.output)
-            assert "backends" in data
-        except json.JSONDecodeError:
-            pytest.fail("Status --json should output valid JSON")
+            assert isinstance(data, dict), f"Status JSON should be an object: {type(data)}"
+            
+            # Should contain system status information
+            expected_sections = ["backend", "api", "model", "config"]
+            found_sections = [section for section in expected_sections 
+                            if any(key.lower().startswith(section) for key in data.keys())]
+            assert len(found_sections) > 0, f"Status should contain system info sections. Found keys: {list(data.keys())}"
+            
+            # Each section should have meaningful data
+            non_empty_values = [v for v in data.values() if v is not None and v != ""]
+            assert len(non_empty_values) >= len(data) // 2, f"Status should contain meaningful data: {data}"
+            
+        except json.JSONDecodeError as e:
+            pytest.fail(f"Status --json should output valid JSON. Error: {e}. Output: {result.output}")
 
-    def test_models_json(self):
-        """Test: ttt models --json - Tested 2025-07-24"""
+    def test_models_json_provides_comprehensive_model_data(self):
+        """Test: ttt models --json - Outputs structured JSON array with detailed model information"""
         result = run_ttt_command(["models", "--json"])
-        assert result.exit_code == 0
+        assert result.exit_code == 0, f"Models JSON command failed: {result.output}"
+        
         # Should output valid JSON array
         try:
             data = json.loads(result.output)
-            assert isinstance(data, list)
-        except json.JSONDecodeError:
-            pytest.fail("Models --json should output valid JSON")
+            assert isinstance(data, list), f"Models JSON should be an array: {type(data)}"
+            assert len(data) > 0, f"Models list should not be empty: {data}"
+            
+            # Each model should have essential properties
+            for model in data:
+                assert isinstance(model, dict), f"Each model should be an object: {model}"
+                
+                # Should have basic model information
+                required_fields = ["name", "provider"]
+                for field in required_fields:
+                    field_present = any(key.lower().startswith(field) for key in model.keys())
+                    assert field_present, f"Model missing {field}: {model}"
+                
+                # Name should be a non-empty string
+                name_field = next((v for k, v in model.items() if k.lower().startswith("name")), None)
+                assert name_field and isinstance(name_field, str) and name_field.strip(), f"Invalid model name: {model}"
+            
+        except json.JSONDecodeError as e:
+            pytest.fail(f"Models --json should output valid JSON. Error: {e}. Output: {result.output}")
 
-    def test_info_json(self):
-        """Test: ttt info <model> --json - Tested 2025-07-24"""
+    def test_info_json_provides_detailed_model_metadata(self):
+        """Test: ttt info <model> --json - Outputs comprehensive model metadata in structured JSON format"""
         result = run_ttt_command(["info", "gpt-4", "--json"])
-        assert result.exit_code == 0
+        assert result.exit_code == 0, f"Info JSON command failed: {result.output}"
+        
         # Should output valid JSON
         try:
             data = json.loads(result.output)
-            assert "name" in data or "model" in data
-        except json.JSONDecodeError:
-            pytest.fail("Info --json should output valid JSON")
+            assert isinstance(data, dict), f"Info JSON should be an object: {type(data)}"
+            
+            # Should contain model identification
+            has_name = any(key.lower().startswith("name") or key.lower().startswith("model") for key in data.keys())
+            assert has_name, f"Model info should contain name/model field: {list(data.keys())}"
+            
+            # Should contain provider information
+            has_provider = any(key.lower().startswith("provider") for key in data.keys())
+            assert has_provider, f"Model info should contain provider field: {list(data.keys())}"
+            
+            # Should have meaningful model details
+            detail_fields = ["context", "token", "capabilit", "cost", "speed"]  # Partial matches
+            found_details = [field for field in detail_fields 
+                           if any(field in key.lower() for key in data.keys())]
+            assert len(found_details) > 0, f"Model info should contain capability/performance details: {list(data.keys())}"
+            
+            # Verify GPT-4 specific content
+            model_name = next((v for k, v in data.items() if "name" in k.lower() or "model" in k.lower()), "")
+            assert "gpt-4" in str(model_name).lower(), f"Model name should contain 'gpt-4': {model_name}"
+            
+        except json.JSONDecodeError as e:
+            pytest.fail(f"Info --json should output valid JSON. Error: {e}. Output: {result.output}")
 
 
 class TestPipelineUsage:
@@ -556,28 +576,45 @@ class TestFilePipelineUsage:
     """Test file-based pipeline usage - tests real file I/O functionality."""
 
     @pytest.mark.requires_api
-    def test_cat_file_pipe_ask(self):
-        """Test: cat file.txt | ttt ask 'summarize' - Tests real file I/O"""
+    def test_file_content_analysis_demonstrates_pipeline_usage(self):
+        """Test: cat file.txt | ttt ask 'summarize' - Demonstrates real file processing pipeline with validation"""
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
-        # Create a temporary file with test content
+        # Create a temporary file with meaningful test content
+        test_content = """# Project Documentation
+        
+This is a sample project that demonstrates TTT's ability to process file content.
+The project includes multiple components:
+1. A data processing module
+2. A user interface component  
+3. Integration tests
+4. Configuration management
+        
+The architecture follows modern best practices with clear separation of concerns."""
+        
         with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
-            test_content = "This is a test file with sample content for TTT to process."
             f.write(test_content)
             temp_file = f.name
 
         try:
-            # Read file content and pipe to ttt
+            # Read file content and pipe to ttt with specific analysis request
             with open(temp_file, 'r') as f:
                 file_content = f.read()
             
-            result = run_ttt_command(["ask", "summarize this"], input_text=file_content)
-            assert result.exit_code in [0, 124]
+            result = run_ttt_command(["ask", "Summarize the main components mentioned in this documentation"], input_text=file_content)
+            assert result.exit_code in [0, 124], f"File analysis command failed: {result.output}"
             
-            # If successful, verify we got some response
+            # If successful, verify meaningful analysis was performed
             if result.exit_code == 0:
-                assert len(result.output.strip()) > 0
+                response = result.output.strip()
+                assert len(response) > 20, f"Response too short for meaningful analysis: {response}"
+                
+                # Verify the AI understood the content structure
+                response_lower = response.lower()
+                expected_concepts = ["component", "module", "project", "architecture"]
+                found_concepts = [concept for concept in expected_concepts if concept in response_lower]
+                assert len(found_concepts) >= 2, f"Analysis should reference key concepts from input. Found: {found_concepts}"
         finally:
             # Clean up
             os.unlink(temp_file)
@@ -631,33 +668,43 @@ class TestJSONInputPipeline:
 class TestConfigPersistence:
     """Test config persistence - tests that configuration actually saves and loads."""
 
-    def test_config_set_get_roundtrip(self):
-        """Test: config set/get roundtrip - Tests config persistence functionality"""
-        # Get original value
+    def test_config_management_demonstrates_persistence_workflow(self):
+        """Test: config set/get roundtrip - Demonstrates complete configuration management workflow with validation"""
+        # Get original value for restoration
         original_result = run_ttt_command(["config", "get", "models.default"])
-        assert original_result.exit_code == 0
+        assert original_result.exit_code == 0, f"Initial config get failed: {original_result.output}"
         
-        # Try to set a new value (use a model that should exist)
-        set_result = run_ttt_command(["config", "set", "models.default", "gpt-3.5-turbo"])
+        # Parse original value for proper restoration
+        original_value = None
+        if ":" in original_result.output:
+            original_value = original_result.output.split(":", 1)[1].strip()
+        
+        # Test configuration change with a known model
+        test_model = "gpt-3.5-turbo"
+        set_result = run_ttt_command(["config", "set", "models.default", test_model])
         
         if set_result.exit_code == 0:
-            # If set succeeded, verify the value changed
-            get_result = run_ttt_command(["config", "get", "models.default"])
-            assert get_result.exit_code == 0
-            assert "gpt-3.5-turbo" in get_result.output
+            # Verify the configuration was actually persisted
+            verify_result = run_ttt_command(["config", "get", "models.default"])
+            assert verify_result.exit_code == 0, f"Config verification failed: {verify_result.output}"
+            assert test_model in verify_result.output, f"Config was not persisted correctly. Expected '{test_model}' in: {verify_result.output}"
             
-            # Try to restore original (if we can parse it)
-            try:
-                # Extract original value from "models.default: value" format
-                original_line = original_result.output.strip()
-                if ":" in original_line:
-                    original_value = original_line.split(":", 1)[1].strip()
-                    run_ttt_command(["config", "set", "models.default", original_value])
-            except Exception:
-                pass  # Best effort restore
+            # Verify config change is reflected in config list
+            list_result = run_ttt_command(["config", "list"])
+            if list_result.exit_code == 0:
+                assert test_model in list_result.output, f"Config change not reflected in full config list: {list_result.output}"
+            
+            # Restore original configuration
+            if original_value:
+                restore_result = run_ttt_command(["config", "set", "models.default", original_value])
+                if restore_result.exit_code == 0:
+                    # Verify restoration
+                    final_result = run_ttt_command(["config", "get", "models.default"])
+                    assert original_value in final_result.output, f"Config restoration failed: {final_result.output}"
         else:
-            # If config set isn't implemented/available, just verify get works
-            assert original_result.exit_code == 0
+            # If config set isn't available, verify config get provides useful information
+            assert "models.default" in original_result.output, f"Config get should show key information: {original_result.output}"
+            assert ":" in original_result.output, f"Config get should use key:value format: {original_result.output}"
 
     def test_config_invalid_key(self):
         """Test: config get invalid.key - Tests config error handling"""

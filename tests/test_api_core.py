@@ -2,7 +2,6 @@
 
 import pytest
 
-from ttt import AIResponse, chat
 from ttt.session.chat import PersistentChatSession
 from tests.utils import MockBackend
 
@@ -23,6 +22,7 @@ def mock_backend():
 class TestPersistentChatSession:
     """Test the PersistentChatSession class."""
 
+    @pytest.mark.unit
     def test_chat_session_initialization(self):
         """Test chat session initialization."""
         session = PersistentChatSession(system="You are helpful", model="test-model")
@@ -31,6 +31,7 @@ class TestPersistentChatSession:
         assert session.model == "test-model"
         assert session.history == []
 
+    @pytest.mark.unit
     def test_chat_session_clear(self):
         """Test clearing chat history."""
         session = PersistentChatSession()

@@ -7,7 +7,7 @@ errors such as invalid model aliases, failed model connections, or provider issu
 
 import difflib
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from ttt.config.manager import ConfigManager
 from ttt.config.schema import get_model_registry
@@ -26,7 +26,7 @@ def calculate_similarity(input_str: str, target_str: str) -> float:
     return difflib.SequenceMatcher(None, input_str.lower(), target_str.lower()).ratio()
 
 
-def suggest_model_alternatives(failed_model: str, limit: int = 3) -> List[Dict[str, str]]:
+def suggest_model_alternatives(failed_model: str, limit: int = 3) -> List[Dict[str, Union[str, float, bool]]]:
     """Suggest alternative models when a model fails or is not found.
     
     Args:
@@ -99,7 +99,7 @@ def suggest_model_alternatives(failed_model: str, limit: int = 3) -> List[Dict[s
         return _get_fallback_suggestions()
 
 
-def suggest_alias_fixes(invalid_alias: str, limit: int = 5) -> List[Dict[str, str]]:
+def suggest_alias_fixes(invalid_alias: str, limit: int = 5) -> List[Dict[str, Union[str, float, bool]]]:
     """Suggest correct aliases for typos like @gpt → @gpt4.
     
     Args:
@@ -411,7 +411,7 @@ def _detect_failed_provider(error_message: str) -> str:
         return "unknown"
 
 
-def _get_fallback_suggestions() -> List[Dict[str, str]]:
+def _get_fallback_suggestions() -> List[Dict[str, Union[str, float, bool]]]:
     """Provide basic suggestions when config loading fails."""
     return [
         {
@@ -438,7 +438,7 @@ def _get_fallback_suggestions() -> List[Dict[str, str]]:
     ]
 
 
-def _get_fallback_alias_suggestions() -> List[Dict[str, str]]:
+def _get_fallback_alias_suggestions() -> List[Dict[str, Union[str, float, bool]]]:
     """Provide basic alias suggestions when config loading fails."""
     return [
         {

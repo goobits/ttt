@@ -3,7 +3,7 @@
 import json
 import os
 import time
-from typing import Any, AsyncIterator, Dict, List, Optional, Union, cast
+from typing import Any, AsyncIterator, Dict, List, NoReturn, Optional, Union, cast
 
 # Import model_registry lazily to avoid import-time config loading
 from ..core.exceptions import (
@@ -99,9 +99,9 @@ class CloudBackend(BaseBackend):
         """
         # Check if we received pre-built messages from chat session
         if kwargs and "messages" in kwargs and kwargs["messages"]:
-            return kwargs["messages"]
+            return cast(List[Dict[str, Any]], kwargs["messages"])
 
-        messages = []
+        messages: List[Dict[str, Any]] = []
         if system:
             messages.append({"role": "system", "content": system})
 
@@ -137,7 +137,7 @@ class CloudBackend(BaseBackend):
 
         return messages
 
-    def _handle_request_error(self, e: Exception, used_model: str, request_type: str = "request") -> None:
+    def _handle_request_error(self, e: Exception, used_model: str, request_type: str = "request") -> NoReturn:
         """
         Handle errors from API requests by converting them to appropriate exceptions.
 

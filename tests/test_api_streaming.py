@@ -1,18 +1,15 @@
 """Advanced tests for the API module to increase coverage."""
 
-from typing import AsyncIterator
 from unittest.mock import patch
 
 import pytest
 
 from ttt import (
-    AIResponse,
     BackendNotAvailableError,
     ImageInput,
     achat,
     ask,
     ask_async,
-    chat,
     stream,
     stream_async,
 )

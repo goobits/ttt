@@ -4,7 +4,7 @@ import base64
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -93,7 +93,7 @@ class AIResponse(str):
         """Get list of tool calls made during this response."""
         if self.tool_result is None:
             return []
-        return self.tool_result.calls
+        return cast(List[Any], self.tool_result.calls)
 
     @property
     def tools_succeeded(self) -> bool:
@@ -247,7 +247,7 @@ class ImageInput:
 
             # Try to get mime types from config
             try:
-                from ..config.loader import load_project_defaults
+                from ..config.schema import load_project_defaults
 
                 project_defaults = load_project_defaults()
                 default_mime_types = {

@@ -5,7 +5,7 @@ import json as json_module
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import rich_click as click
 from rich.console import Console
@@ -424,36 +424,36 @@ def on_ask(
         model = resolve_model_alias(model)
 
     # Build request parameters
-    kwargs: Dict[str, Any] = {}
+    api_params: Dict[str, Any] = {}
     if model:
-        kwargs["model"] = model
+        api_params["model"] = model
     if temperature is not None:
-        kwargs["temperature"] = temperature
+        api_params["temperature"] = temperature
     if max_tokens:
-        kwargs["max_tokens"] = max_tokens
+        api_params["max_tokens"] = max_tokens
     if tools:
-        kwargs["tools"] = None  # Enable all tools
+        api_params["tools"] = None  # Enable all tools
     if session:
-        kwargs["session_id"] = session
+        api_params["session_id"] = session
     if system:
-        kwargs["system"] = system
+        api_params["system"] = system
 
     try:
         if json:
             # JSON output mode - collect response and format as JSON
-            response = ttt_ask(prompt_text, **kwargs)
+            response = ttt_ask(prompt_text, **api_params)
             output = {
                 "response": str(response).strip(),
-                "model": kwargs.get("model"),
-                "temperature": kwargs.get("temperature"),
-                "max_tokens": kwargs.get("max_tokens"),
-                "tools_enabled": kwargs.get("tools") is not None,
-                "session_id": kwargs.get("session_id"),
-                "system": kwargs.get("system"),
+                "model": api_params.get("model"),
+                "temperature": api_params.get("temperature"),
+                "max_tokens": api_params.get("max_tokens"),
+                "tools_enabled": api_params.get("tools") is not None,
+                "session_id": api_params.get("session_id"),
+                "system": api_params.get("system"),
             }
             click.echo(json_module.dumps(output, indent=2))
         elif stream:
-            chunks = list(ttt_stream(prompt_text, **kwargs))
+            chunks = list(ttt_stream(prompt_text, **api_params))
             for i, chunk in enumerate(chunks):
                 if i == len(chunks) - 1:  # Last chunk
                     click.echo(chunk.rstrip("\n"), nl=False)
@@ -461,7 +461,7 @@ def on_ask(
                     click.echo(chunk, nl=False)
             click.echo()  # Always add exactly one newline at the end
         else:
-            response = ttt_ask(prompt_text, **kwargs)
+            response = ttt_ask(prompt_text, **api_params)
             click.echo(str(response).strip())
     except Exception as e:
         # Import exception types for better error handling
@@ -484,8 +484,8 @@ def on_ask(
             error_output = {
                 "error": str(e),
                 "error_type": e.__class__.__name__,
-                "model": kwargs.get("model"),
-                "parameters": kwargs,
+                "model": api_params.get("model"),
+                "parameters": api_params,
             }
             click.echo(json_module.dumps(error_output, indent=2), err=True)
         else:
@@ -495,7 +495,7 @@ def on_ask(
             if isinstance(e, APIKeyError):
                 click.echo(f"❌ API key error: {e.message}", err=True)
                 # Suggest provider alternatives
-                provider_suggestions = suggest_provider_alternatives(str(e), kwargs.get("model"))
+                provider_suggestions = suggest_provider_alternatives(str(e), api_params.get("model"))
                 if provider_suggestions:
                     click.echo("\n[cyan]💡 Try these alternatives:[/cyan]", err=True)
                     for suggestion in provider_suggestions[:3]:
@@ -511,7 +511,7 @@ def on_ask(
                     click.echo(f"❌ Connection error: {e.message}", err=True)
                 
                 # Suggest alternatives
-                provider_suggestions = suggest_provider_alternatives(error_msg, kwargs.get("model"))
+                provider_suggestions = suggest_provider_alternatives(error_msg, api_params.get("model"))
                 if provider_suggestions:
                     click.echo("\n[cyan]💡 Try these alternatives:[/cyan]", err=True)
                     for suggestion in provider_suggestions[:2]:
@@ -548,9 +548,12 @@ def on_ask(
                     model_suggestions = suggest_model_alternatives(failed_model, limit=3)
                     if model_suggestions:
                         click.echo("\n[cyan]💡 Similar models you can try:[/cyan]", err=True)
-                        for suggestion in model_suggestions:
-                            status = "[green]✓[/green]" if suggestion["available"] else "[red]✗[/red]"
-                            click.echo(f"   {status} [bold]{suggestion['alias']}[/bold]  {suggestion['description']}", err=True)
+                        for model_suggestion in model_suggestions:
+                            available = model_suggestion.get("available", False)
+                            status = "[green]✓[/green]" if available else "[red]✗[/red]"
+                            alias = str(model_suggestion.get("alias", ""))
+                            description = str(model_suggestion.get("description", ""))
+                            click.echo(f"   {status} [bold]{alias}[/bold]  {description}", err=True)
                 
                 click.echo("\n[dim]Run 'ttt models' to see all available models[/dim]", err=True)
                 
@@ -633,7 +636,8 @@ def on_chat(command_name: str, model: Optional[str], session: Optional[str], too
         chat_session = session_manager.load_session(session)
         if not chat_session:
             console.print(f"[yellow]Session '{session}' not found. Creating new session.[/yellow]")
-            chat_session = session_manager.create_session(session_id=session, model=model, tools=parsed_tools)
+            chat_session = session_manager.create_session(model=model, tools=parsed_tools)
+            chat_session.id = session
     else:
         chat_session = session_manager.create_session(model=model, tools=parsed_tools)
 
@@ -974,9 +978,9 @@ def on_export(
         sys.exit(1)
 
     # Export data
-    export_data = {
+    export_data: Dict[str, Any] = {
         "session_id": chat_session.id,
-        "created_at": (chat_session.created_at.isoformat() if hasattr(chat_session, "created_at") else None),
+        "created_at": (chat_session.created_at if hasattr(chat_session, "created_at") and chat_session.created_at else None),
         "messages": chat_session.messages,
     }
 
@@ -1001,10 +1005,18 @@ def on_export(
     else:  # markdown
         output_text = f"# Chat Session: {session}\n\n"
         if include_metadata:
-            output_text += f"**Model**: {export_data['metadata']['model']}\n\n"
+            metadata = export_data.get('metadata')
+            if metadata and isinstance(metadata, dict):
+                model_info = metadata.get('model', 'Unknown')
+                output_text += f"**Model**: {model_info}\n\n"
 
-        for msg in export_data["messages"]:
-            output_text += f"## {msg['role'].capitalize()}\n\n{msg['content']}\n\n"
+        messages = export_data.get("messages")
+        if messages and isinstance(messages, list):
+            for msg in messages:
+                if hasattr(msg, 'role') and hasattr(msg, 'content'):
+                    output_text += f"## {msg.role.capitalize()}\n\n{msg.content}\n\n"
+                elif isinstance(msg, dict) and 'role' in msg and 'content' in msg:
+                    output_text += f"## {msg['role'].capitalize()}\n\n{msg['content']}\n\n"
 
     # Write output
     if output:
@@ -1099,7 +1111,11 @@ def show_models_list(json_output: bool = False) -> None:
     try:
         model_registry = get_model_registry()
         model_names = model_registry.list_models()
-        models = [model_registry.get_model(name) for name in model_names if model_registry.get_model(name)]
+        models = []
+        for name in model_names:
+            model = model_registry.get_model(name)
+            if model is not None:
+                models.append(model)
 
         if json_output:
             models_data = []

@@ -310,6 +310,37 @@ class LocalBackend(BaseBackend):
             logger.error(f"Failed to fetch models: {str(e)}")
             raise BackendConnectionError(self.name, e) from e
 
+    def list_models(self, detailed: bool = False) -> List[Union[str, Dict[str, Any]]]:
+        """
+        List available models from Ollama, optionally with details.
+
+        Args:
+            detailed: Whether to return detailed model information
+
+        Returns:
+            List of model names or detailed model information
+        """
+        from typing import cast
+        
+        # Use run_async to make this synchronous for CLI compatibility
+        models = run_async(self.models())
+        
+        if not detailed:
+            # Cast to satisfy MyPy variance requirements
+            return cast(List[Union[str, Dict[str, Any]]], models)
+        
+        # For detailed mode, return basic information for each model
+        detailed_models: List[Union[str, Dict[str, Any]]] = []
+        for model in models:
+            detailed_models.append({
+                "name": model,
+                "provider": "local",
+                "backend": self.name,
+                "available": True,
+            })
+        
+        return detailed_models
+
     async def status(self) -> Dict[str, Any]:
         """
         Get status information from Ollama.

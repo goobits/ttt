@@ -1,5 +1,7 @@
 """Backend implementations for different AI providers."""
 
+from typing import TYPE_CHECKING, Optional, Type
+
 from .base import BaseBackend
 from .cloud import CloudBackend
 
@@ -10,6 +12,9 @@ try:
     HAS_LOCAL_BACKEND = True
     __all__ = ["BaseBackend", "CloudBackend", "LocalBackend"]
 except ImportError:
-    LocalBackend = None  # type: ignore[misc]
+    if TYPE_CHECKING:
+        from .local import LocalBackend
+    else:
+        LocalBackend: Optional[Type[BaseBackend]] = None  # type: ignore[misc]
     HAS_LOCAL_BACKEND = False
     __all__ = ["BaseBackend", "CloudBackend"]

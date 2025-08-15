@@ -5,7 +5,6 @@ import sys
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from unittest.mock import Mock
 
 import pytest
 from dotenv import load_dotenv
@@ -32,15 +31,23 @@ MIN_DELAY = 0.1  # Minimum delay for progressive rate limiting
 MAX_DELAY = 2.0  # Maximum delay for progressive rate limiting
 
 
-def _should_skip_rate_limiting():
+def _should_skip_rate_limiting(config=None):
     """Determine if rate limiting should be skipped based on environment.
     
     Returns True if:
+    - Fast mode is enabled (--fast flag or PYTEST_FAST_MODE=1)
     - Running in CI environment
     - No real API keys present (all tests would be mocked)
     - Explicit disable flag is set
     - Running unit tests only
     """
+    # Check for fast mode first
+    if os.getenv("PYTEST_FAST_MODE") == "1":
+        return True
+    
+    if config and config.getoption("--fast", default=False):
+        return True
+    
     # Check for CI environment
     if os.getenv("CI") or os.getenv("GITHUB_ACTIONS") or os.getenv("PYTEST_DISABLE_RATE_LIMIT"):
         return True
@@ -107,7 +114,7 @@ def rate_limit_delay(request):
         
         # Skip delays in various conditions unless forced
         if not force:
-            if _should_skip_rate_limiting():
+            if _should_skip_rate_limiting(request.config):
                 return
             if _uses_mock_backend(request):
                 return
@@ -148,7 +155,7 @@ def auto_rate_limit_for_integration_tests(request, rate_limit_delay):
         return
     
     # Skip delays if conditions indicate this test doesn't need them
-    if _should_skip_rate_limiting():
+    if _should_skip_rate_limiting(request.config):
         return
         
     # Skip if test uses mocks
@@ -316,4 +323,10 @@ def pytest_addoption(parser):
         type=float,
         default=None,
         help="Override default rate limit delay (in seconds)",
+    )
+    parser.addoption(
+        "--fast",
+        action="store_true",
+        default=False,
+        help="Skip rate limiting delays for fast development cycles",
     )

@@ -2,12 +2,15 @@
 
 from datetime import datetime
 
+import pytest
+
 from ttt import AIResponse, ConfigModel, ModelInfo
 
 
 class TestAIResponse:
     """Test AIResponse class."""
 
+    @pytest.mark.unit
     def test_metadata_storage(self):
         """Test metadata is stored correctly."""
         response = AIResponse(
@@ -30,6 +33,7 @@ class TestAIResponse:
         assert response.succeeded
         assert not response.failed
 
+    @pytest.mark.unit
     def test_error_handling(self):
         """Test error state handling."""
         response = AIResponse("", model="test-model", error="Test error")
@@ -38,11 +42,13 @@ class TestAIResponse:
         assert response.failed
         assert not response.succeeded
 
+    @pytest.mark.unit
     def test_timestamp_automatically_set_on_response_creation(self):
         """Test that timestamp is set by default."""
         response = AIResponse("test")
         assert isinstance(response.timestamp, datetime)
 
+    @pytest.mark.unit
     def test_repr(self):
         """Test string representation."""
         response = AIResponse(
@@ -62,6 +68,7 @@ class TestAIResponse:
 class TestModelInfo:
     """Test ModelInfo dataclass."""
 
+    @pytest.mark.unit
     def test_basic_creation(self):
         """Test basic model creation."""
         model = ModelInfo(name="test-model", provider="test", provider_name="test-provider-model")
@@ -72,6 +79,7 @@ class TestModelInfo:
         assert model.aliases == []
         assert model.capabilities == []
 
+    @pytest.mark.unit
     def test_with_optional_fields(self):
         """Test model with all fields."""
         model = ModelInfo(
@@ -97,6 +105,7 @@ class TestModelInfo:
 class TestConfigModel:
     """Test ConfigModel configuration."""
 
+    @pytest.mark.unit
     def test_default_values(self):
         """Test default configuration values."""
         config = ConfigModel()
@@ -109,6 +118,7 @@ class TestConfigModel:
         assert config.enable_fallbacks is True
         assert config.fallback_order == ["cloud", "local"]
 
+    @pytest.mark.unit
     def test_model_aliases(self):
         """Test model aliases configuration."""
         # ConfigModel starts with empty aliases
@@ -128,6 +138,7 @@ class TestConfigModel:
         # Verify all aliases were set correctly
         assert config.model_aliases == test_aliases
 
+    @pytest.mark.unit
     def test_custom_values(self):
         """Test setting custom values."""
         config = ConfigModel(ollama_base_url="http://custom:8080", default_backend="local", timeout=60)

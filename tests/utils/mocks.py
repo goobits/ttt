@@ -134,8 +134,3 @@ class MockBackend(BaseBackend):
     async def list_models(self, **kwargs) -> List[str]:
         """List available models."""
         return self.models
-
-    # Legacy method name for compatibility with test_routing.py
-    async def models(self) -> List[str]:
-        """List available models (legacy method name)."""
-        return ["mock-model"]

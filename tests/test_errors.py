@@ -42,6 +42,7 @@ from ttt.tools.recovery import (
 class TestExceptionHierarchy:
     """Test the exception class hierarchy."""
 
+    @pytest.mark.unit
     def test_all_exceptions_inherit_from_ai_error(self):
         """Test that all exceptions inherit from AIError."""
         exceptions = [
@@ -58,6 +59,7 @@ class TestExceptionHierarchy:
             assert isinstance(exc, AIError)
             assert isinstance(exc, Exception)
 
+    @pytest.mark.unit
     def test_exception_messages(self):
         """Test that exceptions have proper messages."""
         exc = BackendNotAvailableError("mybackend", "Not installed")
@@ -69,6 +71,7 @@ class TestExceptionHierarchy:
         exc = APIKeyError("OpenAI", "OPENAI_API_KEY")
         assert "OPENAI_API_KEY" in str(exc)
 
+    @pytest.mark.unit
     def test_exception_details(self):
         """Test that exceptions store details properly."""
         exc = BackendConnectionError("local", Exception("Connection refused"))

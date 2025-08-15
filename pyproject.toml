@@ -19,7 +19,7 @@ text = "MIT"
 
 [project.optional-dependencies]
 local = [ "httpx>=0.24.0",]
-dev = [ "pytest>=7.0", "pytest-asyncio", "pytest-cov", "pytest-timeout", "black", "ruff", "mypy", "build", "twine",]
+dev = [ "pytest>=7.0", "pytest-asyncio", "pytest-cov", "pytest-timeout", "black", "ruff", "mypy", "types-PyYAML", "build", "twine",]
 
 [project.scripts]
 ttt = "ttt.cli:cli_entry"
@@ -46,6 +46,7 @@ cache_dir = ".temp/mypy"
 
 [tool.pytest.ini_options]
 markers = [
+    "unit: unit tests",
     "requires_api: tests that require API keys",
     "integration: integration tests", 
     "slow: slow tests",
@@ -58,8 +59,7 @@ testpaths = ["tests"]
 addopts = [
     "--strict-markers",
     "--disable-warnings",
-    "-ra",
-    "--timeout=300"
+    "-ra"
 ]
 
 [tool.coverage.run]

@@ -1,6 +1,5 @@
 """Tests for the models, info, list, status, and export CLI commands."""
 
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 from ttt.cli import main

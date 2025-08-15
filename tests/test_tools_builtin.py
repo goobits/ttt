@@ -22,6 +22,7 @@ from ttt.tools.builtins import (
 class TestWebSearch:
     """Test web_search tool."""
 
+    @pytest.mark.unit
     @patch("urllib.request.urlopen")
     def test_web_search_returns_formatted_answer_and_topics(self, mock_urlopen):
         """Test successful web search."""
@@ -48,11 +49,13 @@ class TestWebSearch:
         assert "Topic 1" in result
         assert "Topic 2" in result
 
+    @pytest.mark.unit
     def test_web_search_empty_query(self):
         """Test web search with empty query."""
         result = web_search("")
         assert "Search query cannot be empty" in result
 
+    @pytest.mark.unit
     @patch("urllib.request.urlopen")
     def test_web_search_no_results(self, mock_urlopen):
         """Test web search with no results."""
@@ -63,6 +66,7 @@ class TestWebSearch:
         result = web_search("obscure query")
         assert "No results found" in result
 
+    @pytest.mark.unit
     @patch("urllib.request.urlopen")
     def test_web_search_network_error(self, mock_urlopen):
         """Test web search with network error."""
@@ -75,6 +79,7 @@ class TestWebSearch:
 class TestFileOperations:
     """Test file operation tools."""
 
+    @pytest.mark.unit
     def test_read_file_returns_complete_file_contents(self, tmp_path):
         """Test successful file reading."""
         # Create test file
@@ -85,17 +90,20 @@ class TestFileOperations:
         result = read_file(str(test_file))
         assert result == test_content
 
+    @pytest.mark.unit
     def test_read_file_not_found(self, tmp_path):
         """Test reading non-existent file."""
         nonexistent_file = tmp_path / "nonexistent.txt"
         result = read_file(str(nonexistent_file))
         assert "not found" in result.lower() or "does not exist" in result.lower()
 
+    @pytest.mark.unit
     def test_read_file_directory(self, tmp_path):
         """Test reading a directory."""
         result = read_file(str(tmp_path))
         assert "not a file" in result.lower() or "directory" in result.lower()
 
+    @pytest.mark.unit
     def test_read_file_too_large(self, tmp_path):
         """Test reading file that's too large (if size limits exist)."""
         # Create a large file
@@ -107,6 +115,7 @@ class TestFileOperations:
         # File should either read successfully or report size limit
         assert "Error" not in result or "too large" in result.lower()
 
+    @pytest.mark.unit
     def test_write_file_creates_file_with_exact_content(self, tmp_path):
         """Test successful file writing."""
         test_file = tmp_path / "output.txt"
@@ -117,6 +126,7 @@ class TestFileOperations:
         assert "Successfully wrote" in result
         assert test_file.read_text() == content
 
+    @pytest.mark.unit
     def test_write_file_create_dirs(self, tmp_path):
         """Test writing file with directory creation."""
         test_file = tmp_path / "new_dir" / "output.txt"
@@ -128,6 +138,7 @@ class TestFileOperations:
         assert test_file.exists()
         assert test_file.read_text() == content
 
+    @pytest.mark.unit
     def test_write_file_no_parent_dir(self, tmp_path):
         """Test writing file when parent directory doesn't exist."""
         test_file = tmp_path / "nonexistent" / "output.txt"
@@ -135,6 +146,7 @@ class TestFileOperations:
         result = write_file(str(test_file), "content")
         assert "Parent directory does not exist" in result
 
+    @pytest.mark.unit
     def test_list_directory_shows_files_and_subdirectories_with_types(self, tmp_path):
         """Test listing directory contents."""
         # Create test structure
@@ -150,6 +162,7 @@ class TestFileOperations:
         assert "[DIR] subdir/" in result
         assert "file3.txt" not in result  # Not recursive by default
 
+    @pytest.mark.unit
     def test_list_directory_pattern(self, tmp_path):
         """Test listing directory with pattern."""
         (tmp_path / "file1.txt").touch()
@@ -162,6 +175,7 @@ class TestFileOperations:
         assert "file3.txt" in result
         assert "file2.py" not in result
 
+    @pytest.mark.unit
     def test_list_directory_recursive(self, tmp_path):
         """Test recursive directory listing."""
         (tmp_path / "file1.txt").touch()
@@ -177,6 +191,7 @@ class TestFileOperations:
 class TestCodeExecution:
     """Test code execution tool."""
 
+    @pytest.mark.unit
     def test_run_python_executes_code_and_captures_output(self):
         """Test successful Python code execution."""
         code = "print('Hello, World!')\nprint(2 + 2)"
@@ -185,6 +200,7 @@ class TestCodeExecution:
         assert "Hello, World!" in result
         assert "4" in result
 
+    @pytest.mark.unit
     def test_run_python_error(self):
         """Test Python code with error."""
         code = "print(undefined_variable)"
@@ -192,6 +208,7 @@ class TestCodeExecution:
 
         assert "Error" in result.lower() or "NameError" in result
 
+    @pytest.mark.unit
     def test_run_python_timeout(self):
         """Test Python code timeout."""
         code = "import time\ntime.sleep(10)"
@@ -199,6 +216,7 @@ class TestCodeExecution:
 
         assert "timed out" in result
 
+    @pytest.mark.unit
     def test_run_python_empty_code(self):
         """Test empty code."""
         result = run_python("")
@@ -208,6 +226,7 @@ class TestCodeExecution:
 class TestTimeOperations:
     """Test time-related tools."""
 
+    @pytest.mark.unit
     def test_get_current_time_returns_utc_formatted_timestamp(self):
         """Test getting current time with defaults."""
         result = get_current_time()
@@ -217,6 +236,7 @@ class TestTimeOperations:
         # Should be in default format
         assert len(result.split()) >= 3  # Date, time, timezone
 
+    @pytest.mark.unit
     def test_get_current_time_timezone(self):
         """Test getting time in specific timezone."""
         # Use America/New_York which is more standard
@@ -225,6 +245,7 @@ class TestTimeOperations:
         # Should contain time and timezone info, or an error message
         assert len(result) > 0 and ("2025" in result or "Error" in result)
 
+    @pytest.mark.unit
     def test_get_current_time_custom_format(self):
         """Test custom time format."""
         result = get_current_time("UTC", "%Y-%m-%d")
@@ -233,6 +254,7 @@ class TestTimeOperations:
         assert len(result.split("-")) == 3
         assert ":" not in result  # No time component
 
+    @pytest.mark.unit
     def test_get_current_time_invalid_timezone(self):
         """Test invalid timezone."""
         result = get_current_time("Invalid/Timezone")
@@ -244,6 +266,7 @@ class TestTimeOperations:
 class TestHttpRequest:
     """Test HTTP request tool."""
 
+    @pytest.mark.unit
     @patch("urllib.request.urlopen")
     def test_http_request_get(self, mock_urlopen):
         """Test GET request."""
@@ -257,6 +280,7 @@ class TestHttpRequest:
         # Should pretty-print JSON
         assert '"status": "ok"' in result
 
+    @pytest.mark.unit
     @patch("urllib.request.urlopen")
     def test_http_request_post_json(self, mock_urlopen):
         """Test POST request with JSON data."""
@@ -276,16 +300,19 @@ class TestHttpRequest:
         content_type = headers.get("Content-Type") or headers.get("Content-type")
         assert content_type == "application/json"
 
+    @pytest.mark.unit
     def test_http_request_invalid_url(self):
         """Test invalid URL."""
         result = http_request("not-a-url")
         assert "Error: Invalid URL format" in result
 
+    @pytest.mark.unit
     def test_http_request_unsupported_protocol(self):
         """Test unsupported protocol."""
         result = http_request("ftp://example.com/file")
         assert "Error: Only HTTP/HTTPS protocols are supported" in result
 
+    @pytest.mark.unit
     @patch("urllib.request.urlopen")
     def test_http_request_http_error(self, mock_urlopen):
         """Test HTTP error response."""
@@ -298,6 +325,7 @@ class TestHttpRequest:
 class TestCalculate:
     """Test calculate tool."""
 
+    @pytest.mark.unit
     def test_calculate_basic_arithmetic(self):
         """Test basic arithmetic operations."""
         assert "Result: 7" in calculate("3 + 4")
@@ -308,6 +336,7 @@ class TestCalculate:
         assert "Result: 1" in calculate("10 % 3")
         assert "Result: 3" in calculate("10 // 3")
 
+    @pytest.mark.unit
     def test_calculate_functions(self):
         """Test mathematical functions."""
         assert "Result: 5" in calculate("abs(-5)")
@@ -316,6 +345,7 @@ class TestCalculate:
         assert "Result: 2" in calculate("sqrt(4)")
         assert "Result: 0" in calculate("round(sin(0), 10)")
 
+    @pytest.mark.unit
     def test_calculate_constants(self):
         """Test mathematical constants."""
         result = calculate("pi")
@@ -324,21 +354,25 @@ class TestCalculate:
         result = calculate("e")
         assert "2.71828" in result
 
+    @pytest.mark.unit
     def test_calculate_complex_expression(self):
         """Test complex expression."""
         result = calculate("sqrt(16) + 3 * 2 - 1")
         assert "Result: 9" in result
 
+    @pytest.mark.unit
     def test_calculate_division_by_zero(self):
         """Test division by zero."""
         result = calculate("1 / 0")
         assert "Error: Division by zero" in result
 
+    @pytest.mark.unit
     def test_calculate_invalid_expression(self):
         """Test invalid expression."""
         result = calculate("invalid + syntax !")
         assert "Error" in result
 
+    @pytest.mark.unit
     def test_calculate_unsafe_operation(self):
         """Test unsafe operation is blocked."""
         result = calculate("__import__('os').system('ls')")
@@ -348,6 +382,7 @@ class TestCalculate:
 class TestBuiltinToolsIntegration:
     """Test integration of built-in tools with the tool system."""
 
+    @pytest.mark.unit
     def test_all_tools_registered(self):
         """Test that all built-in tools are registered."""
         # Get all tools in the 'web' category
@@ -378,6 +413,7 @@ class TestBuiltinToolsIntegration:
         math_tool_names = [t.name for t in math_tools]
         assert "calculate" in math_tool_names
 
+    @pytest.mark.unit
     def test_get_specific_tool(self):
         """Test getting specific built-in tools."""
         # Get web_search tool
@@ -394,6 +430,7 @@ class TestBuiltinToolsIntegration:
         assert tool.category == "math"
         assert "mathematical calculations" in tool.description
 
+    @pytest.mark.unit
     def test_tool_schemas(self):
         """Test that built-in tools have valid schemas."""
         # Test OpenAI schema

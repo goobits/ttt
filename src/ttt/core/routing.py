@@ -234,9 +234,13 @@ class Router:
         # Try to resolve alias
         from ..config.schema import model_registry
 
+        # At this point model should not be None, but add safety check
+        if model is None:
+            raise ValueError("Model cannot be None at this point")
+        
         resolved = model_registry.resolve_model_name(model)
         logger.debug(f"Resolved model '{model}' to '{resolved}'")
-        return resolved
+        return str(resolved)
 
     def smart_route(
         self,
