@@ -78,18 +78,14 @@ class TestConfigCommand(IntegrationTestBase):
     def test_config_command_parameter_passing(self):
         """Test config set/get commands pass key/value parameters correctly."""
         # Test config set - this command should complete successfully
-        result = self.runner.invoke(main, [
-            "config", "set", "model", "gpt-4"
-        ])
-        
+        result = self.runner.invoke(main, ["config", "set", "model", "gpt-4"])
+
         # Config set should succeed - this validates CLI structure and parameter passing
         assert result.exit_code == 0, f"Config set failed with output: {result.output}"
-        
+
         # Test config get - this should retrieve the value we just set
-        result = self.runner.invoke(main, [
-            "config", "get", "model"
-        ])
-        
+        result = self.runner.invoke(main, ["config", "get", "model"])
+
         # Config get should succeed and show the value
         assert result.exit_code == 0, f"Config get failed with output: {result.output}"
         # Should contain the value we set (validates parameter was passed correctly)
@@ -98,16 +94,12 @@ class TestConfigCommand(IntegrationTestBase):
     def test_config_list_command_parameter_passing(self):
         """Test config list command passes show_secrets parameter correctly."""
         # Test config list with show-secrets flag
-        result = self.runner.invoke(main, [
-            "config", "list", "--show-secrets", "true"
-        ])
-        
+        result = self.runner.invoke(main, ["config", "list", "--show-secrets", "true"])
+
         # Config list should succeed - validates CLI structure and parameter passing
         assert result.exit_code == 0, f"Config list failed with output: {result.output}"
-        
+
         # Test config list without show-secrets
-        result = self.runner.invoke(main, [
-            "config", "list"
-        ])
-        
+        result = self.runner.invoke(main, ["config", "list"])
+
         assert result.exit_code == 0, f"Config list (no secrets) failed with output: {result.output}"

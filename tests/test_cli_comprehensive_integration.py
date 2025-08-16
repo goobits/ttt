@@ -412,29 +412,33 @@ The project includes multiple components:
 4. Configuration management
         
 The architecture follows modern best practices with clear separation of concerns."""
-        
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
             f.write(test_content)
             temp_file = f.name
 
         try:
             # Read file content and pipe to ttt with specific analysis request
-            with open(temp_file, 'r') as f:
+            with open(temp_file, "r") as f:
                 file_content = f.read()
-            
-            result = run_ttt_command(["ask", "Summarize the main components mentioned in this documentation"], input_text=file_content)
+
+            result = run_ttt_command(
+                ["ask", "Summarize the main components mentioned in this documentation"], input_text=file_content
+            )
             assert result.exit_code in [0, 124], f"File analysis command failed: {result.output}"
-            
+
             # If successful, verify meaningful analysis was performed
             if result.exit_code == 0:
                 response = result.output.strip()
                 assert len(response) > 20, f"Response too short for meaningful analysis: {response}"
-                
+
                 # Verify the AI understood the content structure
                 response_lower = response.lower()
                 expected_concepts = ["component", "module", "project", "architecture"]
                 found_concepts = [concept for concept in expected_concepts if concept in response_lower]
-                assert len(found_concepts) >= 2, f"Analysis should reference key concepts from input. Found: {found_concepts}"
+                assert len(found_concepts) >= 2, (
+                    f"Analysis should reference key concepts from input. Found: {found_concepts}"
+                )
         finally:
             # Clean up
             os.unlink(temp_file)
@@ -446,15 +450,15 @@ The architecture follows modern best practices with clear separation of concerns
             pytest.skip("Requires API key")
 
         # Create a temporary JSON file
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:
             test_data = {"users": [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]}
             json.dump(test_data, f)
             temp_file = f.name
 
         try:
-            with open(temp_file, 'r') as f:
+            with open(temp_file, "r") as f:
                 file_content = f.read()
-            
+
             result = run_ttt_command(["ask", "how many users are in this data?"], input_text=file_content)
             assert result.exit_code in [0, 124]
         finally:
@@ -480,7 +484,7 @@ class TestJSONInputPipeline:
         if not has_valid_api_key():
             pytest.skip("Requires API key")
 
-        json_input = '[10, 20, 30, 40]'
+        json_input = "[10, 20, 30, 40]"
         result = run_ttt_command(["ask", "what is the sum of these numbers?"], input_text=json_input)
         assert result.exit_code in [0, 124]
 

@@ -4,7 +4,7 @@ import json
 import time
 from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
-import httpx
+import httpx  # type: ignore[import-not-found]
 
 from ..core.exceptions import (
     BackendConnectionError,
@@ -321,24 +321,26 @@ class LocalBackend(BaseBackend):
             List of model names or detailed model information
         """
         from typing import cast
-        
+
         # Use run_async to make this synchronous for CLI compatibility
         models = run_async(self.models())
-        
+
         if not detailed:
             # Cast to satisfy MyPy variance requirements
             return cast(List[Union[str, Dict[str, Any]]], models)
-        
+
         # For detailed mode, return basic information for each model
         detailed_models: List[Union[str, Dict[str, Any]]] = []
         for model in models:
-            detailed_models.append({
-                "name": model,
-                "provider": "local",
-                "backend": self.name,
-                "available": True,
-            })
-        
+            detailed_models.append(
+                {
+                    "name": model,
+                    "provider": "local",
+                    "backend": self.name,
+                    "available": True,
+                }
+            )
+
         return detailed_models
 
     async def status(self) -> Dict[str, Any]:

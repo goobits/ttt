@@ -6,10 +6,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field  # type: ignore[import-not-found]
 
 if TYPE_CHECKING:
-    from .tools.base import ToolResult
+    from ttt.tools.base import ToolResult
 
 
 class AIResponse(str):

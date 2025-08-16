@@ -33,7 +33,7 @@ MAX_DELAY = 2.0  # Maximum delay for progressive rate limiting
 
 def _should_skip_rate_limiting(config=None):
     """Determine if rate limiting should be skipped based on environment.
-    
+
     Returns True if:
     - Fast mode is enabled (--fast flag or PYTEST_FAST_MODE=1)
     - Running in CI environment
@@ -44,22 +44,24 @@ def _should_skip_rate_limiting(config=None):
     # Check for fast mode first
     if os.getenv("PYTEST_FAST_MODE") == "1":
         return True
-    
+
     if config and config.getoption("--fast", default=False):
         return True
-    
+
     # Check for CI environment
     if os.getenv("CI") or os.getenv("GITHUB_ACTIONS") or os.getenv("PYTEST_DISABLE_RATE_LIMIT"):
         return True
-    
+
     # Check if any real API keys are present
-    has_real_keys = any([
-        _is_valid_api_key(os.getenv("OPENAI_API_KEY")),
-        _is_valid_api_key(os.getenv("ANTHROPIC_API_KEY")),
-        _is_valid_api_key(os.getenv("OPENROUTER_API_KEY")),
-        _is_valid_api_key(os.getenv("GOOGLE_API_KEY"))
-    ])
-    
+    has_real_keys = any(
+        [
+            _is_valid_api_key(os.getenv("OPENAI_API_KEY")),
+            _is_valid_api_key(os.getenv("ANTHROPIC_API_KEY")),
+            _is_valid_api_key(os.getenv("OPENROUTER_API_KEY")),
+            _is_valid_api_key(os.getenv("GOOGLE_API_KEY")),
+        ]
+    )
+
     # If no real API keys, all tests are mocked - skip delays
     return not has_real_keys
 
@@ -77,18 +79,18 @@ def _is_valid_api_key(key):
 def _uses_mock_backend(request):
     """Check if the test is using a mock backend by examining fixtures and test content."""
     # Check if mock-related fixtures are used
-    if hasattr(request, 'fixturenames'):
-        mock_fixtures = [name for name in request.fixturenames if 'mock' in name.lower()]
+    if hasattr(request, "fixturenames"):
+        mock_fixtures = [name for name in request.fixturenames if "mock" in name.lower()]
         if mock_fixtures:
             return True
-    
+
     # Check test function for mock usage
-    if hasattr(request.node, 'function') and hasattr(request.node.function, '__code__'):
+    if hasattr(request.node, "function") and hasattr(request.node.function, "__code__"):
         code_names = request.node.function.__code__.co_names
-        mock_indicators = ['mock', 'Mock', 'patch', 'MagicMock']
+        mock_indicators = ["mock", "Mock", "patch", "MagicMock"]
         if any(indicator in code_names for indicator in mock_indicators):
             return True
-    
+
     return False
 
 
@@ -101,7 +103,7 @@ def rate_limit_delay(request):
     """
     # Track delay counts for progressive limiting
     delay_count = 0
-    
+
     def delay(provider=None, force=False):
         """Add delay based on provider to respect rate limits.
 
@@ -111,14 +113,14 @@ def rate_limit_delay(request):
             force: Force delay even if conditions suggest skipping
         """
         nonlocal delay_count
-        
+
         # Skip delays in various conditions unless forced
         if not force:
             if _should_skip_rate_limiting(request.config):
                 return
             if _uses_mock_backend(request):
                 return
-        
+
         # Calculate progressive delay
         if provider:
             provider_lower = provider.lower()
@@ -132,11 +134,11 @@ def rate_limit_delay(request):
                 base_delay = CONSERVATIVE_DEFAULT_DELAY
         else:
             base_delay = CONSERVATIVE_DEFAULT_DELAY
-        
+
         # Progressive delay: start small, increase if needed
         delay_multiplier = min(1.0 + (delay_count * 0.1), 2.0)  # Max 2x original delay
         actual_delay = max(MIN_DELAY, min(base_delay * delay_multiplier, MAX_DELAY))
-        
+
         delay_count += 1
         time.sleep(actual_delay)
 
@@ -153,24 +155,26 @@ def auto_rate_limit_for_integration_tests(request, rate_limit_delay):
     markers = request.node.iter_markers(name="integration")
     if not list(markers):
         return
-    
+
     # Skip delays if conditions indicate this test doesn't need them
     if _should_skip_rate_limiting(request.config):
         return
-        
+
     # Skip if test uses mocks
     if _uses_mock_backend(request):
         return
-    
+
     # Check if test function explicitly uses --real-api flag
     real_api_flag = request.config.getoption("--real-api", default=False)
-    if not real_api_flag and not any([
-        _is_valid_api_key(os.getenv("OPENAI_API_KEY")),
-        _is_valid_api_key(os.getenv("ANTHROPIC_API_KEY")),
-        _is_valid_api_key(os.getenv("OPENROUTER_API_KEY"))
-    ]):
+    if not real_api_flag and not any(
+        [
+            _is_valid_api_key(os.getenv("OPENAI_API_KEY")),
+            _is_valid_api_key(os.getenv("ANTHROPIC_API_KEY")),
+            _is_valid_api_key(os.getenv("OPENROUTER_API_KEY")),
+        ]
+    ):
         return
-    
+
     # Add a minimal initial delay for real integration tests
     time.sleep(MIN_DELAY)
 
@@ -303,7 +307,7 @@ def delayed_chat(rate_limit_delay):
 # Smart mocking for integration tests
 def _should_use_real_api(config=None, env_override=None):
     """Determine if integration tests should use real API calls.
-    
+
     Returns True if:
     - --real-api flag is used
     - REAL_API_TESTS=1 environment variable is set
@@ -312,22 +316,22 @@ def _should_use_real_api(config=None, env_override=None):
     # Check environment override first
     if env_override is not None:
         return env_override
-    
+
     # Check command line flag
     if config and config.getoption("--real-api", default=False):
         return True
-    
+
     # Check environment variable
     if os.getenv("REAL_API_TESTS") == "1":
         return True
-    
+
     return False
 
 
 @pytest.fixture(autouse=True)
 def smart_integration_mocking(request, monkeypatch):
     """Automatically mock HTTP calls for integration tests unless real APIs are requested.
-    
+
     This fixture:
     - Detects integration tests
     - Mocks litellm.acompletion by default
@@ -339,29 +343,29 @@ def smart_integration_mocking(request, monkeypatch):
     if not markers:
         yield None
         return
-    
+
     # Check if we should use real APIs
     use_real_api = _should_use_real_api(request.config)
-    
+
     if use_real_api:
         # Don't mock anything - use real APIs
         yield None
         return
-    
+
     # Import mocking utilities
     from tests.utils.http_mocks import get_http_mocker, reset_http_mocker
     from unittest.mock import patch, AsyncMock
-    
+
     # Reset mocker state for clean test
     reset_http_mocker()
     mocker = get_http_mocker()
-    
+
     # Mock litellm module directly where it's imported
     async def mock_acompletion(*args, **kwargs):
         return await mocker.mock_acompletion(*args, **kwargs)
-    
+
     # Patch litellm module itself
-    with patch('litellm.acompletion', new=AsyncMock(side_effect=mock_acompletion)) as mock_litellm:
+    with patch("litellm.acompletion", new=AsyncMock(side_effect=mock_acompletion)) as mock_litellm:
         yield mock_litellm
 
 
@@ -370,28 +374,28 @@ def mock_rate_limit_error():
     """Fixture to simulate rate limit errors in integration tests."""
     from tests.utils.http_mocks import ErrorHTTPMocker
     from unittest.mock import patch, AsyncMock
-    
+
     error_mocker = ErrorHTTPMocker("rate_limit")
-    
+
     async def mock_acompletion(*args, **kwargs):
         return await error_mocker.mock_acompletion(*args, **kwargs)
-    
-    with patch('litellm.acompletion', new=AsyncMock(side_effect=mock_acompletion)) as mock_litellm:
+
+    with patch("litellm.acompletion", new=AsyncMock(side_effect=mock_acompletion)) as mock_litellm:
         yield mock_litellm
 
 
-@pytest.fixture  
+@pytest.fixture
 def mock_auth_error():
     """Fixture to simulate authentication errors in integration tests."""
     from tests.utils.http_mocks import ErrorHTTPMocker
     from unittest.mock import patch, AsyncMock
-    
+
     error_mocker = ErrorHTTPMocker("auth")
-    
+
     async def mock_acompletion(*args, **kwargs):
         return await error_mocker.mock_acompletion(*args, **kwargs)
-    
-    with patch('litellm.acompletion', new=AsyncMock(side_effect=mock_acompletion)) as mock_litellm:
+
+    with patch("litellm.acompletion", new=AsyncMock(side_effect=mock_acompletion)) as mock_litellm:
         yield mock_litellm
 
 

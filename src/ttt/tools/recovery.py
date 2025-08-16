@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, cast
 
 import bleach  # type: ignore[import-untyped]
-import validators
+import validators  # type: ignore[import-not-found]
 
 from .base import ToolCall
 

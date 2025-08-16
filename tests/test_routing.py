@@ -11,8 +11,6 @@ from ttt.plugins import plugin_registry
 from tests.utils import MockBackend
 
 
-
-
 class TestRouter:
     """Test the Router class."""
 

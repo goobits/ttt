@@ -42,13 +42,13 @@ class CloudBackend(BaseBackend):
 
         # Import LiteLLM here to avoid import errors if not installed
         try:
-            import litellm
+            import litellm  # type: ignore[import-not-found]
 
             self.litellm = litellm
         except ImportError as e:
             raise BackendNotAvailableError(
                 "cloud",
-                "LiteLLM is required for cloud backend. " "Install with: pip install litellm",
+                "LiteLLM is required for cloud backend. Install with: pip install litellm",
             ) from e
 
         # Get cloud-specific config
@@ -150,26 +150,22 @@ class CloudBackend(BaseBackend):
             Appropriate exception based on error type
         """
         from ..utils.error_display import format_model_overload_error, get_model_suggestions
-        
+
         error_msg = str(e)
         logger.error(f"Cloud {request_type} failed: {error_msg}")
 
         # Check for specific error types
         # ServiceUnavailableError (503) - model overloaded or service down
-        if hasattr(e, '__class__') and e.__class__.__name__ == 'ServiceUnavailableError':
+        if hasattr(e, "__class__") and e.__class__.__name__ == "ServiceUnavailableError":
             # Extract key information from the error message
             if "overloaded" in error_msg.lower():
                 # Model is temporarily overloaded - provide clean formatted message
                 formatted_msg = format_model_overload_error(used_model)
-                raise BackendConnectionError(
-                    self.name, 
-                    Exception(formatted_msg)
-                ) from e
+                raise BackendConnectionError(self.name, Exception(formatted_msg)) from e
             else:
                 # General service unavailable
                 raise BackendConnectionError(
-                    self.name,
-                    Exception("⚠️  Service temporarily unavailable (503). Please try again")
+                    self.name, Exception("⚠️  Service temporarily unavailable (503). Please try again")
                 ) from e
         elif "api_key" in error_msg.lower() or "api key" in error_msg.lower() or "authentication" in error_msg.lower():
             provider = self._get_provider_from_model(used_model)
@@ -184,8 +180,8 @@ class CloudBackend(BaseBackend):
             provider = self._get_provider_from_model(used_model)
             # Extract retry_after if available
             retry_after = None
-            if hasattr(e, 'response') and hasattr(e.response, 'headers'):
-                retry_after = e.response.headers.get('retry-after')
+            if hasattr(e, "response") and hasattr(e.response, "headers"):
+                retry_after = e.response.headers.get("retry-after")
                 if retry_after:
                     try:
                         retry_after = int(retry_after)
@@ -206,12 +202,13 @@ class CloudBackend(BaseBackend):
             # Try to get model suggestions
             try:
                 from ..config.schema import get_model_registry
+
                 registry = get_model_registry()
                 available_models = list(registry.models.keys())
                 get_model_suggestions(used_model, available_models)
             except Exception:
                 pass
-            
+
             # Create enhanced ModelNotFoundError with suggestions
             raise ModelNotFoundError(used_model, self.name) from e
         elif "timeout" in error_msg.lower():
@@ -327,9 +324,7 @@ class CloudBackend(BaseBackend):
 
         try:
             logger.debug(f"Sending request to {used_model}")
-            logger.debug(
-                f"Parameters: max_tokens={params.get('max_tokens')}, " f"temperature={params.get('temperature')}"
-            )
+            logger.debug(f"Parameters: max_tokens={params.get('max_tokens')}, temperature={params.get('temperature')}")
 
             # Use LiteLLM's completion function
             # Add API key explicitly for OpenRouter models
@@ -515,7 +510,7 @@ class CloudBackend(BaseBackend):
         try:
             logger.debug(f"Starting stream request to {used_model}")
             logger.debug(
-                f"Stream parameters: max_tokens={params.get('max_tokens')}, " f"temperature={params.get('temperature')}"
+                f"Stream parameters: max_tokens={params.get('max_tokens')}, temperature={params.get('temperature')}"
             )
 
             # Use LiteLLM's streaming completion

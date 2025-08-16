@@ -84,7 +84,9 @@ class PersistentChatSession:
         # Resolve backend using router
         if backend is None:
             self.backend, resolved_model = router.smart_route(
-                "placeholder", model=model, **kwargs  # Just for backend selection
+                "placeholder",
+                model=model,
+                **kwargs,  # Just for backend selection
             )
             # Use user-specified model if provided, otherwise use resolved
             self.model = model if model is not None else resolved_model

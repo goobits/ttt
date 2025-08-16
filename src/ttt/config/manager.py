@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Any, Dict
 
 import yaml
-from rich.console import Console
-from rich.syntax import Syntax
-from rich.table import Table
+from rich.console import Console  # type: ignore[import-not-found]
+from rich.syntax import Syntax  # type: ignore[import-not-found]
+from rich.table import Table  # type: ignore[import-not-found]
 
 console = Console()
 
@@ -40,20 +40,20 @@ class ConfigManager:
 
             is_json_mode = os.environ.get("TTT_JSON_MODE", "").lower() == "true"
             is_verbose = (
-                os.environ.get("TTT_VERBOSE", "").lower() == "true" or
-                os.environ.get("TTT_DEBUG", "").lower() == "true"
+                os.environ.get("TTT_VERBOSE", "").lower() == "true" or os.environ.get("TTT_DEBUG", "").lower() == "true"
             )
-            
+
             # Try to get debug flag from click context if available
             if not is_verbose:
                 try:
                     import click
+
                     ctx = click.get_current_context(silent=True)
-                    if ctx and hasattr(ctx, 'obj') and ctx.obj and ctx.obj.get('debug'):
+                    if ctx and hasattr(ctx, "obj") and ctx.obj and ctx.obj.get("debug"):
                         is_verbose = True
                 except (RuntimeError, AttributeError):
                     pass
-            
+
             if not is_json_mode and is_verbose:
                 console.print("[yellow]Warning: Default config.yaml not found, using minimal defaults[/yellow]")
 
@@ -249,7 +249,9 @@ class ConfigManager:
                 if part not in current:
                     current[part] = {}
                 elif not isinstance(current[part], dict):
-                    console.print(f"[red]Error: Cannot set {key} - {'.'.join(parts[:i+1])} is not a dictionary[/red]")
+                    console.print(
+                        f"[red]Error: Cannot set {key} - {'.'.join(parts[: i + 1])} is not a dictionary[/red]"
+                    )
                     return
                 current = current[part]
 

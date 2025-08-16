@@ -17,8 +17,6 @@ from ttt.session.chat import PersistentChatSession as ChatSession
 from tests.utils import MockBackend
 
 
-
-
 @pytest.fixture
 def mock_backend():
     """Provide a mock backend."""

@@ -37,7 +37,7 @@ class BackendNotAvailableError(BackendError):
     """Raised when a requested backend is not available or misconfigured."""
 
     def __init__(self, backend_name: str, reason: Optional[str] = None):
-        message = f"Backend \"{backend_name}\" is not available"
+        message = f'Backend "{backend_name}" is not available'
         if reason:
             message += f": {reason}"
         super().__init__(message, {"backend": backend_name, "reason": reason})
@@ -80,9 +80,9 @@ class ModelNotFoundError(ModelError):
     """Raised when a requested model is not found."""
 
     def __init__(self, model_name: str, backend: Optional[str] = None):
-        message = f"Model \"{model_name}\" not found"
+        message = f'Model "{model_name}" not found'
         if backend:
-            message += f" in backend \"{backend}\""
+            message += f' in backend "{backend}"'
         super().__init__(message, {"model": model_name, "backend": backend})
 
 

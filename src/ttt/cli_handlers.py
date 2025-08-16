@@ -5,10 +5,10 @@ import json as json_module
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
-import rich_click as click
-from rich.console import Console
+import rich_click as click  # type: ignore[import-not-found]
+from rich.console import Console  # type: ignore[import-not-found]
 
 import ttt
 from ttt.config.manager import ConfigManager
@@ -22,30 +22,32 @@ console = Console()
 
 # Import helper functions we'll need
 
+
 def is_verbose_mode() -> bool:
     """Check if verbose mode is enabled via environment variables or click context."""
     # Check environment variables first
-    if (os.environ.get("TTT_VERBOSE", "").lower() == "true" or
-        os.environ.get("TTT_DEBUG", "").lower() == "true"):
+    if os.environ.get("TTT_VERBOSE", "").lower() == "true" or os.environ.get("TTT_DEBUG", "").lower() == "true":
         return True
-    
+
     # Try to get debug flag from click context if available
     try:
-        import click
+        import click  # type: ignore[import-not-found]
+
         ctx = click.get_current_context(silent=True)
-        if ctx and hasattr(ctx, 'obj') and ctx.obj and ctx.obj.get('debug'):
+        if ctx and hasattr(ctx, "obj") and ctx.obj and ctx.obj.get("debug"):
             return True
     except (RuntimeError, AttributeError):
         pass
-    
+
     return False
+
 
 def setup_logging_level(verbose: bool = False, debug: bool = False, json_output: bool = False) -> None:
     """Setup logging level based on verbosity flags."""
     import asyncio
     import logging
 
-    from rich.logging import RichHandler
+    from rich.logging import RichHandler  # type: ignore[import-not-found]
 
     # Set environment variables for verbosity to be used by other parts of the system
     if verbose:
@@ -136,9 +138,9 @@ def resolve_model_alias(model: str) -> str:
 
             # Use smart suggestions for unknown aliases
             from ttt.utils.smart_suggestions import suggest_alias_fixes
-            
+
             console.print(f"[red]Error: Unknown model alias '@{alias}'[/red]")
-            
+
             suggestions = suggest_alias_fixes(alias, limit=3)
             if suggestions:
                 console.print("\n[cyan]💡 Did you mean:[/cyan]")
@@ -146,7 +148,7 @@ def resolve_model_alias(model: str) -> str:
                     status = "[green]✓[/green]" if suggestion["available"] else "[red]✗[/red]"
                     console.print(f"   {status} [bold]{suggestion['alias']}[/bold]  {suggestion['description']}")
                 console.print()
-            
+
             # Show some available aliases as fallback
             console.print("[dim]Popular aliases:[/dim]")
             popular_aliases = ["fast", "best", "claude", "gpt4", "gpt3", "local"]
@@ -159,11 +161,12 @@ def resolve_model_alias(model: str) -> str:
                 sorted_aliases = sorted(aliases.keys())
                 for available_alias in sorted_aliases[:5]:
                     console.print(f"  @{available_alias}")
-            
+
             console.print("\nTip: Use [green]ttt models[/green] to see all available models")
-            
+
             # Exit with error instead of proceeding
             import sys
+
             sys.exit(1)
         except (KeyError, ValueError, TypeError) as e:
             if is_verbose_mode():
@@ -478,7 +481,7 @@ def on_ask(
             suggest_provider_alternatives,
             suggest_troubleshooting_steps,
         )
-        
+
         if json:
             # For JSON mode, return structured error
             error_output = {
@@ -491,7 +494,7 @@ def on_ask(
         else:
             # Format error messages with smart suggestions
             debug_mode = kwargs.get("debug", False) or os.getenv("TTT_DEBUG", "").lower() == "true"
-            
+
             if isinstance(e, APIKeyError):
                 click.echo(f"❌ API key error: {e.message}", err=True)
                 # Suggest provider alternatives
@@ -501,7 +504,7 @@ def on_ask(
                     for suggestion in provider_suggestions[:3]:
                         click.echo(f"   • [bold]{suggestion['provider']}[/bold]: {suggestion['description']}", err=True)
                         click.echo(f"     Example: {suggestion['example']}", err=True)
-                        
+
             elif isinstance(e, BackendConnectionError):
                 # Check for specific patterns in the error message
                 error_msg = str(e.details.get("original_error", str(e)))
@@ -509,7 +512,7 @@ def on_ask(
                     click.echo(f"⚠️  {error_msg}", err=True)
                 else:
                     click.echo(f"❌ Connection error: {e.message}", err=True)
-                
+
                 # Suggest alternatives
                 provider_suggestions = suggest_provider_alternatives(error_msg, api_params.get("model"))
                 if provider_suggestions:
@@ -517,20 +520,21 @@ def on_ask(
                     for suggestion in provider_suggestions[:2]:
                         click.echo(f"   • [bold]{suggestion['provider']}[/bold]: {suggestion['description']}", err=True)
                         click.echo(f"     {suggestion['example']}", err=True)
-                
+
                 # Show troubleshooting steps
                 steps = suggest_troubleshooting_steps("connection", error_msg)
                 if steps:
                     click.echo("\n[dim]Troubleshooting steps:[/dim]", err=True)
                     for i, step in enumerate(steps[:3], 1):
                         click.echo(f"   {i}. {step}", err=True)
-                
+
                 # Show full traceback in debug mode
                 debug_mode_local = kwargs.get("debug", False) or os.getenv("TTT_DEBUG", "").lower() == "true"
                 if debug_mode_local:
                     import traceback
+
                     traceback.print_exc()
-                        
+
             elif isinstance(e, BackendTimeoutError):
                 click.echo(f"⏱️  Request timed out after {e.details.get('timeout', 'unknown')}s", err=True)
                 steps = suggest_troubleshooting_steps("timeout", str(e))
@@ -538,10 +542,10 @@ def on_ask(
                     click.echo("\n[dim]Try these solutions:[/dim]", err=True)
                     for i, step in enumerate(steps[:3], 1):
                         click.echo(f"   {i}. {step}", err=True)
-                        
+
             elif isinstance(e, ModelNotFoundError):
                 click.echo(f"❌ Model not found: {e.message}", err=True)
-                
+
                 # Suggest model alternatives
                 failed_model = e.details.get("model", "")
                 if failed_model:
@@ -554,22 +558,24 @@ def on_ask(
                             alias = str(model_suggestion.get("alias", ""))
                             description = str(model_suggestion.get("description", ""))
                             click.echo(f"   {status} [bold]{alias}[/bold]  {description}", err=True)
-                
+
                 click.echo("\n[dim]Run 'ttt models' to see all available models[/dim]", err=True)
-                
+
             elif isinstance(e, RateLimitError):
                 click.echo(f"⚠️  Rate limit exceeded: {e.message}", err=True)
                 if e.details.get("retry_after"):
                     click.echo(f"  Retry after {e.details['retry_after']} seconds", err=True)
-                
+
                 # Suggest alternatives
                 provider_suggestions = suggest_provider_alternatives(str(e))
                 if provider_suggestions:
                     click.echo("\n[cyan]💡 Try a different provider:[/cyan]", err=True)
                     for suggestion in provider_suggestions[:2]:
                         if suggestion["provider"] != e.details.get("provider"):
-                            click.echo(f"   • [bold]{suggestion['provider']}[/bold]: {suggestion['description']}", err=True)
-                            
+                            click.echo(
+                                f"   • [bold]{suggestion['provider']}[/bold]: {suggestion['description']}", err=True
+                            )
+
             elif isinstance(e, QuotaExceededError):
                 click.echo(f"❌ Quota exceeded: {e.message}", err=True)
                 # Suggest alternatives
@@ -578,27 +584,30 @@ def on_ask(
                     click.echo("\n[cyan]💡 Alternative providers:[/cyan]", err=True)
                     for suggestion in provider_suggestions[:2]:
                         click.echo(f"   • [bold]{suggestion['provider']}[/bold]: {suggestion['description']}", err=True)
-                        
+
             else:
                 # For other exceptions, show simplified message
                 click.echo(f"Error: {str(e)}", err=True)
-                
+
                 # Try to provide generic troubleshooting steps
                 steps = suggest_troubleshooting_steps("generic", str(e))
                 if steps:
                     click.echo("\n[dim]Troubleshooting steps:[/dim]", err=True)
                     for i, step in enumerate(steps[:3], 1):
                         click.echo(f"   {i}. {step}", err=True)
-            
+
             # Show full traceback in debug mode
             if debug_mode:
                 import traceback
+
                 traceback.print_exc()
-        
+
         sys.exit(1)
 
 
-def on_chat(command_name: str, model: Optional[str], session: Optional[str], tools: bool, markdown: bool, **kwargs) -> None:
+def on_chat(
+    command_name: str, model: Optional[str], session: Optional[str], tools: bool, markdown: bool, **kwargs
+) -> None:
     """Hook for 'chat' command.
 
     Starts an interactive chat session with an AI model. Supports session
@@ -750,7 +759,7 @@ def on_chat(command_name: str, model: Optional[str], session: Optional[str], too
                         QuotaExceededError,
                     )
                     from ttt.utils.smart_suggestions import suggest_provider_alternatives
-                    
+
                     # Format error messages with smart suggestions for chat
                     if isinstance(e, APIKeyError):
                         console.print(f"[red]❌ API key error: {e.message}[/red]")
@@ -759,7 +768,9 @@ def on_chat(command_name: str, model: Optional[str], session: Optional[str], too
                         if provider_suggestions:
                             console.print("[cyan]💡 Try these alternatives:[/cyan]")
                             for suggestion in provider_suggestions[:2]:
-                                console.print(f"   • [bold]{suggestion['provider']}[/bold]: {suggestion['description']}")
+                                console.print(
+                                    f"   • [bold]{suggestion['provider']}[/bold]: {suggestion['description']}"
+                                )
                     elif isinstance(e, BackendConnectionError):
                         # Check for specific patterns in the error message
                         error_msg = str(e.details.get("original_error", str(e)))
@@ -769,14 +780,16 @@ def on_chat(command_name: str, model: Optional[str], session: Optional[str], too
                             console.print(f"[yellow]⚠️  {error_msg}[/yellow]")
                         else:
                             console.print(f"[red]❌ Connection error: {e.message}[/red]")
-                        
+
                         # Brief suggestion for chat mode
                         provider_suggestions = suggest_provider_alternatives(error_msg)
                         if provider_suggestions and provider_suggestions[0]["provider"] != "Local (Ollama)":
                             suggestion = provider_suggestions[0]
                             console.print(f"[dim]💡 Try: {suggestion['example']}[/dim]")
                     elif isinstance(e, BackendTimeoutError):
-                        console.print(f"[yellow]⏱️  Request timed out after {e.details.get('timeout', 'unknown')}s[/yellow]")
+                        console.print(
+                            f"[yellow]⏱️  Request timed out after {e.details.get('timeout', 'unknown')}s[/yellow]"
+                        )
                     elif isinstance(e, ModelNotFoundError):
                         console.print(f"[red]❌ Model not found: {e.message}[/red]")
                     elif isinstance(e, RateLimitError):
@@ -785,15 +798,17 @@ def on_chat(command_name: str, model: Optional[str], session: Optional[str], too
                         console.print(f"[red]❌ Quota exceeded: {e.message}[/red]")
                     else:
                         console.print(f"[red]Error: {str(e)}[/red]")
-                    
+
                     # Show full traceback in debug mode
                     debug_mode = kwargs.get("debug", False) or os.getenv("TTT_DEBUG", "").lower() == "true"
                     if debug_mode:
                         import traceback
+
                         traceback.print_exc()
-                    
+
                     # Exit with error code for non-interactive errors
                     import sys
+
                     sys.exit(1)
 
     except (EOFError, KeyboardInterrupt):
@@ -805,7 +820,9 @@ def on_chat(command_name: str, model: Optional[str], session: Optional[str], too
             console.print(f"[red]Error starting chat session: {e}[/red]")
 
 
-def on_list(command_name: str, resource: Optional[str] = None, format: str = "table", verbose: bool = False, **kwargs) -> None:
+def on_list(
+    command_name: str, resource: Optional[str] = None, format: str = "table", verbose: bool = False, **kwargs
+) -> None:
     """Hook for 'list' command.
 
     Lists various TTT resources like models, sessions, or tools in either
@@ -980,7 +997,9 @@ def on_export(
     # Export data
     export_data: Dict[str, Any] = {
         "session_id": chat_session.id,
-        "created_at": (chat_session.created_at if hasattr(chat_session, "created_at") and chat_session.created_at else None),
+        "created_at": (
+            chat_session.created_at if hasattr(chat_session, "created_at") and chat_session.created_at else None
+        ),
         "messages": chat_session.messages,
     }
 
@@ -1005,17 +1024,17 @@ def on_export(
     else:  # markdown
         output_text = f"# Chat Session: {session}\n\n"
         if include_metadata:
-            metadata = export_data.get('metadata')
+            metadata = export_data.get("metadata")
             if metadata and isinstance(metadata, dict):
-                model_info = metadata.get('model', 'Unknown')
+                model_info = metadata.get("model", "Unknown")
                 output_text += f"**Model**: {model_info}\n\n"
 
         messages = export_data.get("messages")
         if messages and isinstance(messages, list):
             for msg in messages:
-                if hasattr(msg, 'role') and hasattr(msg, 'content'):
+                if hasattr(msg, "role") and hasattr(msg, "content"):
                     output_text += f"## {msg.role.capitalize()}\n\n{msg.content}\n\n"
-                elif isinstance(msg, dict) and 'role' in msg and 'content' in msg:
+                elif isinstance(msg, dict) and "role" in msg and "content" in msg:
                     output_text += f"## {msg['role'].capitalize()}\n\n{msg['content']}\n\n"
 
     # Write output
@@ -1133,7 +1152,7 @@ def show_models_list(json_output: bool = False) -> None:
                 models_data.append(model_data)
             click.echo(json_module.dumps(models_data))
         else:
-            from rich.table import Table
+            from rich.table import Table  # type: ignore[import-not-found]
 
             table = Table(title="Available Models")
             table.add_column("Model Name", style="cyan")

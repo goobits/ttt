@@ -42,13 +42,16 @@ recovery_system = ErrorRecoverySystem(RetryConfig())
 # Get configuration settings
 def _get_max_file_size() -> int:
     """Get maximum file size from configuration."""
+
+    def empty_dict() -> Dict[str, Any]:
+        return {}
+
     try:
         config = get_config()
         # Try tools config first, then constants, then hardcoded fallback
         size = config.tools_config.get("max_file_size")
         if size is None:
             # Try to get from constants section
-            empty_dict: Callable[[], Dict[str, Any]] = lambda: {}
             constants = getattr(config, "model_dump", empty_dict)().get("constants", {})
             size = constants.get("file_sizes", {}).get("max_file_size")
         return int(size or 10485760)  # 10MB fallback from constants
@@ -58,13 +61,16 @@ def _get_max_file_size() -> int:
 
 def _get_code_timeout() -> int:
     """Get code execution timeout from configuration."""
+
+    def empty_dict() -> Dict[str, Any]:
+        return {}
+
     try:
         config = get_config()
         # Try tools config first, then constants, then hardcoded fallback
         timeout = config.tools_config.get("code_execution_timeout")
         if timeout is None:
             # Try to get from constants section
-            empty_dict: Callable[[], Dict[str, Any]] = lambda: {}
             constants = getattr(config, "model_dump", empty_dict)().get("constants", {})
             timeout = constants.get("tool_bounds", {}).get("default_code_timeout")
         return int(timeout or 30)  # fallback from constants
@@ -74,13 +80,16 @@ def _get_code_timeout() -> int:
 
 def _get_web_timeout() -> int:
     """Get web request timeout from configuration."""
+
+    def empty_dict() -> Dict[str, Any]:
+        return {}
+
     try:
         config = get_config()
         # Try tools config first, then constants, then hardcoded fallback
         timeout = config.tools_config.get("web_request_timeout")
         if timeout is None:
             # Try to get from constants section
-            empty_dict: Callable[[], Dict[str, Any]] = lambda: {}
             constants = getattr(config, "model_dump", empty_dict)().get("constants", {})
             timeout = constants.get("tool_bounds", {}).get("default_web_timeout")
         return int(timeout or 10)  # fallback from constants
@@ -747,9 +756,9 @@ def list_directory(
                 if size < kb_threshold:
                     size_str = f"{size}B"
                 elif size < mb_threshold:
-                    size_str = f"{size/kb_threshold:.1f}KB"
+                    size_str = f"{size / kb_threshold:.1f}KB"
                 else:
-                    size_str = f"{size/mb_threshold:.1f}MB"
+                    size_str = f"{size / mb_threshold:.1f}MB"
 
                 results.append(f"[FILE] {relative} ({size_str})")
 

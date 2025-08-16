@@ -11,33 +11,33 @@ from click.testing import CliRunner
 
 class IntegrationTestBase:
     """Base class for integration tests with proper isolation."""
-    
+
     def setup_method(self):
         """Set up isolated test environment."""
         self.runner = CliRunner()
-        
+
         # Create temporary directories for test isolation
         self.temp_dir = tempfile.mkdtemp()
         self.config_dir = Path(self.temp_dir) / ".ttt"
         self.session_dir = self.config_dir / "sessions"
-        
+
         # Ensure directories exist
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.session_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Set environment variables to use our temp directories
         self.original_env = {}
         env_vars = {
-            'TTT_CONFIG_DIR': str(self.config_dir),
-            'TTT_SESSION_DIR': str(self.session_dir),
-            'XDG_CONFIG_HOME': str(Path(self.temp_dir)),
-            'HOME': str(self.temp_dir),
+            "TTT_CONFIG_DIR": str(self.config_dir),
+            "TTT_SESSION_DIR": str(self.session_dir),
+            "XDG_CONFIG_HOME": str(Path(self.temp_dir)),
+            "HOME": str(self.temp_dir),
         }
-        
+
         for key, value in env_vars.items():
             self.original_env[key] = os.environ.get(key)
             os.environ[key] = value
-    
+
     def teardown_method(self):
         """Clean up test environment."""
         # Restore original environment
@@ -46,9 +46,10 @@ class IntegrationTestBase:
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = original_value
-        
+
         # Clean up temp directory
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
 

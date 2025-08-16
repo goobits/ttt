@@ -7,7 +7,7 @@ from ttt.backends import BaseBackend
 
 class MockBackend(BaseBackend):
     """Unified mock backend for testing.
-    
+
     Supports all the patterns used across different test files:
     - Multiple responses with cycling (test_chat.py style)
     - Custom response text (test_api_streaming.py style)
@@ -16,11 +16,15 @@ class MockBackend(BaseBackend):
     - Streaming support with configurable chunks
     """
 
-    def __init__(self, name_or_config: Union[str, Dict[str, Any]] = "mock", 
-                 config: Optional[Dict[str, Any]] = None, 
-                 response_text: str = "Mock response", responses: Optional[List[str]] = None):
+    def __init__(
+        self,
+        name_or_config: Union[str, Dict[str, Any]] = "mock",
+        config: Optional[Dict[str, Any]] = None,
+        response_text: str = "Mock response",
+        responses: Optional[List[str]] = None,
+    ):
         """Initialize mock backend.
-        
+
         Args:
             name_or_config: Backend name OR configuration dict (for router compatibility)
             config: Configuration dict (for test_routing.py compatibility)
@@ -33,15 +37,15 @@ class MockBackend(BaseBackend):
             self.name_value = "mock"  # Default name for plugin backends
         else:
             self.name_value = name_or_config
-            
-        # Handle config-based initialization (test_routing.py style)  
+
+        # Handle config-based initialization (test_routing.py style)
         if config and isinstance(config, dict):
             # Extract name from config if available
             self.name_value = config.get("name", self.name_value)
-            
+
         self._is_available = True
         self._supports_streaming = True
-        
+
         # Support multiple response patterns
         if responses:
             self.responses = responses
@@ -49,7 +53,7 @@ class MockBackend(BaseBackend):
             self.responses = [response_text]
         self.response_index = 0
         self.response_text = response_text
-        
+
         # Track requests for verification (test_api_streaming.py style)
         self.last_prompt = None
         self.last_kwargs = None
@@ -75,13 +79,13 @@ class MockBackend(BaseBackend):
 
     async def ask(self, prompt: Union[str, List], **kwargs) -> AIResponse:
         """Generate an AI response.
-        
+
         Supports both string and list prompts (test_chat.py compatibility).
         Tracks requests for verification.
         """
         self.last_prompt = prompt
         self.last_kwargs = kwargs
-        
+
         # Check if response_text has been updated and use it, otherwise use responses array
         if self.response_text != "Mock response" or len(self.responses) == 1:
             # response_text was updated or we only have default response
@@ -111,12 +115,12 @@ class MockBackend(BaseBackend):
 
     async def astream(self, prompt: Union[str, List], **kwargs) -> AsyncIterator[str]:
         """Stream a response.
-        
+
         Supports different streaming patterns from different test files.
         """
         self.last_prompt = prompt
         self.last_kwargs = kwargs
-        
+
         # Check if response_text has been updated and use it, otherwise use responses array
         if self.response_text != "Mock response" or len(self.responses) == 1:
             # response_text was updated or we only have default response
@@ -125,7 +129,7 @@ class MockBackend(BaseBackend):
             # Use cycling responses for multi-response scenarios
             response = self.responses[self.response_index % len(self.responses)]
             self.response_index += 1
-        
+
         # Split response into chunks for streaming
         chunks = response.split()
         for chunk in chunks:

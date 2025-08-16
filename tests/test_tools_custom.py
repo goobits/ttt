@@ -363,10 +363,7 @@ class TestToolIntegration:
             )
             tool_result = ToolResult(calls=[tool_call])
             mock_response = AIResponse(
-                "AI response with tool usage",
-                model="test-model",
-                backend="cloud",
-                tool_result=tool_result
+                "AI response with tool usage", model="test-model", backend="cloud", tool_result=tool_result
             )
 
             mock_backend.ask = AsyncMock(return_value=mock_response)

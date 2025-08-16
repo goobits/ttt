@@ -63,10 +63,10 @@ class TestExceptionHierarchy:
     def test_exception_messages(self):
         """Test that exceptions have proper messages."""
         exc = BackendNotAvailableError("mybackend", "Not installed")
-        assert str(exc) == "Backend \"mybackend\" is not available: Not installed"
+        assert str(exc) == 'Backend "mybackend" is not available: Not installed'
 
         exc = ModelNotFoundError("gpt-5", "openai")
-        assert str(exc) == "Model \"gpt-5\" not found in backend \"openai\""
+        assert str(exc) == 'Model "gpt-5" not found in backend "openai"'
 
         exc = APIKeyError("OpenAI", "OPENAI_API_KEY")
         assert "OPENAI_API_KEY" in str(exc)
@@ -284,8 +284,8 @@ class TestInputSanitizer:
 
         # Test that code-specific dangerous patterns are blocked in code context
         code_dangerous_inputs = [
-            "exec(\"malicious code\")",  # Should trigger code pattern
-            "eval(\"bad stuff\")",  # Should trigger code pattern
+            'exec("malicious code")',  # Should trigger code pattern
+            'eval("bad stuff")',  # Should trigger code pattern
         ]
 
         for dangerous in code_dangerous_inputs:
@@ -339,14 +339,14 @@ class TestInputSanitizer:
 
     def test_sanitize_json_valid(self):
         """Test valid JSON sanitization."""
-        json_str = "{\"key\": \"value\", \"number\": 42}"
+        json_str = '{"key": "value", "number": 42}'
         result = InputSanitizer.sanitize_json(json_str)
         assert result == {"key": "value", "number": 42}
 
     def test_sanitize_json_with_dangerous_strings(self):
         """Test JSON with dangerous string values."""
         # This should now pass since <script> tags are cleaned by bleach, not blocked
-        json_str = "{\"script\": \"<script>alert(1)</script>\"}"
+        json_str = '{"script": "<script>alert(1)</script>"}'
         result = InputSanitizer.sanitize_json(json_str)
         # bleach should have cleaned the script tag
         assert "<script>" not in result["script"]

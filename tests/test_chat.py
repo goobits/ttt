@@ -21,8 +21,6 @@ from ttt.session.chat import PersistentChatSession, _estimate_tokens
 from tests.utils import MockBackend
 
 
-
-
 @pytest.fixture
 def mock_backend():
     """Provide a mock backend."""

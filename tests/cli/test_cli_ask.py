@@ -24,7 +24,7 @@ class TestAskCommand(IntegrationTestBase):
         # Integration test - verify CLI works (may fail with API errors in CI)
         # Exit code 0 = success, 1 = expected error (like missing API key)
         assert result.exit_code in [0, 1]
-        
+
         # If successful, should have some output
         if result.exit_code == 0:
             assert len(result.output.strip()) > 0
@@ -55,7 +55,7 @@ class TestAskCommand(IntegrationTestBase):
         # Integration test - verify CLI handles options correctly
         # Exit code 0 = success, 1 = expected error (like missing API key/model)
         assert result.exit_code in [0, 1]
-        
+
         # The important thing is that it doesn't crash with exit code 2 (argument error)
         # which would indicate the CLI argument parsing failed
         assert result.exit_code != 2

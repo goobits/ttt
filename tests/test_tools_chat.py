@@ -201,7 +201,6 @@ class TestCLIToolSupport:
 
         # Mock the API functions to prevent real calls
         with patch("ttt.cli_handlers.ttt_stream") as mock_stream, patch("ttt.cli_handlers.ttt_ask") as mock_ask:
-
             mock_stream.return_value = iter(["Test response"])
             mock_ask.return_value = "Test response"
 

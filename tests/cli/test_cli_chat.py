@@ -25,7 +25,7 @@ class TestChatCommand(IntegrationTestBase):
         # by testing help with complex arguments
         result = self.runner.invoke(main, ["chat", "--help"])
         assert result.exit_code == 0
-        
+
         # Verify help shows the options we expect
         assert "--model" in result.output
         assert "--session" in result.output

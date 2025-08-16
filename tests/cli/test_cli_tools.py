@@ -32,8 +32,9 @@ class TestCLIToolsCommand(IntegrationTestBase):
     def test_tools_enable(self):
         """Test tools enable subcommand."""
         # Mock the config manager methods that tools enable/disable uses
-        with patch("ttt.config.manager.ConfigManager.get_merged_config") as mock_get, \
-             patch("ttt.config.manager.ConfigManager.set_value") as mock_set:
+        with patch("ttt.config.manager.ConfigManager.get_merged_config") as mock_get, patch(
+            "ttt.config.manager.ConfigManager.set_value"
+        ) as mock_set:
             mock_get.return_value = {"tools": {"disabled": ["web_search"]}}
             mock_set.return_value = None
 
@@ -47,8 +48,9 @@ class TestCLIToolsCommand(IntegrationTestBase):
     def test_tools_disable(self):
         """Test tools disable subcommand."""
         # Mock the config manager methods that tools enable/disable uses
-        with patch("ttt.config.manager.ConfigManager.get_merged_config") as mock_get, \
-             patch("ttt.config.manager.ConfigManager.set_value") as mock_set:
+        with patch("ttt.config.manager.ConfigManager.get_merged_config") as mock_get, patch(
+            "ttt.config.manager.ConfigManager.set_value"
+        ) as mock_set:
             mock_get.return_value = {"tools": {"disabled": []}}
             mock_set.return_value = None
 
@@ -65,9 +67,10 @@ class TestCLIToolsCommand(IntegrationTestBase):
         mock_tool = Mock()
         mock_tool.name = "web_search"
         mock_tool.description = "Web search tool"
-        
-        with patch("ttt.tools.list_tools") as mock_list, \
-             patch("ttt.config.manager.ConfigManager.get_merged_config") as mock_get:
+
+        with patch("ttt.tools.list_tools") as mock_list, patch(
+            "ttt.config.manager.ConfigManager.get_merged_config"
+        ) as mock_get:
             mock_list.return_value = [mock_tool]
             mock_get.return_value = {"tools": {"disabled": []}}
 
@@ -81,25 +84,19 @@ class TestCLIToolsCommand(IntegrationTestBase):
     def test_tools_command_parameter_passing(self):
         """Test tools enable/disable/list commands pass parameters correctly."""
         # Test tools list - this should always work
-        result = self.runner.invoke(main, [
-            "tools", "list", "--show-disabled", "true"
-        ])
-        
+        result = self.runner.invoke(main, ["tools", "list", "--show-disabled", "true"])
+
         # Tools list should succeed - validates CLI structure and parameter passing
         assert result.exit_code == 0, f"Tools list failed with output: {result.output}"
-        
+
         # Test tools enable/disable with a hypothetical tool
         # These might fail if tool doesn't exist, but shouldn't have argument parsing errors
-        result = self.runner.invoke(main, [
-            "tools", "enable", "web_search"
-        ])
-        
+        result = self.runner.invoke(main, ["tools", "enable", "web_search"])
+
         # Should not fail with argument parsing error (exit code 2)
         assert result.exit_code != 2, f"Tools enable had argument parsing error: {result.output}"
-        
-        result = self.runner.invoke(main, [
-            "tools", "disable", "calculator" 
-        ])
-        
+
+        result = self.runner.invoke(main, ["tools", "disable", "calculator"])
+
         # Should not fail with argument parsing error (exit code 2)
         assert result.exit_code != 2, f"Tools disable had argument parsing error: {result.output}"
