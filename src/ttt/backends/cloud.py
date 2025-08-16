@@ -42,7 +42,7 @@ class CloudBackend(BaseBackend):
 
         # Import LiteLLM here to avoid import errors if not installed
         try:
-            import litellm  # type: ignore[import-not-found]
+            import litellm
 
             self.litellm = litellm
         except ImportError as e:
@@ -206,8 +206,10 @@ class CloudBackend(BaseBackend):
                 registry = get_model_registry()
                 available_models = list(registry.models.keys())
                 get_model_suggestions(used_model, available_models)
-            except Exception:
-                pass
+            except (ImportError, AttributeError, KeyError) as e:
+                logger.warning(f"Could not load model suggestions: {e}")
+            except Exception as e:
+                logger.warning(f"Unexpected error loading model suggestions: {e}")
 
             # Create enhanced ModelNotFoundError with suggestions
             raise ModelNotFoundError(used_model, self.name) from e
@@ -443,7 +445,7 @@ class CloudBackend(BaseBackend):
         except Exception as e:
             self._handle_request_error(e, used_model)
 
-    async def astream(  # type: ignore[override]
+    async def astream(
         self,
         prompt: Union[str, List[Union[str, ImageInput]]],
         *,

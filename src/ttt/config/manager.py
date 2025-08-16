@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Any, Dict
 
 import yaml
-from rich.console import Console  # type: ignore[import-not-found]
-from rich.syntax import Syntax  # type: ignore[import-not-found]
-from rich.table import Table  # type: ignore[import-not-found]
+from rich.console import Console
+from rich.syntax import Syntax
+from rich.table import Table
 
 console = Console()
 
@@ -285,6 +285,12 @@ class ConfigManager:
             with open(self.user_config_path, "w") as f:
                 yaml.safe_dump(config, f, default_flow_style=False, sort_keys=False)
             console.print(f"[dim]Saved to {self.user_config_path}[/dim]")
+        except PermissionError:
+            console.print(f"[red]Error: Permission denied saving config to {self.user_config_path}[/red]")
+        except OSError as e:
+            console.print(f"[red]Error: Cannot save config to {self.user_config_path}: {e}[/red]")
+        except yaml.YAMLError as e:
+            console.print(f"[red]Error: YAML serialization failed: {e}[/red]")
         except Exception as e:
             console.print(f"[red]Error saving config: {e}[/red]")
 

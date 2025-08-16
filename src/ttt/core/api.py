@@ -150,7 +150,7 @@ def stream(
 
     # This creates an async generator from the backend
     async def _async_generator() -> AsyncIterator[str]:
-        async for chunk in backend_instance.astream(  # type: ignore[attr-defined]
+        async for chunk in backend_instance.astream(
             prompt,
             model=resolved_model,
             system=system,
@@ -336,7 +336,7 @@ async def stream_async(
         **kwargs,
     )
 
-    async for chunk in backend_instance.astream(  # type: ignore[attr-defined]
+    async for chunk in backend_instance.astream(
         prompt,
         model=resolved_model,
         system=system,

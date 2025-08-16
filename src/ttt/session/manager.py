@@ -7,8 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from rich.console import Console  # type: ignore[import-not-found]
-from rich.table import Table  # type: ignore[import-not-found]
+from rich.console import Console
+from rich.table import Table
 
 console = Console()
 
@@ -135,8 +135,18 @@ class ChatSessionManager:
         """Internal method to save session."""
         session_file = self.sessions_dir / f"{session.id}.json"
 
-        with open(session_file, "w") as f:
-            json.dump(session.to_dict(), f, indent=2)
+        try:
+            with open(session_file, "w") as f:
+                json.dump(session.to_dict(), f, indent=2)
+        except PermissionError:
+            console.print(f"[red]Error: Permission denied saving session to {session_file}[/red]")
+            raise
+        except OSError as e:
+            console.print(f"[red]Error: Could not save session to {session_file}: {e}[/red]")
+            raise
+        except Exception as e:
+            console.print(f"[red]Error: Unexpected error saving session {session.id}: {e}[/red]")
+            raise
 
     def add_message(self, session: ChatSession, role: str, content: str, model: Optional[str] = None) -> None:
         """Add a message to a session and save it."""
@@ -216,7 +226,8 @@ class ChatSessionManager:
                 try:
                     dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
                     created = dt.strftime("%Y-%m-%d %H:%M")
-                except Exception:
+                except (ValueError, TypeError, AttributeError):
+                    # Keep original timestamp if parsing fails
                     pass
 
             table.add_row(

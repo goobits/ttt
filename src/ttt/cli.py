@@ -5,8 +5,8 @@ import os
 import sys
 import importlib.util
 from pathlib import Path
-import rich_click as click  # type: ignore[import-not-found]
-from rich_click import RichGroup  # type: ignore[import-not-found]
+import rich_click as click
+from rich_click import RichGroup
 
 # Set up rich-click configuration globally
 click.rich_click.USE_RICH_MARKUP = True
@@ -78,7 +78,7 @@ try:
                 if spec is not None and spec.loader is not None:
                     cli_handlers = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(cli_handlers)
-except Exception:
+except (ImportError, AttributeError, OSError, FileNotFoundError):
     # No hooks module found, use default behavior
     pass
 
@@ -209,7 +209,7 @@ def get_version():
             match = re.search(r'version\s*=\s*["\']([^"\']+)["\']', content)
             if match:
                 return match.group(1)
-    except Exception:
+    except (FileNotFoundError, PermissionError, OSError, AttributeError):
         pass
 
     try:
@@ -220,7 +220,7 @@ def get_version():
             match = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', content)
             if match:
                 return match.group(1)
-    except Exception:
+    except (FileNotFoundError, PermissionError, OSError, AttributeError):
         pass
 
     # Final fallback
@@ -793,7 +793,7 @@ class DefaultGroup(RichGroup):
                 # Check if stdin is a pipe or file (not a terminal)
                 stdin_stat = os.fstat(sys.stdin.fileno())
                 has_stdin = stat.S_ISFIFO(stdin_stat.st_mode) or stat.S_ISREG(stdin_stat.st_mode)
-            except Exception:
+            except (OSError, AttributeError, ValueError):
                 # Fallback to isatty check
                 has_stdin = not sys.stdin.isatty()
 
@@ -821,7 +821,7 @@ class DefaultGroup(RichGroup):
                 import stat
 
                 has_stdin = stat.S_ISFIFO(stdin_stat.st_mode) or stat.S_ISREG(stdin_stat.st_mode)
-            except Exception:
+            except (OSError, AttributeError, ValueError):
                 # Fallback to isatty check
                 has_stdin = not sys.stdin.isatty()
 

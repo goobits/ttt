@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import rich_click as click  # type: ignore[import-not-found]
-from rich.console import Console  # type: ignore[import-not-found]
+import rich_click as click
+from rich.console import Console
 
 import ttt
 from ttt.config.manager import ConfigManager
@@ -31,7 +31,7 @@ def is_verbose_mode() -> bool:
 
     # Try to get debug flag from click context if available
     try:
-        import click  # type: ignore[import-not-found]
+        import click
 
         ctx = click.get_current_context(silent=True)
         if ctx and hasattr(ctx, "obj") and ctx.obj and ctx.obj.get("debug"):
@@ -47,7 +47,7 @@ def setup_logging_level(verbose: bool = False, debug: bool = False, json_output:
     import asyncio
     import logging
 
-    from rich.logging import RichHandler  # type: ignore[import-not-found]
+    from rich.logging import RichHandler
 
     # Set environment variables for verbosity to be used by other parts of the system
     if verbose:
@@ -1152,7 +1152,7 @@ def show_models_list(json_output: bool = False) -> None:
                 models_data.append(model_data)
             click.echo(json_module.dumps(models_data))
         else:
-            from rich.table import Table  # type: ignore[import-not-found]
+            from rich.table import Table
 
             table = Table(title="Available Models")
             table.add_column("Model Name", style="cyan")

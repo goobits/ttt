@@ -1,6 +1,6 @@
 """Unified routing logic for selecting backends and models."""
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 from ..backends import HAS_LOCAL_BACKEND, BaseBackend, CloudBackend
 from ..config.schema import get_config
@@ -77,7 +77,7 @@ class Router:
 
         # Handle mock objects (for testing)
         if hasattr(backend, "_mock_name") or str(type(backend)).startswith("<class 'unittest.mock"):
-            return backend  # type: ignore[return-value]
+            return cast(BaseBackend, backend)
 
         if isinstance(backend, str):
             return self.get_backend(backend)
@@ -180,20 +180,29 @@ class Router:
             from ..utils import run_async
 
             async def fetch_local_models() -> List[str]:
+                """Fetch available local models using proper resource management."""
+                if local_backend is None:
+                    return []
+
                 try:
-                    if local_backend is None:
-                        return []
                     # Use backend health check timeout from constants
                     from ..config.loader import get_config_value
 
                     health_check_timeout = get_config_value("constants.timeouts.backend_health_check", 3)
+
+                    # Use async context manager to ensure proper HTTP client cleanup
                     async with httpx.AsyncClient(timeout=health_check_timeout) as client:
                         response = await client.get(f"{local_backend.base_url}/api/tags")
-                        if response.status_code == 200:
-                            data = response.json()
-                            return [m["name"] for m in data.get("models", [])]
-                        return []
-                except (ConnectionError, TimeoutError, ValueError):
+                        try:
+                            if response.status_code == 200:
+                                data = response.json()
+                                return [m["name"] for m in data.get("models", [])]
+                            return []
+                        finally:
+                            # Ensure response is properly closed
+                            await response.aclose()
+
+                except (ConnectionError, TimeoutError, ValueError, httpx.RequestError, httpx.HTTPStatusError):
                     return []
 
             available_models = run_async(fetch_local_models())

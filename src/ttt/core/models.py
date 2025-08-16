@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 
-from pydantic import BaseModel, ConfigDict, Field  # type: ignore[import-not-found]
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from ttt.tools.base import ToolResult
@@ -225,8 +225,19 @@ class ImageInput:
             assert isinstance(self.source, bytes)
             self._base64_cache = base64.b64encode(self.source).decode("utf-8")
         elif self.is_path:
-            with open(self.source, "rb") as f:
-                self._base64_cache = base64.b64encode(f.read()).decode("utf-8")
+            try:
+                with open(self.source, "rb") as f:
+                    self._base64_cache = base64.b64encode(f.read()).decode("utf-8")
+            except FileNotFoundError:
+                raise FileNotFoundError(f"Image file not found: {self.source}")
+            except PermissionError:
+                raise PermissionError(f"Permission denied reading image file: {self.source}")
+            except IsADirectoryError:
+                raise IsADirectoryError(f"Path is a directory, not a file: {self.source}")
+            except OSError as e:
+                raise OSError(f"Error reading image file {self.source}: {e}")
+            except Exception as e:
+                raise RuntimeError(f"Unexpected error reading image file {self.source}: {e}")
         elif self.is_url:
             # URL images typically sent as-is to APIs
             return str(self.source)
@@ -259,7 +270,7 @@ class ImageInput:
                     ".bmp": "image/bmp",
                 }
                 mime_map: Dict[str, str] = project_defaults.get("files", {}).get("mime_types", default_mime_types)
-            except Exception:
+            except (ImportError, AttributeError, KeyError, TypeError):
                 # Fallback to hardcoded if config loading fails
                 mime_map = {
                     ".jpg": "image/jpeg",

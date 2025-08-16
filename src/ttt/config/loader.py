@@ -22,7 +22,7 @@ def _is_pipe_mode() -> bool:
     """Check if stdin is coming from a pipe (not a tty)."""
     try:
         return not sys.stdin.isatty()
-    except Exception:
+    except (OSError, AttributeError):
         # If we can't determine, assume not in pipe mode
         return False
 

@@ -268,7 +268,7 @@ class PersistentChatSession:
 
         # Stream the response
         async def _async_stream() -> AsyncIterator[str]:
-            async for chunk in self.backend.astream(  # type: ignore[attr-defined]
+            async for chunk in self.backend.astream(
                 full_prompt,
                 model=model or self.model,
                 system=self.system if len(self.history) == 1 else None,
@@ -357,6 +357,12 @@ class PersistentChatSession:
                 with open(path, "w") as f:
                     json.dump(session_data, f, indent=2, default=str)
                 logger.info(f"Saved session to {path} (JSON format)")
+            except PermissionError as e:
+                raise SessionSaveError(str(path), f"Permission denied: {e}") from e
+            except OSError as e:
+                raise SessionSaveError(str(path), f"OS error: {e}") from e
+            except (TypeError, ValueError) as e:
+                raise SessionSaveError(str(path), f"JSON serialization error: {e}") from e
             except Exception as e:
                 raise SessionSaveError(str(path), str(e)) from e
 
@@ -366,6 +372,12 @@ class PersistentChatSession:
                 with open(path, "wb") as f:
                     pickle.dump(session_data, f)
                 logger.info(f"Saved session to {path} (pickle format)")
+            except PermissionError as e:
+                raise SessionSaveError(str(path), f"Permission denied: {e}") from e
+            except OSError as e:
+                raise SessionSaveError(str(path), f"OS error: {e}") from e
+            except pickle.PicklingError as e:
+                raise SessionSaveError(str(path), f"Pickle serialization error: {e}") from e
             except Exception as e:
                 raise SessionSaveError(str(path), str(e)) from e
 

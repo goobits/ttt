@@ -98,7 +98,7 @@ def suggest_model_alternatives(failed_model: str, limit: int = 3) -> List[Dict[s
         suggestions.sort(key=lambda x: (x["available"], x["similarity"]), reverse=True)
         return suggestions[:limit]
 
-    except Exception:
+    except (ImportError, AttributeError, KeyError, TypeError):
         # Fallback to basic suggestions if config loading fails
         return _get_fallback_suggestions()
 
@@ -187,7 +187,7 @@ def suggest_alias_fixes(invalid_alias: str, limit: int = 5) -> List[Dict[str, Un
         unique_suggestions.sort(key=lambda x: (x["available"], x["similarity"]), reverse=True)
         return unique_suggestions[:limit]
 
-    except Exception:
+    except (ImportError, AttributeError, KeyError, TypeError):
         return _get_fallback_alias_suggestions()
 
 

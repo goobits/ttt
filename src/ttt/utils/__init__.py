@@ -2,7 +2,7 @@
 
 from typing import TypeVar
 
-from rich.console import Console  # type: ignore[import-not-found]
+from rich.console import Console
 
 from .async_utils import optimized_run_async, run_coro_in_background
 from .logger import get_logger

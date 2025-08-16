@@ -6,9 +6,9 @@ import logging
 import os
 from typing import Optional
 
-from rich.console import Console  # type: ignore[import-not-found]
-from rich.logging import RichHandler  # type: ignore[import-not-found]
-from rich.traceback import install  # type: ignore[import-not-found]
+from rich.console import Console
+from rich.logging import RichHandler
+from rich.traceback import install
 
 _json_mode = os.environ.get("TTT_JSON_MODE", "").lower() == "true"
 

@@ -11,8 +11,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, cast
 
-import bleach  # type: ignore[import-untyped]
-import validators  # type: ignore[import-not-found]
+import bleach
+import validators
 
 from .base import ToolCall
 

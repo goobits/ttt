@@ -4,7 +4,7 @@ import json
 import time
 from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
-import httpx  # type: ignore[import-not-found]
+import httpx
 
 from ..core.exceptions import (
     BackendConnectionError,
@@ -187,7 +187,7 @@ class LocalBackend(BaseBackend):
             logger.error(f"Ollama request failed: {str(e)}")
             raise BackendConnectionError(self.name, e) from e
 
-    async def astream(  # type: ignore[override]
+    async def astream(
         self,
         prompt: Union[str, List[Union[str, ImageInput]]],
         *,
