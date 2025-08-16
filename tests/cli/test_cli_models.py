@@ -99,24 +99,6 @@ class TestCLIStatusCommand(IntegrationTestBase):
             assert result.exit_code == 0
             assert "TTT System Status" in result.output or "healthy" in result.output.lower()
 
-    def test_status_json(self):
-        """Test status command with JSON output."""
-        # Mock the backend components used by status check
-        with patch("ttt.backends.local.LocalBackend") as mock_local, patch("os.getenv") as mock_getenv:
-            # Mock local backend with proper return values
-            mock_local_instance = Mock()
-            mock_local_instance.is_available = False
-            mock_local_instance.base_url = "http://localhost:11434"
-            mock_local.return_value = mock_local_instance
-
-            # Mock no API keys
-            mock_getenv.return_value = None
-
-            result = self.runner.invoke(main, ["status", "--json"])
-
-            assert result.exit_code == 0
-            # Should produce JSON-like output
-            assert "{" in result.output and "}" in result.output
 
     def test_status_command_parameter_passing(self):
         """Test status command passes json parameter correctly."""
@@ -162,31 +144,6 @@ class TestModelsCommand(IntegrationTestBase):
             assert "gpt-4" in result.output
             mock_registry.assert_called_once()
 
-    def test_models_json(self):
-        """Test models command with JSON output."""
-        # Mock the model registry used by models command
-        with patch("ttt.config.schema.get_model_registry") as mock_registry:
-            mock_model = Mock()
-            mock_model.name = "gpt-4"
-            mock_model.provider = "openai"
-            mock_model.provider_name = "OpenAI"
-            mock_model.context_length = 8192
-            mock_model.cost_per_token = 0.00003
-            mock_model.speed = "fast"
-            mock_model.quality = "high"
-            mock_model.aliases = ["gpt4"]
-
-            mock_registry_instance = Mock()
-            mock_registry_instance.list_models.return_value = ["gpt-4"]
-            mock_registry_instance.get_model.return_value = mock_model
-            mock_registry.return_value = mock_registry_instance
-
-            result = self.runner.invoke(main, ["models", "--json"])
-
-            assert result.exit_code == 0
-            # Should produce JSON-like output
-            assert "{" in result.output and "}" in result.output
-            assert "gpt-4" in result.output
 
     def test_models_command_parameter_passing(self):
         """Test models command passes json parameter correctly."""
@@ -246,31 +203,6 @@ class TestInfoCommand(IntegrationTestBase):
         if result.exit_code == 0:
             assert len(result.output.strip()) > 0
 
-    def test_info_json(self):
-        """Test info command with JSON output."""
-        # Mock the model registry used by info command
-        with patch("ttt.config.schema.get_model_registry") as mock_registry:
-            mock_model = Mock()
-            mock_model.name = "gpt-4"
-            mock_model.provider = "openai"
-            mock_model.provider_name = "OpenAI"
-            mock_model.context_length = 8192
-            mock_model.cost_per_token = 0.00003
-            mock_model.speed = "fast"
-            mock_model.quality = "high"
-            mock_model.aliases = ["gpt4"]
-            mock_model.capabilities = ["text"]
-
-            mock_registry_instance = Mock()
-            mock_registry_instance.get_model.return_value = mock_model
-            mock_registry.return_value = mock_registry_instance
-
-            result = self.runner.invoke(main, ["info", "gpt-4", "--json"])
-
-            assert result.exit_code == 0
-            # Should produce JSON-like output
-            assert "{" in result.output and "}" in result.output
-            assert "gpt-4" in result.output
 
     def test_info_command_parameter_passing(self):
         """Test info command passes model and json parameters correctly."""

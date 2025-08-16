@@ -86,14 +86,14 @@ class TestDebugFlag(IntegrationTestBase):
         cli_content = cli_file.read_text()
 
         # Check that the debug flag is defined
-        assert "@click.option('--debug'" in cli_content, "Debug option should be defined in CLI"
-        assert "help='Show full error traces and debug information'" in cli_content, "Debug help text should exist"
+        assert '@click.option("--debug"' in cli_content, "Debug option should be defined in CLI"
+        assert 'help="Show full error traces and debug information"' in cli_content, "Debug help text should exist"
 
         # Check that debug is passed to context
-        assert "ctx.obj['debug'] = debug" in cli_content, "Debug should be stored in context"
+        assert 'ctx.obj["debug"] = debug' in cli_content, "Debug should be stored in context"
 
         # Check that debug is passed to hooks
-        assert "kwargs['debug'] = ctx.obj.get('debug', False)" in cli_content, "Debug should be passed to hooks"
+        assert 'kwargs["debug"] = ctx.obj.get("debug", False)' in cli_content, "Debug should be passed to hooks"
 
     def test_debug_functionality_in_hooks(self):
         """Test that debug functionality exists in the hooks file."""
