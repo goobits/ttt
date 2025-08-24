@@ -93,3 +93,5 @@ tests/generated_cli.py
 # Project specific - TTT
 setup-config.yaml
 sync-framework.sh
+# Symbolic links directory
+.links
