@@ -1,33 +1,57 @@
-version: '1.0'
+version: 1.2.1
+provider: docker
+os: auto
 project:
-  name: ttt
   hostname: dev.ttt.local
+  name: ttt
   workspace_path: /workspace
 vm:
-  memory: 4096
-  cpus: 4
-  user: developer
+  cpus: 6
+  gui: false
+  memory: 8192
+  port_binding: 0.0.0.0
   timezone: America/Los_Angeles
-pip_packages:
-  - black
-  - pytest
-  - flake8
-  - claudeflow
+  user: developer
+versions:
+  node: '22'
+  python: '3.11'
+ports:
+  _range: [3220, 3229]
+services:
+  postgresql:
+    database: '{{ project.name }}_dev'
+    enabled: true
+    password: postgres
+    port: 3229
+    user: postgres
+    version: '15'
+  redis:
+    enabled: true
+    port: 3228
+    version: latest
+apt_packages:
+  - tree
+  - ripgrep
+  - unzip
+  - htop
 npm_packages:
+  - '@anthropic-ai/claude-code'
+  - '@google/gemini-cli'
+  - '@openai/codex'
+pip_packages:
+  - claudeflow
 terminal:
-  emoji: 🤖
-  username: ttt-dev
+  emoji: 🚀
   show_git_branch: true
+  show_timestamp: false
   theme: dracula
+  username: ttt-dev
 aliases:
   claudeyolo: claude --dangerously-skip-permissions
-  geminiyolo: GEMINI_API_KEY=${GEMINI_API_KEY:-} gemini
-claude_sync: true
-gemini_sync: true
-package_linking:
-  npm: true
-  pip: true
-  cargo: true
-# Ports 3100-3109 reserved for ttt
-ports:
-  www_dev: 3100
+  codexyolo: codex --dangerously-bypass-approvals-and-sandbox
+  geminiyolo: GEMINI_API_KEY=${GEMINI_API_KEY:-} gemini --approval-mode=yolo
+ai_sync: true
+networking:
+  networks:
+  - jules
+  - spacebase
