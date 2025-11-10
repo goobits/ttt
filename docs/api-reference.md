@@ -1,6 +1,13 @@
 # API Reference
 
-Complete API documentation for the AI library.
+Complete Python API documentation for Goobits TTT.
+
+```python
+# Common imports
+from ttt import ask, stream, chat, configure
+from ttt import ChatSession
+from ttt.tools import tool
+```
 
 ## Core Functions
 
@@ -119,7 +126,7 @@ def configure(
 ) -> None
 ```
 
-Configure the AI library programmatically.
+Configure TTT programmatically.
 
 **Parameters:**
 - `openai_api_key` (str, optional): OpenAI API key
@@ -390,7 +397,7 @@ Common error scenarios:
 
 5. **Use Type Hints**:
    ```python
-   from ai import AIResponse
+   from ttt import AIResponse
 
    def process_response(response: AIResponse) -> str:
        return response.upper()
