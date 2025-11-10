@@ -1,6 +1,48 @@
 # API Reference
 
-Complete API documentation for the AI library.
+Complete Python API documentation for Goobits TTT.
+
+## Module Organization
+
+TTT provides a unified interface accessible through simple imports:
+
+```python
+# Core functions - primary API
+from ttt import ask, stream, chat, configure
+
+# Async variants
+from ttt import ask_async, stream_async, achat
+
+# Session management
+from ttt import ChatSession
+
+# Tool/function calling decorators
+from ttt.tools import tool
+
+# Response models
+from ttt import AIResponse
+```
+
+### Module Structure
+
+The Python library is organized as:
+
+- **`ttt`** - Main module with core functions
+- **`ttt.core`** - Core API implementation (`api.py`, `routing.py`, `models.py`)
+- **`ttt.backends`** - Backend implementations (`cloud.py`, `local.py`, `base.py`)
+- **`ttt.tools`** - Function calling system (`base.py`, `builtins.py`, `registry.py`)
+- **`ttt.config`** - Configuration management
+- **`ttt.session`** - Conversation/session management
+
+### Quick Start Imports
+
+Most users need only:
+```python
+from ttt import ask                    # Simple requests
+from ttt import stream                 # Streaming responses
+from ttt import chat, ChatSession      # Conversations
+from ttt.tools import tool             # Function calling
+```
 
 ## Core Functions
 
@@ -390,7 +432,7 @@ Common error scenarios:
 
 5. **Use Type Hints**:
    ```python
-   from ai import AIResponse
+   from ttt import AIResponse
 
    def process_response(response: AIResponse) -> str:
        return response.upper()

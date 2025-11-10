@@ -38,7 +38,7 @@ The system follows a **CLI → Backend → Provider** abstraction pattern:
 
 ## Core Components
 
-### 1. API Layer (`src/ttt/api.py`)
+### 1. API Layer (`src/ttt/core/api.py`)
 
 The main interface providing both synchronous and asynchronous APIs:
 
@@ -82,7 +82,7 @@ Integrates with Ollama for local models:
 - Support for open-source models
 - Automatic model management
 
-### 3. Routing System (`src/ttt/routing.py`)
+### 3. Routing System (`src/ttt/core/routing.py`)
 
 Intelligent routing between backends and models:
 
@@ -115,7 +115,7 @@ def get_weather(city: str) -> str:
     return f"Weather in {city}: Sunny, 72°F"
 ```
 
-### 5. Configuration System (`src/ttt/config.py`)
+### 5. Configuration System (`src/ttt/config/`)
 
 Hierarchical configuration management:
 

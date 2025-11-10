@@ -15,10 +15,10 @@ Configuration is loaded in this order (highest to lowest precedence):
 
 The library searches for configuration files in these locations:
 
-1. `./ttt.yaml` or `./ttt.yml` - Project-specific config
-2. `./.ttt.yaml` or `./.ttt.yml` - Hidden project config
+1. `./ai.yaml` or `./ai.yml` - Project-specific config
+2. `./.ai.yaml` or `./.ai.yml` - Hidden project config
 3. `~/.config/ttt/config.yaml` or `~/.config/ttt/config.yml` - User config
-4. `~/.ttt.yaml` or `~/.ttt.yml` - Hidden user config
+4. `~/.ai.yaml` or `~/.ai.yml` - Hidden user config
 5. `config.yaml` - Default configuration (built-in)
 6. `.env` - Environment variables and API keys
 
@@ -261,7 +261,7 @@ retry_config:
 ## Configuration Best Practices
 
 1. **Use environment variables for API keys** - Keep sensitive data out of config files
-2. **Create project-specific configs** - Use `./ttt.yaml` for project settings
+2. **Create project-specific configs** - Use `./ai.yaml` for project settings
 3. **Set reasonable timeouts** - Balance between reliability and responsiveness
 4. **Configure model aliases** - Create shortcuts for frequently used models
 5. **Enable fallbacks** - Ensure reliability with automatic backend switching
@@ -307,8 +307,8 @@ ttt config set models.default gpt-4
 ```bash
 # Check config file locations
 ls -la ~/.config/ttt/config.yaml
-ls -la ./ttt.yaml
+ls -la ./ai.yaml
 
 # Verify syntax
-python -m yaml < ttt.yaml
+python -m yaml < ai.yaml
 ```

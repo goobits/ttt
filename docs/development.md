@@ -60,27 +60,27 @@ The test suite uses pytest with comprehensive coverage:
 
 ```bash
 # Run unit tests (default - free, fast)
-./test.sh
+./run-tests.sh
 
 # Run unit tests with coverage
-./test.sh unit --coverage
+./run-tests.sh unit --coverage
 
 # Run specific test file
-./test.sh --test test_api
+./run-tests.sh --test test_api
 
 # Run integration tests (costs money, requires API keys)
 export OPENROUTER_API_KEY=your-key-here
-./test.sh integration          # Will prompt for confirmation
-./test.sh integration --force  # Skip confirmation
+./run-tests.sh integration          # Will prompt for confirmation
+./run-tests.sh integration --force  # Skip confirmation
 
 # Run all tests (unit first, then integration)
-./test.sh all
+./run-tests.sh all
 
 # Skip slow tests
-./test.sh --markers "not slow"
+./run-tests.sh --markers "not slow"
 
 # Verbose output
-./test.sh unit --verbose
+./run-tests.sh unit --verbose
 ```
 
 ### Direct pytest Usage
@@ -202,7 +202,7 @@ git checkout -b feature/my-feature
 # ... edit files ...
 
 # Run tests
-./test.sh
+./run-tests.sh
 
 # Format and lint
 black src/ttt/ tests/
@@ -223,7 +223,7 @@ ttt status
 ttt models
 
 # Run unit tests
-./test.sh
+./run-tests.sh
 
 # Test specific functionality
 pytest tests/test_my_feature.py -v
@@ -305,21 +305,40 @@ def my_tool(param1: str, param2: int = 10) -> str:
 
 ### Adding CLI Commands
 
-1. Add command in `src/ttt/cli.py`:
+**IMPORTANT**: `src/ttt/cli.py` is auto-generated from `goobits.yaml`. Never edit it directly - your changes will be overwritten on the next `goobits build`.
 
-```python
-@main.command()
-@click.argument("query")
-@click.option("--model", "-m", help="Model to use")
-def mycommand(query, model):
-    """Description of command."""
-    # Implementation using app_hooks
-    from ttt.app_hooks import on_mycommand
-    on_mycommand(query, model)
-```
+**Correct workflow:**
 
-2. Implement hook in `src/ttt/app_hooks.py`
-3. Add tests in `tests/test_cli_modern.py`
+1. **Define command in `goobits.yaml`**:
+   ```yaml
+   commands:
+     mycommand:
+       description: "Description of command"
+       arguments:
+         - name: query
+           description: "Query to process"
+       options:
+         - name: model
+           short: m
+           description: "Model to use"
+       hook: on_mycommand
+   ```
+
+2. **Regenerate CLI** (requires goobits-cli installed):
+   ```bash
+   goobits build
+   ```
+   This updates `src/ttt/cli.py` and `setup.sh` automatically.
+
+3. **Implement hook in `src/ttt/app_hooks.py`**:
+   ```python
+   def on_mycommand(query: str, model: str = None):
+       """Business logic for mycommand."""
+       # Your implementation here
+       pass
+   ```
+
+4. **Add tests in `tests/test_cli_modern.py`**
 
 ## Debugging
 
@@ -353,14 +372,14 @@ pip install -e ".[dev,local]"
 pytest tests/test_file.py::test_name -v -s
 
 # Check test coverage
-./test.sh unit --coverage
+./run-tests.sh unit --coverage
 ```
 
 ## Contributing
 
 ### Before Submitting
 
-1. **Run all tests**: `./test.sh`
+1. **Run all tests**: `./run-tests.sh`
 2. **Format code**: `black src/ttt/ tests/`
 3. **Check linting**: `ruff src/ttt/ tests/`
 4. **Type check**: `mypy src/ttt/`
@@ -419,7 +438,7 @@ Closes #123
 
 1. Update version in `pyproject.toml`
 2. Update CHANGELOG.md
-3. Run full test suite: `./test.sh all`
+3. Run full test suite: `./run-tests.sh all`
 4. Create git tag: `git tag v1.0.0`
 5. Push to GitHub: `git push origin main --tags`
 6. GitHub Actions handles PyPI release

@@ -24,10 +24,10 @@ The library loads configuration from multiple sources with the following precede
 ### Configuration Files
 
 The library searches for configuration files in these locations:
-- `./ttt.yaml` or `./ttt.yml` (current directory)
-- `./.ttt.yaml` or `./.ttt.yml` (hidden file in current directory)
+- `./ai.yaml` or `./ai.yml` (current directory)
+- `./.ai.yaml` or `./.ai.yml` (hidden file in current directory)
 - `~/.config/ttt/config.yaml` or `~/.config/ttt/config.yml`
-- `~/.ttt.yaml` or `~/.ttt.yml`
+- `~/.ai.yaml` or `~/.ai.yml`
 
 ### Configuration Schema
 
@@ -85,7 +85,7 @@ routing:
 ### Programmatic Configuration
 
 ```python
-from ai import configure
+from ttt import configure
 
 # Update configuration at runtime
 configure(
@@ -171,7 +171,7 @@ Plugins are automatically discovered from:
 ### Loading Plugins
 
 ```python
-from ai import load_plugin, discover_plugins
+from ttt import load_plugin, discover_plugins
 from pathlib import Path
 
 # Manually load a specific plugin
@@ -322,7 +322,7 @@ async def ask(self, prompt, **kwargs):
 
 1. **Direct Registration**:
    ```python
-   from ai import register_backend
+   from ttt import register_backend
    register_backend("name", BackendClass, version="1.0.0")
    ```
 
@@ -375,7 +375,7 @@ routing:
 
 ```python
 import pytest
-from ai import ask, register_backend
+from ttt import ask, register_backend
 from my_backend import MyBackend
 
 @pytest.fixture
@@ -418,4 +418,4 @@ def test_error_handling(setup_backend):
 For complete working examples, see:
 - [examples/plugins/echo_backend.py](../examples/plugins/echo_backend.py) - Simple echo backend
 - [examples/plugins/mock_llm_backend.py](../examples/plugins/mock_llm_backend.py) - Sophisticated mock backend
-- [examples/config/ttt.yaml](../examples/config/ttt.yaml) - Full configuration example
+- [examples/config/ai.yaml](../examples/config/ai.yaml) - Full configuration example
