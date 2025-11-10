@@ -1,6 +1,6 @@
 # System Architecture
 
-The TTT library implements a layered architecture that provides a unified interface to multiple AI providers while maintaining flexibility and extensibility.
+Goobits TTT implements a layered architecture that provides a unified interface to multiple AI providers while maintaining flexibility and extensibility.
 
 ## Architecture Overview
 

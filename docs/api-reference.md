@@ -161,7 +161,7 @@ def configure(
 ) -> None
 ```
 
-Configure the AI library programmatically.
+Configure TTT programmatically.
 
 **Parameters:**
 - `openai_api_key` (str, optional): OpenAI API key

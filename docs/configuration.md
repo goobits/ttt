@@ -1,6 +1,6 @@
 # Configuration Guide
 
-The TTT library provides flexible configuration through multiple sources with clear precedence rules.
+Goobits TTT provides flexible configuration through multiple sources with clear precedence rules.
 
 ## Configuration Hierarchy
 

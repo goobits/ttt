@@ -1,6 +1,6 @@
 # Development Guide
 
-This guide covers development setup, testing, code style, and contributing to the TTT library.
+This guide covers development setup, testing, code style, and contributing to Goobits TTT.
 
 ## Development Setup
 
