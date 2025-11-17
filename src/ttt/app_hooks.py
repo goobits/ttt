@@ -422,6 +422,13 @@ def on_ask(
         click.echo("Error: Missing argument 'prompt'", err=True)
         sys.exit(1)
 
+    # Get configured default model if not specified via CLI
+    if not model:
+        from ttt.config.schema import get_config
+        config = get_config()
+        if config.model:
+            model = config.model
+
     # Resolve model alias
     if model:
         model = resolve_model_alias(model)

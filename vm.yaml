@@ -1,4 +1,4 @@
-version: 1.2.1
+version: "2.0"
 provider: docker
 os: auto
 project:
@@ -6,15 +6,11 @@ project:
   name: ttt
   workspace_path: /workspace
 vm:
+  box: '@vibe-box'
   cpus: 6
   gui: false
   memory: 8192
   port_binding: 0.0.0.0
-  timezone: America/Los_Angeles
-  user: developer
-versions:
-  node: '22'
-  python: '3.11'
 ports:
   _range: [3220, 3229]
 services:
@@ -29,28 +25,15 @@ services:
     enabled: true
     port: 3228
     version: latest
-apt_packages:
-  - tree
-  - ripgrep
-  - unzip
-  - htop
-npm_packages:
-  - '@anthropic-ai/claude-code'
-  - '@google/gemini-cli'
-  - '@openai/codex'
-pip_packages:
-  - claudeflow
 terminal:
   emoji: 🚀
   show_git_branch: true
   show_timestamp: false
   theme: dracula
   username: ttt-dev
-aliases:
-  claudeyolo: claude --dangerously-skip-permissions
-  codexyolo: codex --dangerously-bypass-approvals-and-sandbox
-  geminiyolo: GEMINI_API_KEY=${GEMINI_API_KEY:-} gemini --approval-mode=yolo
-ai_sync: true
+host_sync:
+  git_config: true
+  ai_tools: true
 networking:
   networks:
   - jules

@@ -125,6 +125,18 @@ class Router:
             if backend:
                 return backend
 
+            # If default backend was explicitly configured but unavailable, raise a clear error
+            if self.config.default_backend == "local":
+                error_msg = (
+                    "Local backend is configured as default but Ollama is not running. "
+                    "Please start Ollama with 'ollama serve' or change default_backend in your config."
+                )
+                raise BackendNotAvailableError("local", error_msg)
+            else:
+                # For other backends, show a generic error
+                error_msg = f"Configured default backend '{self.config.default_backend}' is not available."
+                raise BackendNotAvailableError(self.config.default_backend, error_msg)
+
         # Try cloud first (always available)
         backend = self._try_backend_safely("cloud", "Using cloud backend")
         if backend:

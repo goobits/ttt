@@ -271,7 +271,14 @@ class LocalBackend(BaseBackend):
                                 raise ResponseParsingError(f"Invalid JSON in stream: {line[:100]}", line) from e
 
         except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404 and "model" in e.response.text.lower():
+            # For streaming responses, read the response body to get error details
+            try:
+                error_text = await e.response.aread()
+                error_text = error_text.decode('utf-8') if isinstance(error_text, bytes) else str(error_text)
+            except Exception:
+                error_text = ""
+
+            if e.response.status_code == 404 and "model" in error_text.lower():
                 raise ModelNotFoundError(used_model, self.name) from e
             raise BackendConnectionError(self.name, e) from e
         except httpx.TimeoutException:
